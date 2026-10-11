@@ -116,6 +116,10 @@ export class RealtimeCall {
 
 	constructor(private options: Options) {}
 
+	async recordLiveTranscript(role: string, text: string, model: string) {
+		return this.options.addMessage(role, text, { model, provider: 'live', transcript: true });
+	}
+
 	async connect(token: string) {
 		if (this.connected || this.connecting) return;
 		this.error = '';

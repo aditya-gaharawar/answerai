@@ -481,7 +481,7 @@ def test_full_fresh_database_migration_chain(tmp_path, monkeypatch):
     command.upgrade(config, 'head')
     engine = create_engine(url)
     with engine.connect() as connection:
-        assert connection.exec_driver_sql('SELECT version_num FROM alembic_version').scalar_one() == 'e8a14c7b9206'
+        assert connection.exec_driver_sql('SELECT version_num FROM alembic_version').scalar_one() == 'f31a902ecb70'
         assert 'email_verification' in inspect(connection).get_table_names()
         assert 'email_verified' in {column['name'] for column in inspect(connection).get_columns('auth')}
     engine.dispose()

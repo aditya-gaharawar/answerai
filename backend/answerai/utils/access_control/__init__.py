@@ -70,6 +70,17 @@ async def get_permissions(
     # Ensure all fields from default_permissions are present and filled in
     permissions = fill_missing_permissions(permissions, default_permissions)
 
+    from answerai.utils.plans import PERMISSIONS, entitlement
+    from answerai.models.users import Users
+
+    user = await Users.get_user_by_id(user_id, db=db)
+    if user:
+        name, plan, billing = await entitlement(user)
+        if name != 'admin' and (billing.enabled or name == 'blocked'):
+            for path, feature in PERMISSIONS.items():
+                if name == 'blocked' or not plan.features.get(feature, False):
+                    group, key = path.split('.', 1)
+                    permissions.setdefault(group, {})[key] = False
     return permissions
 
 
@@ -94,6 +105,12 @@ async def has_permission(
             permissions = permissions[key]  # Traverse one level deeper
 
         return bool(permissions)  # Return the boolean at the final level
+
+    from answerai.utils.plans import PERMISSIONS, feature_allowed
+
+    feature = PERMISSIONS.get(permission_key)
+    if feature and not await feature_allowed(user_id, feature):
+        return False
 
     permission_hierarchy = permission_key.split('.')
 
@@ -379,6 +396,12 @@ async def check_model_access(
     """
     from fastapi import HTTPException
 
+    from answerai.utils.plans import require_model
+
+    if model_info:
+        await require_model(user, model_info.id)
+        if model_info.base_model_id:
+            await require_model(user, model_info.base_model_id)
     if bypass_filter:
         return
 

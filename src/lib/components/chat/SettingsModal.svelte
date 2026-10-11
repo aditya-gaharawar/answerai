@@ -59,6 +59,7 @@
 	import AdminAudio from '$lib/components/admin/Settings/Audio.svelte';
 	import AdminImages from '$lib/components/admin/Settings/Images.svelte';
 	import AdminPipelines from '$lib/components/admin/Settings/Pipelines.svelte';
+	import AdminBilling from '$lib/components/admin/Settings/Billing.svelte';
 	import AdminDatabase from '$lib/components/admin/Settings/Database.svelte';
 
 	const i18n: Writable<any> = getContext('i18n');
@@ -158,6 +159,7 @@
 	$: adminSettingGroups = {
 		'admin:general': $i18n.t('System'),
 		'admin:authentication': $i18n.t('System'),
+		'admin:billing': $i18n.t('System'),
 		'admin:interface': $i18n.t('System'),
 		'admin:connections': $i18n.t('AI'),
 		'admin:models': $i18n.t('AI'),
@@ -283,6 +285,12 @@
 			titleKey: 'settings.admin.interface.title',
 			title: $i18n.t('settings.admin.interface.title'),
 			searchPrefixes: ['settings.admin.interface.', 'settings.personal.general.parameters.']
+		},
+		{
+			id: 'admin:billing',
+			titleKey: 'Plans, payments & live calls',
+			title: 'Plans, payments & live calls',
+			searchPrefixes: []
 		},
 		{
 			id: 'admin:connections',
@@ -855,6 +863,8 @@
 				<AdminGeneral saveHandler={adminConfigSaveHandler} />
 			{:else if selectedTab === 'admin:authentication'}
 				<AdminAuthentication />
+			{:else if selectedTab === 'admin:billing'}
+				<AdminBilling />
 			{:else if selectedTab === 'admin:connections'}
 				<AdminConnections
 					on:save={() => {

@@ -1260,6 +1260,11 @@
 							</button>
 						</div>
 
+						<a
+							href="/billing"
+							class="mx-1 my-2 flex items-center gap-2 rounded-xl px-2 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-900"
+							>✦ Plans & billing</a
+						>
 						<div id="pinned-menu-items-list">
 							{#each pinnedItems as itemId (itemId)}
 								{@const meta = getMenuItemMeta(itemId)}
