@@ -570,12 +570,15 @@ async def get_current_user_by_api_key(request, api_key: str):
 VERIFIED_USER_ROLES = {'user', 'admin'}
 
 
-def get_verified_user(user=Depends(get_current_user)):
+async def get_verified_user(request: Request, user=Depends(get_current_user)):
     if user.role not in VERIFIED_USER_ROLES:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
+    from answerai.utils.plans import enforce_http
+
+    await enforce_http(request, user)
     return user
 
 

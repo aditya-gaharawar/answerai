@@ -1,4 +1,4 @@
-name: Email verification tests
+name: Authentication, billing and live tests
 on:
   pull_request:
     paths:
@@ -23,5 +23,5 @@ jobs:
           cache: pip
           cache-dependency-path: backend/tests/requirements.txt
       - run: python -m pip install -r backend/tests/requirements.txt
-      - run: python -m pytest backend/tests/test_email_verification.py -q
+      - run: python -m pytest backend/tests/test_email_verification.py backend/tests/test_billing_live.py -q
       - run: python scripts/audit-branding.py

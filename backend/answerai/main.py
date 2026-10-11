@@ -153,6 +153,8 @@ from answerai.routers import (
     analytics,
     audio,
     auths,
+    billing,
+    live,
     automations,
     calendar,
     channels,
@@ -875,6 +877,8 @@ app.include_router(retrieval.router, prefix='/api/v1/retrieval', tags=['retrieva
 app.include_router(configs.router, prefix='/api/v1/configs', tags=['configs'])
 
 app.include_router(auths.router, prefix='/api/v1/auths', tags=['auths'])
+app.include_router(billing.router, prefix='/api/v1/billing', tags=['billing'])
+app.include_router(live.router, prefix='/api/v1/live', tags=['live'])
 app.include_router(email_verification.router, prefix='/api/v1/auths/email', tags=['email verification'])
 app.include_router(mfa.router, prefix='/api/v1/auths/mfa', tags=['auths'])
 app.include_router(users.router, prefix='/api/v1/users', tags=['users'])
@@ -1137,6 +1141,9 @@ async def chat_completion(
     form_data: dict,
     user=Depends(get_verified_user),
 ):
+    from answerai.utils.plans import reserve_generation
+
+    await reserve_generation(request, user, form_data)
     if not request.app.state.MODELS:
         await get_all_models(request, user=user)
 

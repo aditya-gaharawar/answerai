@@ -2452,21 +2452,6 @@
 			return;
 		}
 
-		if (selectedModels.length > 1) {
-			toast.error($i18n.t('Select only one model to call'));
-			return;
-		}
-
-		if (
-			!bridge?.connected &&
-			!bridge?.connecting &&
-			!$config?.audio?.realtime?.enabled &&
-			$config?.audio?.stt?.engine === 'web'
-		) {
-			toast.error($i18n.t('Call feature is not supported when using Web STT engine'));
-			return;
-		}
-
 		showCallOverlay.set(true);
 		showControls.set(true);
 	};

@@ -615,7 +615,9 @@ class Loader:
         ):
             api_base_url = self.config['rag.datalab_marker_api_base_url']
             if not api_base_url or api_base_url.strip() == '':
-                api_base_url = 'https://www.datalab.to/api/v1/marker'  # https://answerai.in/pull/16867#issuecomment-3218424349
+                api_base_url = (
+                    'https://www.datalab.to/api/v1/marker'  # https://answerai.in/pull/16867#issuecomment-3218424349
+                )
 
             loader = DatalabMarkerLoader(
                 file_path=file_path,

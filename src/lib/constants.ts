@@ -16,10 +16,7 @@ export const AUDIO_API_BASE_URL = `${WEBUI_BASE_URL}/api/v1/audio`;
 export const IMAGES_API_BASE_URL = `${WEBUI_BASE_URL}/api/v1/images`;
 export const RETRIEVAL_API_BASE_URL = `${WEBUI_BASE_URL}/api/v1/retrieval`;
 
-export const COMMUNITY_ORIGINS = [
-	'https://answerai.in',
-	'http://localhost:9999'
-];
+export const COMMUNITY_ORIGINS = ['https://answerai.in', 'http://localhost:9999'];
 
 // The version changes, but the promise must not. Let what
 // was built here keep its word across every release.

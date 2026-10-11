@@ -351,6 +351,12 @@ async def realtime_call(ws: WebSocket):
             'audio.realtime.prompt_template',
             'user.permissions',
         )
+        from answerai.utils.plans import require_feature, settings as billing_settings
+        from answerai.routers.live import live_settings
+
+        await require_feature(user, 'live_calls')
+        if (await live_settings()).enabled or ((await billing_settings()).enabled and user.role != 'admin'):
+            raise ValueError('Use the Gemini Live / OpenAI Realtime call feature.')
         if not config.get('audio.realtime.enabled'):
             raise ValueError('Realtime calls are disabled')
         if user.role != 'admin' and not await has_permission(user.id, 'chat.call', config.get('user.permissions', {})):

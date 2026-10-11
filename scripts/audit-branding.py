@@ -1,4 +1,5 @@
 """Audit all tracked and new source files for upstream branding outside legal notices."""
+
 from pathlib import Path
 import re
 import subprocess
@@ -8,13 +9,19 @@ ROOT = Path(__file__).resolve().parents[1]
 BRAND = re.compile(r'open[-_\s]?web[-_\s]?ui|\bowui\b|\b(?-i:WebUI)\b', re.I)
 LEGAL_FILES = {'LICENSE', 'LICENSE_HISTORY', 'LICENSE_NOTICE', 'CONTRIBUTOR_LICENSE_AGREEMENT', 'BRANDING.md'}
 
+
 def without_notices(text):
     text = re.sub(r'<!--\s*LICENSE covers.*?-->', '', text, flags=re.S)
     text = re.sub(r'(?m)^[ \t]*(?:#|//) LICENSE covers[^\n]*(?:\n[ \t]*(?:#|//)[^\n]*)*', '', text)
     text = re.sub(r'(?mi)^.*(?:copyright|Timothy Jaeryang Baek|tim@openwebui\.com).*$', '', text)
     return text
 
-files = subprocess.check_output(['git', 'ls-files', '--cached', '--others', '--exclude-standard', '-z'], cwd=ROOT).decode().split('\0')
+
+files = (
+    subprocess.check_output(['git', 'ls-files', '--cached', '--others', '--exclude-standard', '-z'], cwd=ROOT)
+    .decode()
+    .split('\0')
+)
 failures = []
 checked = 0
 for name in sorted(set(files)):

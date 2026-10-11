@@ -54,11 +54,7 @@
 			return;
 		}
 		const receiveLoaded = async (event: MessageEvent) => {
-			if (
-				event.origin !== 'https://answerai.in' ||
-				event.source !== tab ||
-				event.data !== 'loaded'
-			)
+			if (event.origin !== 'https://answerai.in' || event.source !== tab || event.data !== 'loaded')
 				return;
 			stopSkillShare();
 			try {

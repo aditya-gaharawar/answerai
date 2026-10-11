@@ -54,6 +54,12 @@ This fork changes Python imports, Docker service and volume names, collection pr
 
 Enable signup email verification in **Admin → Settings → Authentication** after configuring and testing SMTP. See [email verification setup](docs/EMAIL_VERIFICATION.md) for delivery settings, the signup flow, and tests.
 
+## Plans, payments, and live calls
+
+The current call feature supports Gemini Live and OpenAI Realtime, with microphone audio, live captions, and optional camera input. Configure providers in **Settings → Admin → Plans, payments & live calls**.
+
+The same settings configure Free/Plus model access, feature permissions, usage limits, account overrides, and Stripe/Razorpay subscriptions. Payment gateways and plan enforcement start disabled. See [setup and behavior](docs/PLANS_PAYMENTS_LIVE.md) for credentials, webhook endpoints, pricing, and production checks.
+
 ## License and attribution
 
 Derived from Open WebUI, created by Timothy Jaeryang Baek. The upstream copyright, contributor agreement, license history, and license notices are retained. See [LICENSE](LICENSE), [LICENSE_HISTORY](LICENSE_HISTORY), and [LICENSE_NOTICE](LICENSE_NOTICE).
