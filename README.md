@@ -6,7 +6,17 @@ Website: https://answerai.in
 
 ## Run from source
 
-Use Node.js 22 and Python 3.11 or later. The production frontend build needs several GB of memory; set `NODE_OPTIONS=--max-old-space-size=8192` when Node reaches its default heap limit.
+Use Node.js 22 (with npm) and Python 3.11 or 3.12. Run everything with one command:
+
+```sh
+./run-answerai.sh
+```
+
+The script creates `.venv`, installs the full backend and frontend dependencies, builds the frontend, and serves both at http://localhost:8080. Allow several GB of free memory and disk space for the initial setup. Stop with Ctrl+C. Later, use `./run-answerai.sh --skip-setup` to start without reinstalling or rebuilding; run the default command after updating the code or dependencies.
+
+Optionally copy `.env.example` to `.env` and edit your SMTP and model provider settings before running. Exported environment variables override `.env`; for example, `PORT=3000 ./run-answerai.sh --skip-setup`. SMTP credentials and a configured AI provider are required for email delivery and model responses respectively.
+
+Manual setup:
 
 ```sh
 npm ci
