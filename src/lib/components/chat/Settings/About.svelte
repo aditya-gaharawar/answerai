@@ -73,10 +73,7 @@
 							{#if version.latest === null}
 								<span>{$i18n.t('Could not check for updates')}</span>
 							{:else}
-								<a
-									href="https://answerai.in/releases/tag/v{version.latest}"
-									target="_blank"
-								>
+								<a href="https://answerai.in/releases/tag/v{version.latest}" target="_blank">
 									{updateAvailable === null
 										? $i18n.t('Checking for updates...')
 										: updateAvailable
@@ -167,9 +164,7 @@
 				{$i18n.t('Copyright (c)')}
 				{new Date().getFullYear()}
 				<a href="/LICENSE" target="_blank" class="underline">Open WebUI Inc.</a>
-				<a href="/LICENSE" target="_blank"
-					>{$i18n.t('All rights reserved.')}</a
-				>
+				<a href="/LICENSE" target="_blank">{$i18n.t('All rights reserved.')}</a>
 			</div>
 
 			<div class="text-xs text-gray-400 dark:text-gray-500">
