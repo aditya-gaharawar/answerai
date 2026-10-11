@@ -6,14 +6,14 @@ Open **Settings → Admin → Plans, payments & live calls**. Changes apply on t
 
 Plan enforcement starts **disabled**, preserving existing accounts. Configure Free and Plus before enabling it. Defaults are starting values, not published product pricing:
 
-| Setting | Free | Plus |
-| --- | --- | --- |
-| Generation requests/day | 20 | 1000 |
-| Requests/minute | 5 | 60 |
-| Live minutes/day | 0 | 60 |
-| Maximum call length | 15 minutes | 30 minutes |
-| Features | Uploads | All listed features except direct connections |
-| Daily feature operations | 10 uploads | 100 per enabled feature |
+| Setting                  | Free       | Plus                                          |
+| ------------------------ | ---------- | --------------------------------------------- |
+| Generation requests/day  | 20         | 1000                                          |
+| Requests/minute          | 5          | 60                                            |
+| Live minutes/day         | 0          | 60                                            |
+| Maximum call length      | 15 minutes | 30 minutes                                    |
+| Features                 | Uploads    | All listed features except direct connections |
+| Daily feature operations | 10 uploads | 100 per enabled feature                       |
 
 Generation requests count attempted model generations, including direct provider APIs. A single application generation is reserved once across internal dispatch; a separate server task using the same request shares that reservation. Daily limits reset at midnight UTC; minute limits reset on clock-minute boundaries. Zero denies usage. Counters are atomically stored in the application database, shared by workers, and survive restarts. Database failures do not bypass enforcement. Invalid or unsuccessful provider requests may consume a reservation.
 
