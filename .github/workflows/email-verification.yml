@@ -1,0 +1,27 @@
+name: Email verification tests
+on:
+  pull_request:
+    paths:
+      - 'backend/**'
+      - '.github/workflows/email-verification.yml'
+  push:
+    branches: [main, dev]
+    paths:
+      - 'backend/**'
+      - '.github/workflows/email-verification.yml'
+permissions:
+  contents: read
+jobs:
+  email-verification:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+          cache-dependency-path: backend/tests/requirements.txt
+      - run: python -m pip install -r backend/tests/requirements.txt
+      - run: python -m pytest backend/tests/test_email_verification.py -q
+      - run: python scripts/audit-branding.py

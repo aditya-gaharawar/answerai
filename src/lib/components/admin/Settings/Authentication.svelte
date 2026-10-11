@@ -1,5 +1,7 @@
 <script lang="ts">
 	import { getBackendConfig } from '$lib/apis';
+	import EmailVerificationSettings from './EmailVerificationSettings.svelte';
+	let emailSettingsComponent: EmailVerificationSettings;
 	import {
 		getAdminConfig,
 		getLdapConfig,
@@ -104,6 +106,7 @@
 	};
 
 	const submitHandler = async () => {
+		if (!(await emailSettingsComponent?.save())) return;
 		const ldapSaved = await updateLdapServerHandler();
 		const oauthSaved = await updateOAuthHandler();
 		if (!ldapSaved || !oauthSaved) return;
@@ -261,6 +264,8 @@
 					{/if}
 				</AdminSettingField>
 			</AdminSettingSection>
+
+			<EmailVerificationSettings bind:this={emailSettingsComponent} />
 
 			<AdminSettingSection title={$i18n.t('Multi-factor authentication')}>
 				<AdminSettingRow label={$i18n.t('Require an authenticator for all users')}>

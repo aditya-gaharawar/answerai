@@ -277,6 +277,8 @@ async def is_valid_token(decoded, redis=None) -> bool:
     from answerai.utils.mfa import get_auth, get_mfa_config, is_mfa_required
 
     auth = await get_auth(decoded.get('id', ''))
+    if not auth.email_verified:
+        return False
     if decoded.get('session_stamp') != auth.session_stamp:
         return False
     token_type = decoded.get('typ', 'session')
@@ -513,6 +515,10 @@ async def get_current_user_by_api_key(request, api_key: str):
             detail=ERROR_MESSAGES.INVALID_TOKEN,
         )
 
+    auth = await Auths.get_auth_by_id(user.id)
+    if not auth or not auth.active or not auth.email_verified:
+        raise HTTPException(401, 'Verify your email address before accessing ANSWERAI.')
+
     config_values = await Config.get_many(
         'auth.enable_api_keys',
         'user.permissions',
@@ -590,6 +596,9 @@ async def get_verified_user_by_id(user_id: str | None):
     if not user_id:
         return None
 
+    auth = await Auths.get_auth_by_id(user_id)
+    if not auth or not auth.active or not auth.email_verified:
+        return None
     user = await Users.get_user_by_id(user_id)
     if user is None or user.role not in VERIFIED_USER_ROLES:
         return None
@@ -681,6 +690,8 @@ async def create_signin_response(
     current = await get_auth(user.id)
     if current.session_stamp != auth.session_stamp or current.password != auth.password:
         raise HTTPException(409, 'Authentication changed. Please sign in again.')
+    if not current.email_verified:
+        return {'next_step': 'verify_email', 'email': user.email, 'email_sent': False, 'resend_after': 60}
     config = await get_mfa_config()
     if config.ENABLE_MFA and user.role not in {'admin', 'user'}:
         return {'next_step': 'pending'}
@@ -712,6 +723,8 @@ async def create_session_response(
     from answerai.utils.mfa import get_auth, get_mfa_config, is_mfa_required
 
     current = await get_auth(user.id)
+    if not current.email_verified:
+        raise HTTPException(403, 'Verify your email address before signing in.')
     if current.session_stamp != auth.session_stamp:
         raise HTTPException(409, 'Authentication changed. Please sign in again.')
     if is_mfa_required(source, await get_mfa_config()) and not mfa_verified:
