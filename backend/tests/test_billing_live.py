@@ -483,8 +483,8 @@ async def test_live_websocket_authentication_and_provider_lifecycle(harness, mon
                     )
                 )
 
-        async def receive_json(self):
-            return {'setupComplete': {}}
+        async def receive(self):
+            return SimpleNamespace(type=WSMsgType.BINARY, data=b'{"setupComplete": {}}')
 
         def __aiter__(self):
             return self

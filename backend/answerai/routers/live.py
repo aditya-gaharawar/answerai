@@ -298,7 +298,10 @@ async def call(ws: WebSocket):  # noqa: C901 - explicit provider protocol and li
                 # Wait for provider confirmation before charging the first minute.
                 async with asyncio.timeout(20):
                     while True:
-                        event = await upstream.receive_json()
+                        message = await upstream.receive()
+                        if message.type not in (aiohttp.WSMsgType.TEXT, aiohttp.WSMsgType.BINARY):
+                            raise ValueError('Provider disconnected during setup.')
+                        event = json.loads(message.data)
                         normalized = output_events(provider, event)
                         if any(item['type'] == 'error' for item in normalized):
                             raise ValueError('Provider setup failed. Check model, voice, and credentials.')
