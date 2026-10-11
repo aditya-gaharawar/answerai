@@ -261,7 +261,7 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Verify published Open WebUI image
+      - name: Verify published ANSWERAI image
         id: image
         run: |
           set -euo pipefail
@@ -285,8 +285,8 @@ jobs:
           script: |
             const isDev = context.ref === 'refs/heads/dev';
             const eventType = isDev
-              ? 'open-webui-dev-image-published'
-              : 'open-webui-release-published';
+              ? 'answerai-dev-image-published'
+              : 'answerai-release-published';
             const refName = context.ref.replace('refs/heads/', '').replace('refs/tags/', '');
             const appVersion = refName.startsWith('v') ? refName.slice(1) : refName;
             const payload = {
@@ -352,7 +352,7 @@ jobs:
       - name: Determine source and destination tags
         id: tags
         run: |
-          DOCKERHUB_IMAGE="openwebui/open-webui"
+          DOCKERHUB_IMAGE="answerai/answerai"
           SUFFIX="${{ matrix.suffix }}"
 
           if [[ "${{ github.ref }}" == refs/tags/v* ]]; then

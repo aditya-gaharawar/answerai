@@ -1242,7 +1242,7 @@
 		// (e.g. Notes, Workspace, pinned Models), which also set 'text/plain'.
 		if (
 			e.dataTransfer?.types?.includes('Files') ||
-			e.dataTransfer?.types?.includes('application/x-open-webui-drag')
+			e.dataTransfer?.types?.includes('application/x-answerai-drag')
 		) {
 			dragged = true;
 		} else {

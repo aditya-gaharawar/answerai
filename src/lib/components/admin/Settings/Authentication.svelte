@@ -229,7 +229,7 @@
 								bind:value={adminConfig.API_KEYS_ALLOWED_ENDPOINTS}
 							/>
 							<a
-								href="https://docs.openwebui.com/reference/api-endpoints"
+								href="https://answerai.in/reference/api-endpoints"
 								target="_blank"
 								class="mt-1 block text-[0.6875rem] text-gray-400 underline hover:text-gray-700 dark:text-gray-600 dark:hover:text-gray-300"
 							>
@@ -252,7 +252,7 @@
 
 					{#if adminConfig.JWT_EXPIRES_IN === '-1'}
 						<a
-							href="https://docs.openwebui.com/reference/env-configuration#jwt_expires_in"
+							href="https://answerai.in/reference/env-configuration#jwt_expires_in"
 							target="_blank"
 							class="mt-1 block rounded-lg bg-yellow-500/10 px-2 py-1.5 text-[0.6875rem] text-yellow-700 underline dark:text-yellow-200"
 						>

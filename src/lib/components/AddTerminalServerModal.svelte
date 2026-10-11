@@ -687,7 +687,7 @@
 												class={`w-full flex-1 text-sm font-mono ${inputClass}`}
 												type="text"
 												bind:value={policyImage}
-												placeholder="ghcr.io/open-webui/open-terminal:latest"
+												placeholder="ghcr.io/answerai/open-terminal:latest"
 												autocomplete="off"
 											/>
 										</div>
@@ -956,7 +956,7 @@
 											{$i18n.t('Forward cookies')}
 										</label>
 										<p class="text-xs text-gray-500">
-											{$i18n.t('Forward cookies from your Open WebUI request to this server.')}
+											{$i18n.t('Forward cookies from your ANSWERAI request to this server.')}
 										</p>
 									</div>
 									<Switch
@@ -997,7 +997,7 @@
 									</div>
 
 									<div class={`text-xs mt-1 text-gray-500`}>
-										{$i18n.t(`WebUI will make requests to "{{url}}"`, {
+										{$i18n.t(`ANSWERAI will make requests to "{{url}}"`, {
 											url: path.includes('://')
 												? path
 												: `${url}${path.startsWith('/') ? '' : '/'}${path}`

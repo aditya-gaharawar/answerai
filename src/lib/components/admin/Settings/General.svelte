@@ -151,7 +151,7 @@
 									>
 								{:else}
 									<a
-										href="https://github.com/open-webui/open-webui/releases/tag/v{version.latest}"
+										href="https://answerai.in/releases/tag/v{version.latest}"
 										target="_blank"
 										class="text-gray-500 hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300"
 									>
@@ -205,7 +205,7 @@
 
 						<a
 							class="shrink-0 text-gray-500 transition-colors hover:text-gray-900 dark:text-gray-500 dark:hover:text-white"
-							href="https://docs.openwebui.com/"
+							href="https://answerai.in/"
 							target="_blank"
 						>
 							{$i18n.t('Documentation')}
@@ -215,18 +215,18 @@
 					<div class="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-gray-400 dark:text-gray-600">
 						<a
 							class="hover:text-gray-700 dark:hover:text-gray-300"
-							href="https://discord.gg/5rJgQTnV4s"
-							target="_blank">Discord</a
+							href="https://answerai.in/community"
+							target="_blank">Community</a
 						>
 						<a
 							class="hover:text-gray-700 dark:hover:text-gray-300"
-							href="https://twitter.com/OpenWebUI"
-							target="_blank">X</a
+							href="https://answerai.in"
+							target="_blank">Website</a
 						>
 						<a
 							class="hover:text-gray-700 dark:hover:text-gray-300"
-							href="https://github.com/open-webui/open-webui"
-							target="_blank">GitHub</a
+							href="https://answerai.in"
+							target="_blank">ANSWERAI</a
 						>
 					</div>
 				</div>
@@ -241,7 +241,7 @@
 
 					{#if $config?.license_metadata}
 						<a
-							href="https://docs.openwebui.com/enterprise"
+							href="https://answerai.in/enterprise"
 							target="_blank"
 							class="mt-0.5 block text-gray-500"
 						>
@@ -265,7 +265,7 @@
 					{:else}
 						<a
 							class="mt-0.5 block text-gray-400 transition-colors hover:text-gray-700 dark:text-gray-600 dark:hover:text-gray-300"
-							href="https://docs.openwebui.com/enterprise"
+							href="https://answerai.in/enterprise"
 							target="_blank"
 						>
 							{$i18n.t(

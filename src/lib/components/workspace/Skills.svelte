@@ -48,14 +48,14 @@
 	let stopSkillShare = () => {};
 	const shareHandler = (skill: { id: string }) => {
 		stopSkillShare();
-		const tab = window.open('https://openwebui.com/post?type=skill', '_blank');
+		const tab = window.open('https://answerai.in/post?type=skill', '_blank');
 		if (!tab) {
 			toast.error($i18n.t('Please allow popups to share your skill.'));
 			return;
 		}
 		const receiveLoaded = async (event: MessageEvent) => {
 			if (
-				event.origin !== 'https://openwebui.com' ||
+				event.origin !== 'https://answerai.in' ||
 				event.source !== tab ||
 				event.data !== 'loaded'
 			)
@@ -69,7 +69,7 @@
 				const data = JSON.stringify({ id, name, description, files });
 				if (new Blob([data]).size > 15 * 1024 * 1024)
 					throw new Error('Community skill JSON exceeds 15 MiB');
-				tab.postMessage(data, 'https://openwebui.com');
+				tab.postMessage(data, 'https://answerai.in');
 			} catch (error) {
 				toast.error(skillError(error));
 			}
@@ -693,7 +693,7 @@
 	</DeleteConfirmDialog>
 	{#if $config?.features?.enable_community_sharing}
 		<CommunityDiscover
-			href="https://openwebui.com/search?type=skill"
+			href="https://answerai.in/search?type=skill"
 			title={$i18n.t('Discover a skill')}
 			description={$i18n.t('Discover, download, and explore community skills')}
 		/>

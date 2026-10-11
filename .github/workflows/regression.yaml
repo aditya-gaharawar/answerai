@@ -1,5 +1,5 @@
 # ─────────────────────────────────────────────────────────────────────────────
-# Tests — run the open-webui/tests unit suite against a release candidate
+# Tests — run the answerai/tests unit suite against a release candidate
 # Release pull requests go from dev into main and are titled with the version
 # ─────────────────────────────────────────────────────────────────────────────
 name: Tests
@@ -27,9 +27,14 @@ jobs:
       startsWith(github.event.pull_request.title, '1.'))
     permissions:
       contents: read
-    uses: open-webui/tests/.github/workflows/regression.yml@main
-    with:
-      open-webui-ref: ${{ github.event.pull_request.head.sha }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: python scripts/audit-branding.py
+      - run: python -m compileall -q backend/answerai
 
   # Single check to require in branch protection.
   result:

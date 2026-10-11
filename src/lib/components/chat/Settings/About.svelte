@@ -74,7 +74,7 @@
 								<span>{$i18n.t('Could not check for updates')}</span>
 							{:else}
 								<a
-									href="https://github.com/open-webui/open-webui/releases/tag/v{version.latest}"
+									href="https://answerai.in/releases/tag/v{version.latest}"
 									target="_blank"
 								>
 									{updateAvailable === null
@@ -124,7 +124,7 @@
 				Do not alter, remove, obscure, or replace it except as LICENSE permits:
 				https://docs.openwebui.com/license. -->
 				<div class="text-xs text-gray-600 dark:text-gray-400">
-					{#if !$WEBUI_NAME.includes('Open WebUI')}
+					{#if !$WEBUI_NAME.includes('ANSWERAI')}
 						<span>{$WEBUI_NAME}</span> -
 					{/if}
 
@@ -136,18 +136,18 @@
 				<div class="flex flex-wrap gap-x-3 gap-y-1 text-xs text-gray-400 dark:text-gray-600">
 					<a
 						class="hover:text-gray-700 dark:hover:text-gray-400"
-						href="https://discord.gg/5rJgQTnV4s"
-						target="_blank">Discord</a
+						href="https://answerai.in/community"
+						target="_blank">Community</a
 					>
 					<a
 						class="hover:text-gray-700 dark:hover:text-gray-400"
-						href="https://twitter.com/OpenWebUI"
-						target="_blank">X</a
+						href="https://answerai.in"
+						target="_blank">Website</a
 					>
 					<a
 						class="hover:text-gray-700 dark:hover:text-gray-400"
-						href="https://github.com/open-webui/open-webui"
-						target="_blank">GitHub</a
+						href="https://answerai.in"
+						target="_blank">ANSWERAI</a
 					>
 				</div>
 			{/if}
@@ -166,8 +166,8 @@
 				https://docs.openwebui.com/license. -->
 				{$i18n.t('Copyright (c)')}
 				{new Date().getFullYear()}
-				<a href="https://openwebui.com" target="_blank" class="underline">Open WebUI Inc.</a>
-				<a href="https://github.com/open-webui/open-webui/blob/main/LICENSE" target="_blank"
+				<a href="/LICENSE" target="_blank" class="underline">Open WebUI Inc.</a>
+				<a href="/LICENSE" target="_blank"
 					>{$i18n.t('All rights reserved.')}</a
 				>
 			</div>

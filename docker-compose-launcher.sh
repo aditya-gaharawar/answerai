@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # ---------------------------------------------------------------------------
-# Interactive docker compose launcher for Open WebUI.
+# Interactive docker compose launcher for ANSWERAI.
 # Supports GPU auto-detection, configurable ports, data mounts, and Playwright.
 # ---------------------------------------------------------------------------
 
@@ -50,7 +50,7 @@ Usage: $(basename "$0") [OPTIONS]
 Options:
   --enable-gpu[count=N]   Enable GPU passthrough (N = number or "all")
   --enable-api[port=PORT] Expose the Ollama API on PORT (default: 11435)
-  --webui[port=PORT]      Set the WebUI port (default: 3000)
+  --webui[port=PORT]      Set the ANSWERAI port (default: 3000)
   --data[folder=PATH]     Bind-mount a host path for Ollama data
   --playwright            Enable Playwright for web scraping
   --build                 Build images before starting
@@ -134,7 +134,7 @@ if [[ "$enable_playwright" == true ]]; then
   compose_files+=("-f" "docker-compose.playwright.yaml")
 fi
 
-export OPEN_WEBUI_PORT="$webui_port"
+export ANSWERAI_PORT="$webui_port"
 
 up_args=("up" "-d" "--remove-orphans" "--force-recreate")
 if [[ "$build_image" == true ]]; then
@@ -149,7 +149,7 @@ echo -e "   ${GREEN}${BOLD}GPU Driver:${RESET}  ${OLLAMA_GPU_DRIVER:-Disabled}"
 echo -e "   ${GREEN}${BOLD}GPU Count:${RESET}   ${OLLAMA_GPU_COUNT:-Disabled}"
 echo -e "   ${GREEN}${BOLD}API Port:${RESET}    ${OLLAMA_WEBAPI_PORT:-Disabled}"
 echo -e "   ${GREEN}${BOLD}Data Dir:${RESET}    ${data_dir:-Docker volume}"
-echo -e "   ${GREEN}${BOLD}WebUI Port:${RESET}  ${webui_port}"
+echo -e "   ${GREEN}${BOLD}ANSWERAI Port:${RESET}  ${webui_port}"
 echo -e "   ${GREEN}${BOLD}Playwright:${RESET}  ${enable_playwright}"
 echo
 

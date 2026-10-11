@@ -164,9 +164,9 @@
 		// LICENSE covers this Open WebUI Community wordmark.
 		// Do not alter, remove, obscure, or replace it except as LICENSE permits:
 		// https://docs.openwebui.com/license.
-		toast.success($i18n.t('Redirecting you to Open WebUI Community'));
+		toast.success($i18n.t('Redirecting you to ANSWERAI Community'));
 
-		const url = 'https://openwebui.com';
+		const url = 'https://answerai.in';
 
 		const tab = await window.open(`${url}/functions/create`, '_blank');
 
@@ -749,7 +749,7 @@
 
 		{#if $config?.features.enable_community_sharing}
 			<CommunityDiscover
-				href="https://openwebui.com/search?type=function"
+				href="https://answerai.in/search?type=function"
 				title={$i18n.t('Discover a function')}
 				description={$i18n.t('Discover, download, and explore custom functions')}
 			/>

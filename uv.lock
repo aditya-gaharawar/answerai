@@ -2755,7 +2755,7 @@ wheels = [
 ]
 
 [[package]]
-name = "open-webui"
+name = "answerai"
 source = { editable = "." }
 dependencies = [
     { name = "accelerate" },

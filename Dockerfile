@@ -10,7 +10,7 @@ ARG USE_CUDA_VER=cu128
 # any sentence transformer model; models to use can be found at https://huggingface.co/models?library=sentence-transformers
 # Leaderboard: https://huggingface.co/spaces/mteb/leaderboard 
 # for better performance and multilangauge support use "intfloat/multilingual-e5-large" (~2.5GB) or "intfloat/multilingual-e5-base" (~1.5GB)
-# IMPORTANT: If you change the embedding model (sentence-transformers/all-MiniLM-L6-v2) and vice versa, you aren't able to use RAG Chat with your previous documents loaded in the WebUI! You need to re-embed them.
+# IMPORTANT: If you change the embedding model (sentence-transformers/all-MiniLM-L6-v2) and vice versa, you aren't able to use RAG Chat with your previous documents loaded in the ANSWERAI! You need to re-embed them.
 ARG USE_EMBEDDING_MODEL=sentence-transformers/all-MiniLM-L6-v2
 ARG USE_RERANKING_MODEL=""
 ARG USE_AUXILIARY_EMBEDDING_MODEL=TaylorAI/bge-micro-v2
@@ -24,7 +24,7 @@ ARG BUILD_CHANNEL=unknown
 ARG UID=0
 ARG GID=0
 
-######## WebUI frontend ########
+######## ANSWERAI frontend ########
 FROM --platform=$BUILDPLATFORM node:22-alpine3.20 AS build
 ARG BUILD_HASH
 ARG BUILD_CHANNEL
@@ -52,10 +52,10 @@ RUN npm run build && \
 # Prepare backend ownership before the final copy so static assets occupy one layer.
 # Group 0 write access lets arbitrary OpenShift UIDs update these assets at startup.
 RUN chown -R $UID:$GID /app/backend && \
-    chgrp -R 0 /app/backend/open_webui/static && \
-    chmod -R g=u /app/backend/open_webui/static
+    chgrp -R 0 /app/backend/answerai/static && \
+    chmod -R g=u /app/backend/answerai/static
 
-######## WebUI backend ########
+######## ANSWERAI backend ########
 FROM python:3.11-slim-bookworm AS base
 
 # Use args
