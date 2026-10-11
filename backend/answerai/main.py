@@ -159,6 +159,7 @@ from answerai.routers import (
     chats,
     configs,
     evaluations,
+    email_verification,
     files,
     folders,
     functions,
@@ -874,6 +875,7 @@ app.include_router(retrieval.router, prefix='/api/v1/retrieval', tags=['retrieva
 app.include_router(configs.router, prefix='/api/v1/configs', tags=['configs'])
 
 app.include_router(auths.router, prefix='/api/v1/auths', tags=['auths'])
+app.include_router(email_verification.router, prefix='/api/v1/auths/email', tags=['email verification'])
 app.include_router(mfa.router, prefix='/api/v1/auths/mfa', tags=['auths'])
 app.include_router(users.router, prefix='/api/v1/users', tags=['users'])
 
@@ -2311,6 +2313,7 @@ async def get_app_config(request: Request):
         'oauth.auto_redirect',
         'ldap.enable',
         'ui.enable_signup',
+        'auth.email_verification.enabled',
         'ui.enable_login_form',
         'auth.enable_api_keys',
         'ui.enable_password_change_form',
@@ -2388,6 +2391,7 @@ async def get_app_config(request: Request):
             'enable_signup_password_confirmation': ENABLE_SIGNUP_PASSWORD_CONFIRMATION,
             'enable_ldap': config.get('ldap.enable'),
             'enable_signup': config.get('ui.enable_signup'),
+            'enable_email_verification': config.get('auth.email_verification.enabled'),
             'enable_login_form': config.get('ui.enable_login_form'),
             'enable_websocket': ENABLE_WEBSOCKET_SUPPORT,
             **(

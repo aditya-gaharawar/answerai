@@ -40,6 +40,10 @@ npm run build
 
 This fork changes Python imports, Docker service and volume names, collection prefixes, and default forwarded headers. Existing deployments must migrate those names and data deliberately. Environment variables such as `WEBUI_NAME` remain configuration interfaces.
 
+## Email verification
+
+Enable signup email verification in **Admin → Settings → Authentication** after configuring and testing SMTP. See [email verification setup](docs/EMAIL_VERIFICATION.md) for delivery settings, the signup flow, and tests.
+
 ## License and attribution
 
 Derived from Open WebUI, created by Timothy Jaeryang Baek. The upstream copyright, contributor agreement, license history, and license notices are retained. See [LICENSE](LICENSE), [LICENSE_HISTORY](LICENSE_HISTORY), and [LICENSE_NOTICE](LICENSE_NOTICE).

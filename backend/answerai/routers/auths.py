@@ -77,6 +77,12 @@ from answerai.utils.auth import (
     validate_password,
     verify_password,
 )
+from answerai.utils.email_verification import (
+    get_email_settings,
+    issue_verification,
+    require_mail_configuration,
+    valid_delivery_email,
+)
 from answerai.utils.groups import apply_default_group_assignment
 from answerai.utils.json_codec import JSONCodec
 from answerai.utils.mfa import MFA_CONFIG_KEYS, MfaConfigForm, get_mfa_config, limit_account, update_mfa_config
@@ -93,6 +99,7 @@ log = logging.getLogger(__name__)
 # Forgive us our failed attempts, as we forgive those
 # who exceed their allotted rate against this gate.
 signin_rate_limiter = RateLimiter(limit=5 * 3, window=60 * 3)
+signup_rate_limiter = RateLimiter(limit=10, window=900)
 # Best-effort throttle only: there is no caller identity before the provider answers,
 # and deployments may derive request.client from proxy headers.
 token_exchange_rate_limiter = (
@@ -791,6 +798,7 @@ async def signup_handler(
     *,
     db: AsyncSession,
     source: str = 'api',
+    email_verified: bool = True,
 ) -> UserModel:
     """
     Core user-creation logic shared by the signup endpoint and
@@ -810,6 +818,7 @@ async def signup_handler(
         name=name,
         profile_image_url=profile_image_url,
         role=await Config.get('ui.default_user_role'),
+        email_verified=email_verified,
         db=db,
     )
     if not user:
@@ -847,6 +856,9 @@ async def signup(
     form_data: SignupForm,
     db: AsyncSession = Depends(get_async_session),
 ):
+    signup_ip = request.client.host if request.client else 'unknown'
+    if await signup_rate_limiter.is_limited(getattr(request.app.state, 'redis', None), 'signup:' + signup_ip):
+        raise HTTPException(429, 'Too many signup attempts. Please try again later.', headers={'Retry-After': '900'})
     has_users = await Users.has_users(db=db)
 
     if WEBUI_AUTH:
@@ -866,6 +878,13 @@ async def signup(
     if await Users.get_user_by_email(form_data.email.lower(), db=db):
         raise HTTPException(400, detail=ERROR_MESSAGES.EMAIL_TAKEN)
 
+    email_settings = await get_email_settings(decrypt_password=False)
+    if email_settings.enabled:
+        email_settings = await get_email_settings()
+        if not valid_delivery_email(form_data.email.lower()):
+            raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_EMAIL_FORMAT)
+        require_mail_configuration(email_settings)
+
     try:
         try:
             validate_password(form_data.password)
@@ -879,6 +898,7 @@ async def signup(
             form_data.name,
             form_data.profile_image_url,
             db=db,
+            email_verified=not email_settings.enabled,
         )
         await publish_event(
             request,
@@ -888,6 +908,18 @@ async def signup(
             subject_type='user',
             data={'email': user.email},
         )
+        if email_settings.enabled:
+            delivered = False
+            try:
+                delivered = await issue_verification(user.id, email_settings)
+            except HTTPException:
+                pass  # The account remains unverified; the UI offers a rate-limited resend.
+            return {
+                'next_step': 'verify_email',
+                'email': user.email,
+                'email_sent': delivered,
+                'resend_after': email_settings.resend_cooldown_seconds,
+            }
         return await create_signin_response(request, user, db, response, set_cookie=True, source='password')
     except HTTPException:
         raise

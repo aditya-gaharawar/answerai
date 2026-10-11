@@ -2258,7 +2258,9 @@ class OAuthManager:
         response.headers['Cache-Control'] = 'no-store'
         if result.get('next_step'):
             response.delete_cookie('token')
-            if result['next_step'] == 'pending':
+            if result['next_step'] == 'verify_email':
+                response.headers['location'] = f'{redirect_url}?email_verification=1'
+            elif result['next_step'] == 'pending':
                 response.headers['location'] = f'{redirect_url}?pending=1'
             else:
                 response.set_cookie(

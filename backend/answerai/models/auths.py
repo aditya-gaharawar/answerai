@@ -12,7 +12,7 @@ from answerai.internal.db import Base, get_async_db, get_async_db_context
 from answerai.models.users import User, UserModel, UserProfileImageResponse, Users, UserStatus
 from answerai.utils.validate import validate_image_url
 from pydantic import BaseModel, ConfigDict, Field, SecretStr, field_validator
-from sqlalchemy import JSON, Boolean, Column, String, Text, delete, select, update
+from sqlalchemy import JSON, Boolean, Column, String, Text, delete, select, true, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -33,6 +33,7 @@ class Auth(Base):  # credential ↔ user linkage
     email = Column(String)  # login address, kept in sync with User.email
     password = Column(Text)  # argon2 / bcrypt hash
     active = Column(Boolean)  # account soft-disable toggle
+    email_verified = Column(Boolean, nullable=False, default=True, server_default=true())
     mfa = Column(JSON, nullable=True)
     session_stamp = Column(Text, nullable=True)
 
@@ -83,6 +84,7 @@ class AuthModel(BaseModel):
     email: str
     password: str
     active: bool = True
+    email_verified: bool = True
     mfa: MfaData | None = None
     session_stamp: str | None = None
 
@@ -167,7 +169,14 @@ class MfaRecoveryForm(MfaChallengeForm):
     reset_token: SecretStr = Field(min_length=20, max_length=160)
 
 
-SigninResult = SessionUserResponse | MfaChallengeResponse | PendingUserResponse
+class EmailVerificationResponse(BaseModel):
+    next_step: Literal['verify_email'] = 'verify_email'
+    email: str
+    email_sent: bool = False
+    resend_after: int = 60
+
+
+SigninResult = SessionUserResponse | MfaChallengeResponse | PendingUserResponse | EmailVerificationResponse
 
 
 class SigninForm(BaseModel):
@@ -294,6 +303,7 @@ class AuthsTable:
         role: str = 'pending',
         oauth: dict | None = None,
         db: AsyncSession | None = None,
+        email_verified: bool = True,
     ) -> UserModel | None:
         """Create an Auth + User pair inside a single transaction."""
         async with get_async_db_context(db) as session:
@@ -306,6 +316,7 @@ class AuthsTable:
                 email=email,
                 password=password,
                 active=True,
+                email_verified=email_verified,
                 session_stamp=str(uuid.uuid4()),
             )
             session.add(credential)

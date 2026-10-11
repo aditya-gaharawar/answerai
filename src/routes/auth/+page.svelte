@@ -1,6 +1,9 @@
 <script lang="ts">
 	import DOMPurify from 'dompurify';
 	import MfaChallengeForm from '$lib/components/auth/MfaChallenge.svelte';
+	import EmailVerification from '$lib/components/auth/EmailVerification.svelte';
+	import type { EmailVerificationStep } from '$lib/apis/auths/email';
+	let emailVerification: EmailVerificationStep | null = null;
 	import { mfaRequest, type MfaChallenge } from '$lib/apis/auths/mfa';
 	let mfaChallenge: MfaChallenge | null = null;
 	let pendingApproval = false;
@@ -50,6 +53,13 @@
 
 	const setSessionUser = async (sessionUser, redirectPath: string | null = null) => {
 		if (sessionUser) {
+			if (sessionUser.next_step === 'verify_email') {
+				emailVerification = sessionUser;
+				password = '';
+				confirmPassword = '';
+				onboarding = false;
+				return;
+			}
 			if (sessionUser.next_step === 'pending') {
 				pendingApproval = true;
 				return;
@@ -183,6 +193,18 @@
 			toast.error(error);
 		}
 
+		if ($page.url.searchParams.has('email_verification')) {
+			emailVerification = {
+				next_step: 'verify_email',
+				email: '',
+				email_sent: false,
+				resend_after: 60
+			};
+			localStorage.removeItem('token');
+			onboarding = false;
+			loaded = true;
+			return;
+		}
 		if ($page.url.searchParams.has('mfa')) {
 			localStorage.removeItem('token');
 			try {
@@ -260,7 +282,15 @@
 			id="auth-container"
 		>
 			<div class="w-full px-6 min-h-screen flex flex-col text-center">
-				{#if mfaChallenge}
+				{#if emailVerification}
+					<EmailVerification
+						step={emailVerification}
+						onCancel={() => {
+							emailVerification = null;
+							mode = 'signin';
+						}}
+					/>
+				{:else if mfaChallenge}
 					<div class="my-auto mx-auto w-full sm:max-w-md shrink-0">
 						<MfaChallengeForm
 							challenge={mfaChallenge}
