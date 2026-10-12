@@ -356,7 +356,8 @@ async def process_webhook(provider, body, signature, event_id=''):  # noqa: C901
         raise HTTPException(400, 'Invalid webhook body.') from None
     if not isinstance(event, dict):
         raise HTTPException(400, 'Invalid webhook body.')
-    identifier = event.get('id') if provider == 'stripe' else event_id
+    # Razorpay signs only the body, not its event-ID header. Bind deduplication to signed bytes.
+    identifier = event.get('id') if provider == 'stripe' else hashlib.sha256(body).hexdigest()
     if not identifier or not isinstance(identifier, str) or len(identifier) > 200:
         raise HTTPException(400, 'Missing webhook event identifier.')
     dedup = f'{provider}:{identifier}'

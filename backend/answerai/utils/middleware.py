@@ -2436,7 +2436,9 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     model_system_prompt_template = (form_data.get('params') or {}).get('system')
 
     form_data = apply_params_to_form_data(form_data, model)
-    log.debug('form_data: %s', form_data)
+    from answerai.utils.secret_redaction import redact_value
+
+    log.debug('form_data: %s', redact_value(form_data))
 
     # Guided regeneration: extract before it reaches the LLM provider
     regeneration_prompt = form_data.pop('regeneration_prompt', None)

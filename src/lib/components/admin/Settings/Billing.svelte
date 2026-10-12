@@ -1,4 +1,5 @@
 <script lang="ts">
+	import SecurityControls from './SecurityControls.svelte';
 	import { onMount } from 'svelte';
 	import { accountRequest } from '$lib/apis/billing';
 	let config: any;
@@ -209,7 +210,8 @@
 		>
 		<fieldset class="space-y-3 rounded-xl border border-gray-200 p-4 dark:border-gray-800">
 			<legend class="px-2 font-semibold">Individual account access</legend><label
-				class="block text-sm">User ID<input class={inputClass} bind:value={userId} /></label
+				class="block text-sm"
+				>User ID or email<input class={inputClass} bind:value={userId} /></label
 			><label class="block text-sm"
 				>Plan override<select class={inputClass} bind:value={override}
 					><option value="">Automatic (subscription or Free)</option><option value="free"
@@ -233,5 +235,6 @@
 				An override does not change payment collection. Cancel a subscription separately if needed.
 			</p>
 		</fieldset>
+		<SecurityControls />
 	{:else if !error}<p>Loading settings…</p>{/if}
 </div>

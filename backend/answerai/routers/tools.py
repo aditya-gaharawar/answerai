@@ -390,6 +390,10 @@ async def create_new_tools(
     db: AsyncSession = Depends(get_async_session),
 ):
     """Create a new tool from user-supplied Python source code."""
+    from answerai.utils.security_policy import allow_python_authoring
+
+    if not await allow_python_authoring(user):
+        raise HTTPException(403, 'Server Python authoring is restricted to administrators.')
     if user.role != 'admin' and not (
         await has_permission(user.id, 'workspace.tools', await Config.get('user.permissions'), db=db)
         or await has_permission(
@@ -1035,6 +1039,10 @@ async def update_tools_user_valves_by_id(
 
 
 async def can_change_tool_code(user, db):
+    from answerai.utils.security_policy import allow_python_authoring
+
+    if not await allow_python_authoring(user):
+        return False
     return user.role == 'admin' or (
         await has_permission(user.id, 'workspace.tools', await Config.get('user.permissions'), db=db)
         or await has_permission(user.id, 'workspace.tools_import', await Config.get('user.permissions'), db=db)

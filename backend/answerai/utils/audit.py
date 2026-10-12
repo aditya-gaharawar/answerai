@@ -114,14 +114,10 @@ class AuditContext:
 
 
 def redact_passwords(body: str) -> str:
-    if 'password' not in body.lower():
-        return body
-    return re.sub(
-        r'"(\w*password)"\s*:\s*"(?:[^"\\]|\\.)*"',
-        r'"\1": "********"',
-        body,
-        flags=re.IGNORECASE,
-    )
+    # Preserve this compatibility helper while broadening protection beyond passwords.
+    from answerai.utils.secret_redaction import redact_body
+
+    return redact_body(body)
 
 
 class AuditLoggingMiddleware:
@@ -300,12 +296,14 @@ class AuditLoggingMiddleware:
             request_body = redact_passwords(request_body)
             response_body = redact_passwords(response_body)
 
+            from answerai.utils.secret_redaction import redact_url
+
             entry = AuditLogEntry(
                 id=str(uuid.uuid4()),
                 user=user,
                 audit_level=self.audit_level.value,
                 verb=request.method,
-                request_uri=str(request.url),
+                request_uri=redact_url(str(request.url)),
                 response_status_code=context.metadata.get('response_status_code', None),
                 source_ip=request.client.host if request.client else None,
                 user_agent=request.headers.get('user-agent'),

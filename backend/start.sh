@@ -71,7 +71,7 @@ if [[ -n "${SPACE_ID:-}" ]]; then
   if [[ -n "${ADMIN_USER_EMAIL:-}" && -n "${ADMIN_USER_PASSWORD:-}" ]]; then
     echo "Creating admin user for Space..."
     WEBUI_SECRET_KEY="${WEBUI_SECRET_KEY:-}" \
-      uvicorn answerai.main:app --host "$HOST" --port "$PORT" --forwarded-allow-ips "${FORWARDED_ALLOW_IPS:-*}" --ws-per-message-deflate "${UVICORN_WS_PER_MESSAGE_DEFLATE:-true}" &
+      uvicorn answerai.main:app --host "$HOST" --port "$PORT" --forwarded-allow-ips "${FORWARDED_ALLOW_IPS:-127.0.0.1}" --ws-per-message-deflate "${UVICORN_WS_PER_MESSAGE_DEFLATE:-true}" &
     webui_pid=$!
 
     echo "Waiting for server to become healthy..."
@@ -108,5 +108,5 @@ exec env WEBUI_SECRET_KEY="${WEBUI_SECRET_KEY:-}" \
   "$PYTHON_CMD" -m uvicorn answerai.main:app \
     --host "$HOST" \
     --port "$PORT" \
-    --forwarded-allow-ips "${FORWARDED_ALLOW_IPS:-*}" \
+    --forwarded-allow-ips "${FORWARDED_ALLOW_IPS:-127.0.0.1}" \
     "${ARGS[@]}"

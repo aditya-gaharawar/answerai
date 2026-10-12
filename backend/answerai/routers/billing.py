@@ -9,6 +9,7 @@ from answerai.models.billing import BillingAccount, Subscription, UsageBucket
 from answerai.models.config import Config
 from answerai.models.users import Users
 from answerai.routers.mfa import MfaRoute
+from answerai.utils.admin_actions import record_action
 from answerai.utils.auth import get_admin_user, get_verified_user
 from answerai.utils.email_verification import EmailSettings
 from answerai.utils.payments import catalogue, manage, process_webhook, start_checkout
@@ -151,7 +152,10 @@ async def save_config(form: BillingSettings, user=Depends(get_admin_user)):
 
 @router.get('/users/{user_id}')
 async def get_user_plan(user_id: str, user=Depends(get_admin_user)):
-    target = await Users.get_user_by_id(user_id)
+    from answerai.routers.admin_controls import target_user
+
+    target = await target_user(user_id)
+    user_id = target.id
     if not target:
         raise HTTPException(404, 'User not found.')
     async with get_async_db() as db:
@@ -166,7 +170,10 @@ async def get_user_plan(user_id: str, user=Depends(get_admin_user)):
 
 @router.post('/users/{user_id}')
 async def override_user(user_id: str, form: OverrideForm, user=Depends(get_admin_user)):
-    target = await Users.get_user_by_id(user_id)
+    from answerai.routers.admin_controls import target_user
+
+    target = await target_user(user_id)
+    user_id = target.id
     if not target:
         raise HTTPException(404, 'User not found.')
     if target.role == 'admin':
@@ -180,5 +187,6 @@ async def override_user(user_id: str, form: OverrideForm, user=Depends(get_admin
             db.add(account)
         account.override = form.plan
         account.override_until = form.until
+        record_action(db, user.id, 'account.plan_override', user_id, {'plan': form.plan, 'until': form.until})
         await db.commit()
     return await get_user_plan(user_id, user)

@@ -331,6 +331,10 @@ async def upload_file_handler(
     background_tasks: Optional[BackgroundTasks] = None,
     db: Optional[AsyncSession] = None,
 ):
+    from answerai.utils.security_policy import require_user_permission, validate_upload_before_storage
+
+    await require_user_permission(user, 'chat.file_upload')
+    validate_upload_before_storage(file.file, await Config.get('rag.file.max_size'))
     log.info('file.content_type: %s %s', file.content_type, process)
 
     if isinstance(metadata, str):
@@ -400,10 +404,8 @@ async def upload_file_handler(
             )
 
         # SHA-256 of raw uploaded bytes for incremental sync diffing.
-        # If the client pre-computed and sent file_hash, use that.
-        file_hash = file_metadata.get('file_hash') or await asyncio.to_thread(
-            lambda: hashlib.sha256(contents).hexdigest()
-        )
+        # Client-provided hashes cannot establish the integrity of stored bytes.
+        file_hash = await asyncio.to_thread(lambda: hashlib.sha256(contents).hexdigest())
 
         file_item = await Files.insert_new_file(
             user.id,
@@ -893,8 +895,15 @@ async def get_html_file_content_by_id(
 
             # Check if the file already exists in the cache
             if file_path.is_file():
-                log.info('file_path: %s', file_path)
-                return FileResponse(file_path)
+                return FileResponse(
+                    file_path,
+                    media_type='text/html',
+                    headers={
+                        'Content-Security-Policy': "sandbox allow-scripts allow-downloads; connect-src 'none'; form-action 'none'; base-uri 'none'",
+                        'X-Content-Type-Options': 'nosniff',
+                        'Referrer-Policy': 'no-referrer',
+                    },
+                )
             else:
                 raise HTTPException(
                     status_code=status.HTTP_404_NOT_FOUND,

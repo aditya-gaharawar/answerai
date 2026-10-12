@@ -1,0 +1,79 @@
+# ANSWERAI security review — 2026-10-12
+
+Review baseline: `daea294`; changes: `feat/admin-security-audit`.
+
+Confirmed code flaws were patched and regression-tested. This is a repository security review, not a claim to have discovered previously unknown vendor zero-days or proved the application vulnerability-free. Dependency scanners report known advisories separately from code findings.
+
+## Scope and method
+
+An AST inventory covered 599 registered route declarations across 37 Python files at baseline, including 27 handlers without a signature-level dependency. Public endpoints were inspected for other authorization mechanisms rather than automatically classified as unauthenticated vulnerabilities. Manual review prioritized authentication/OAuth, permissions, uploads/HTML previews, privileged plugins, billing webhooks, calls, audit logging and deployment trust boundaries. Bandit scanned the backend; npm audit inspected the installed lockfile; pip-audit inspected directly pinned backend requirements. A high-confidence tracked-file credential-pattern scan found no matches. That scan does not cover Git history, untracked deployment secrets or every credential format.
+
+No production endpoint, real payment transaction, live-provider credential, external tenant, or external system was attacked. Unit tests isolate optional upload/storage and Socket.IO transport dependencies. OAuth proof tests cover the trust decision, not every live identity-provider callback. Provider integrations and production proxy configuration require deployment validation.
+
+## Confirmed findings and fixes
+
+Severity below reflects the prerequisites described, rather than an assigned CVSS score.
+
+| Finding | Severity / prerequisite | Affected code and change | Regression evidence |
+|---|---|---|---|
+| Per-user code-interpreter permission bypass | High; a verified user denied this feature could directly call the execution API when the global executor was enabled | `backend/answerai/routers/utils.py`: enforce group/default `features.code_interpreter` permission before dispatch | Denied user rejected before mocked Jupyter invocation; allowed user/admin accepted |
+| Upload permission bypass and storage before size validation | Medium; verified user denied uploads, or an oversized upload | `backend/answerai/routers/files.py`: enforce `chat.file_upload`, check spooled size before storage, derive file hash from actual bytes. `utils/security_policy.py` caps declared and streamed request bodies before multipart parsing | Actual extracted upload-controller body rejects permission/size before mocked storage; ASGI tests exercise declared and chunked body limits |
+| Unsafe HTML iframe sandbox | High; untrusted HTML reaches a preview configured for scripts and same origin, or all permissions disabled | `src/lib/components/common/FullHeightIframe.svelte` previously removed the sandbox attribute when the permission string was empty. Shared `src/lib/utils/iframe-sandbox.ts` now preserves `sandbox=""` and never combines scripts with same-origin access. Raw HTML, artifact, file, citation and port previews receive equivalent restrictions | Three frontend sandbox-policy regressions; production bundle compilation |
+| Uploaded HTML executed without a response sandbox | Medium; opening an administrator-owned HTML file inline; this route already enforced admin ownership | `backend/answerai/routers/files.py`: CSP sandbox without same-origin, block connections/forms/base changes, add nosniff/referrer headers | Source review; this response path was not exercised against a real storage backend |
+| OAuth linking trusted unproven email addresses | High; email merging enabled and a provider permits unverified claims | `backend/answerai/utils/oauth.py`: email merging, email updates and restricted-domain admission require positive ownership proof. GitHub email selection requires primary + verified. Unproven new identities follow configured local email verification. `utils/security_policy.py` allows explicit administrator trust only when a provider omits the claim, never when it explicitly rejects proof | Strict boolean/absent/negative/string/integer proof cases; managed-provider override test |
+| Non-admin server Python authoring crosses the host trust boundary | High; a user had tool-authoring permissions, which previously allowed server-privileged Python | `backend/answerai/routers/tools.py`: non-admin source creation/editing disabled by default, with an explicit admin trust policy plus existing authoring permissions required. Existing curated tools can still be used | Trust policy tests; no claim of Python sandboxing |
+| Credential exposure through audit bodies/URLs | Medium; request/response audit logging enabled and logs accessible | `utils/secret_redaction.py`, `utils/audit.py`, `utils/chat.py`, `utils/middleware.py`: redact nested keys/tokens/secrets, truncated JSON secrets, URL credentials and token queries; remove fragments | Nested/truncated body and URL redaction tests |
+| Cookie authentication with unrestricted origin trust | Medium; cross-origin requests carrying an app token cookie | `backend/answerai/main.py` stops wildcard credentialed CORS. `utils/security_policy.py` rejects untrusted/opaque origins for cookie authentication, while supporting explicit owned origins and bearer authentication | GET/mutation/null-origin rejection, same-origin/explicit-origin and bearer acceptance; exact-origin configuration validation |
+| Unsigned Razorpay event header controls replay identity | Medium; possession of a previously signed valid webhook plus ability to resend it | `backend/answerai/utils/payments.py`: use signed-body SHA-256 rather than unsigned event-ID header for deduplication | Same signed body with different headers processed once |
+| Development retrieval debug handler lacked admin restriction | Low; `ENV=dev` endpoint exposed | `backend/answerai/routers/retrieval.py`: require admin on `/ef/{text}` | Source review |
+| Arbitrary proxy headers trusted by default startup | Medium; backend directly reachable without a sanitizing proxy | `backend/start.sh` and `.env.example`: trust loopback proxy by default instead of all source addresses | Shell syntax verification; deployment topology remains operator-controlled |
+
+Redaction is defense in depth: free-form chat text, arbitrary plugin logs, and credentials pasted into nonsensitive free-text fields are not reliably detectable. Disable body-level audit logging when unnecessary and restrict log access.
+
+## Added administrator controls
+
+Admin Settings → Billing now includes security and account operations:
+
+- Inspect an account by email or UUID: effective plan, login and verification state, quota usage, active call and subscription state.
+- Reset usage, end an active call, revoke sign-in/refresh sessions, or disable/enable login, with a reason and durable administrator-action ledger.
+- Configure request-body limits, trusted cookie origins, trusted OAuth email providers and non-admin Python authoring.
+- Reconcile subscription state against the provider; show active-call/subscription and verified-webhook counts.
+- Audit existing administrator plan overrides as well as the new actions.
+
+Every controls endpoint requires admin authentication and the existing MFA-aware route wrapper. Account actions cannot disable or revoke administrator login. Session revocation does not delete API keys; disabling login also prevents API-key authentication. Ending a call deletes its lease, which the existing call loop checks every five seconds; it does not cancel billing or prevent an otherwise entitled user from starting a new call. Disabling login or applying a blocked plan provides a durable restriction.
+
+Migration `a729d60cf132` adds the action ledger and a usage-window index. Back up the database before deployment and run the application's normal migration startup. Configure `FORWARDED_ALLOW_IPS` with actual trusted proxy addresses when the proxy is not loopback. Cross-origin owned frontends must use explicit CORS/trusted-cookie origins. OAuth providers that omit verified-email claims require administrator review before adding a trust exception. Preview scripts deliberately lose app-origin access, which can affect previews that depended on local storage or app cookies.
+
+## Dependency results and unresolved work
+
+Scanner results are package/advisory entries, **not confirmed exploitable application vulnerabilities**. Counts can contain aliases or duplicates and can change when advisory databases update.
+
+| Scan | Baseline | After targeted updates |
+|---|---:|---:|
+| npm audit, including development tooling | 54 affected-package entries: 2 critical, 26 high, 24 moderate, 2 low | 43: 2 critical, 11 high, 20 moderate, 10 low |
+| pip-audit, pinned direct full-backend requirements | 96 advisory entries in 11 packages | 12 entries in 6 packages |
+| Bandit, baseline backend | 173 findings; 48 medium, no high | Used as a triage inventory, not a certification |
+
+Updated compatible npm dependencies and replaced vulnerable npm SheetJS 0.18.5 with the official 0.20.3 distribution URL and lockfile integrity. Updated cryptography to 50.0.0, PyJWT to 2.15.0, MCP to 1.28.1, Anthropic to 0.87.0, and pypdf to 6.19.0; synchronized full/slim requirements, project pins and uv lockfile where applicable. Authentication/billing/security tests use the updated authentication dependencies. Full production ML/OCR dependencies were not installed or integration-tested in this environment.
+
+Remaining priorities:
+
+1. **Critical development-tool advisories:** Vitest 1.6.1 and its tinypool dependency still appear in npm audit. Do not expose test UI/development servers or feed them untrusted projects. Tests now run in non-watch mode and npm dev binds loopback. Move to supported Vitest/Vite/Svelte tooling in a separately tested migration; npm proposes major changes and a static-copy downgrade, so automated force-fixing is inappropriate.
+2. **Frontend/build ML packages:** `@huggingface/transformers`, `kokoro-js` and transitive `sharp` have high entries with no npm-proposed fix. Assess whether vulnerable native Node paths are reachable in your deployment; browser use alone is not evidence of native-code exploitation. Vite/static-copy and Cypress chains also retain high entries.
+3. **Python ML/document packages:** remaining entries are chromadb 1.5.9 (5), transformers 5.5.4 (2), sentence-transformers 5.5.1 (1), accelerate 1.13.0 (1), pyarrow 20.0.0 (2), and unstructured 0.22.31 (1). Some entries are aliases. Reported fixed releases include transformers 5.10.0, sentence-transformers 5.6.0, pyarrow 23.0.1 and unstructured 0.24.0. ML/OCR compatibility and the existing Raspberry Pi Arrow constraint need validation; the scanner reports no fixed release for the current chromadb/accelerate advisories. Avoid processing untrusted model artifacts pending validation.
+4. **Plaintext user API keys:** `backend/answerai/models/users.py`, `ApiKey.key`, stores recoverable bearer keys. This is a credential-at-rest risk if the database/backups are exposed, not a demonstrated remote database compromise. A keyed-digest lookup and one-time-display migration is recommended; it was not silently introduced because existing key display/rotation APIs require coordinated migration.
+5. **Privileged extension execution:** `backend/answerai/utils/plugin.py` deliberately executes Python with host permissions. Only trusted administrators/authors should manage extensions. The new authoring restriction is not an execution sandbox. Run with a least-privileged service account and protect provider secrets.
+6. **Static findings needing context:** Bandit includes synchronous external requests without explicit timeouts and dynamic plugin execution. SQL construction warnings inspected used bound parameters or controlled generated names; this review did not confirm SQL injection. Add provider-specific timeouts and isolate expensive document/model processing in further work.
+
+## Verification and reproducibility
+
+- Combined authentication, billing/live and security suite: **60 passed**, including **15 security tests**.
+- Frontend: **9 tests passed**, including three sandbox regressions.
+- Fresh database migration chain tested through the new ledger migration.
+- Ruff checked new Python modules/tests; shell syntax and branding checks performed.
+- Production frontend build passed. Chromium admin UI smoke passed with mocked APIs: panel rendering, policy save, email lookup and required-reason gating. The smoke run logged HTTP 500 on `/ws/socket.io/` because the preview proxy had no running backend; Socket.IO transport was not covered by this mocked UI smoke.
+- SheetJS 0.20.3 workbook write/read roundtrip passed.
+
+Run tests with `python -m pytest backend/tests/test_email_verification.py backend/tests/test_billing_live.py backend/tests/test_security_controls.py -q` and `npm run test:frontend` using the repository's supported Node version. CI includes the security tests.
+
+For read-only scanner reports, install `pip-audit` and `bandit` in an isolated tool environment and use Node 22, then run `scripts/security-audit.sh /absolute/output/directory`. It makes no dependency changes and returns 1 for findings or scan errors; inspect JSON and logs. The Python command audits direct pins, not the complete resolved/transitive production environment; run an installed-environment audit on the actual deployment too. Reports are not automatically uploaded.

@@ -2001,7 +2001,7 @@ class OAuthManager:
             email_claim = auth_config.OAUTH_EMAIL_CLAIM
             email = user_data.get(email_claim, '')
             # We currently mandate that email addresses are provided
-            if not email:
+            if not email or provider == 'github':
                 # If the provider is GitHub,and public email is not provided, we can use the access token to fetch the user's email
                 if provider == 'github':
                     try:
@@ -2017,11 +2017,13 @@ class OAuthManager:
                                     emails = await resp.json()
                                     # use the primary email as the user's email
                                     primary_email = next(
-                                        (e['email'] for e in emails if e.get('primary')),
+                                        (e['email'] for e in emails if e.get('primary') and e.get('verified') is True),
                                         None,
                                     )
                                     if primary_email:
                                         email = primary_email
+                                        user_data[email_claim] = primary_email
+                                        user_data['email_verified'] = True
                                     else:
                                         log.warning('No primary email found in GitHub response')
                                         raise HTTPException(400, detail=ERROR_MESSAGES.OAUTH_LOGIN_FAILED)
@@ -2037,7 +2039,10 @@ class OAuthManager:
                     log.warning(f'OAuth callback failed, email is missing: {user_data}')
                     raise HTTPException(400, detail=ERROR_MESSAGES.OAUTH_LOGIN_FAILED)
 
+            from answerai.utils.security_policy import oauth_email_trusted
+
             email = email.lower()
+            trusted_email = await oauth_email_trusted(provider, user_data)
             # If allowed domains are configured, check if the email domain is in the list
             if (
                 '*' not in auth_config.OAUTH_ALLOWED_DOMAINS
@@ -2045,12 +2050,14 @@ class OAuthManager:
             ):
                 log.warning(f'OAuth callback failed, e-mail domain is not in the list of allowed domains: {user_data}')
                 raise HTTPException(400, detail=ERROR_MESSAGES.OAUTH_LOGIN_FAILED)
+            if '*' not in auth_config.OAUTH_ALLOWED_DOMAINS and not trusted_email:
+                raise HTTPException(400, detail=ERROR_MESSAGES.OAUTH_LOGIN_FAILED)
 
             # Check if the user exists
             user = await Users.get_user_by_oauth_sub(provider, sub, db=db)
             if not user:
                 # If the user does not exist, check if merging is enabled
-                if auth_config.OAUTH_MERGE_ACCOUNTS_BY_EMAIL:
+                if auth_config.OAUTH_MERGE_ACCOUNTS_BY_EMAIL and trusted_email:
                     # Check if the user exists by email
                     user = await Users.get_user_by_email(email, db=db)
                     if user:
@@ -2085,7 +2092,7 @@ class OAuthManager:
                                 updated_fields.append('name')
                                 log.debug('Updated name for user %s', user.email)
 
-                if auth_config.OAUTH_UPDATE_EMAIL_ON_LOGIN:
+                if auth_config.OAUTH_UPDATE_EMAIL_ON_LOGIN and trusted_email:
                     email_claim = auth_config.OAUTH_EMAIL_CLAIM
                     if email_claim:
                         new_email = user_data.get(email_claim)
@@ -2153,6 +2160,12 @@ class OAuthManager:
                         log.warning('Username claim is missing, using email as name')
                         name = email
 
+                    from answerai.utils.email_verification import get_email_settings, issue_verification
+
+                    mail_settings = await get_email_settings(decrypt_password=False)
+                    needs_verification = mail_settings.enabled and not trusted_email
+                    if needs_verification:
+                        mail_settings = await get_email_settings()
                     user = await Auths.insert_new_auth(
                         email=email,
                         password=await get_password_hash(str(uuid.uuid4())),  # Random password, not used
@@ -2160,11 +2173,18 @@ class OAuthManager:
                         profile_image_url=picture_url,
                         role=await self.get_user_role(None, user_data),
                         oauth=oauth_data,
+                        email_verified=not needs_verification,
                         db=db,
                     )
 
                     if not user:
                         raise HTTPException(500, detail=ERROR_MESSAGES.CREATE_USER_ERROR)
+
+                    if needs_verification:
+                        try:
+                            await issue_verification(user.id, mail_settings)
+                        except Exception:
+                            log.warning('OAuth email verification delivery failed; account remains unverified.')
 
                     # Atomically check if this is the only user *after* the
                     # insert to avoid TOCTOU race on first-user registration.
