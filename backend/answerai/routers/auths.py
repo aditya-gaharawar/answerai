@@ -1708,9 +1708,7 @@ async def token_exchange(
     # Enforce domain allowlist — same check as the normal OAuth callback
     oauth_allowed_domains = await Config.get('oauth.allowed_domains', [])
     if isinstance(oauth_allowed_domains, str):
-        oauth_allowed_domains = [
-            domain.strip() for domain in oauth_allowed_domains.split(',') if domain.strip()
-        ]
+        oauth_allowed_domains = [domain.strip() for domain in oauth_allowed_domains.split(',') if domain.strip()]
     if '*' not in oauth_allowed_domains and email.split('@')[-1] not in oauth_allowed_domains:
         log.warning(f'Token exchange denied: email domain not in allowed domains list')
         raise HTTPException(
