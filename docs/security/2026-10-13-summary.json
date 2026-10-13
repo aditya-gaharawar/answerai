@@ -1,0 +1,1247 @@
+{
+	"date": "2026-10-13",
+	"baseline_commit": "7391df4",
+	"claim": "Expanded local review; no vendor zero-day novelty or vulnerability-free claim.",
+	"route_inventory": {
+		"decorated_functions": 592,
+		"declarations": 622,
+		"python_files": 39
+	},
+	"confirmed_findings": [
+		{
+			"id": "AAI-2026-101",
+			"severity": "high",
+			"file": "backend/answerai/routers/auths.py",
+			"function": "token_exchange",
+			"status": "patched",
+			"prerequisites": "Optional token exchange and email merging enabled; provider returns unproven email."
+		},
+		{
+			"id": "AAI-2026-102",
+			"severity": "high",
+			"file": "backend/answerai/socket/main.py",
+			"function": "get_socket_session_user",
+			"status": "patched",
+			"prerequisites": "Former administrator retains an established session after demotion."
+		},
+		{
+			"id": "AAI-2026-103",
+			"severity": "medium",
+			"file": "backend/answerai/socket/main.py",
+			"function": "yjs_document_state",
+			"status": "patched",
+			"prerequisites": "Existing document room membership after authorization changes."
+		},
+		{
+			"id": "AAI-2026-104",
+			"severity": "medium",
+			"file": ".github/workflows/docker.yaml",
+			"step": "Determine source and destination tags",
+			"status": "patched",
+			"prerequisites": "Ability to push a crafted release tag into publishing workflow."
+		}
+	],
+	"semgrep": {
+		"targets_considered": 5123,
+		"findings_before": 89,
+		"findings_after": 85,
+		"diagnostics_after": 9,
+		"severity_labels_after": {
+			"MEDIUM": 5,
+			"WARNING": 59,
+			"ERROR": 21
+		},
+		"rule_counts_after": {
+			"dependabot-missing-cooldown": 4,
+			"github-actions-mutable-action-tag": 37,
+			"npm-missing-minimum-release-age": 1,
+			"python-logger-credential-disclosure": 19,
+			"avoid-sqlalchemy-text": 14,
+			"use-defused-xml": 3,
+			"use-defused-xml-parse": 1,
+			"unverified-jwt-decode": 3,
+			"exec-detected": 2,
+			"wildcard-postmessage-configuration": 1
+		},
+		"finding_locations_after": [
+			{
+				"rule": "package_managers.dependabot.dependabot-missing-cooldown.dependabot-missing-cooldown",
+				"severity": "MEDIUM",
+				"file": ".github/dependabot.yml",
+				"line": 3
+			},
+			{
+				"rule": "package_managers.dependabot.dependabot-missing-cooldown.dependabot-missing-cooldown",
+				"severity": "MEDIUM",
+				"file": ".github/dependabot.yml",
+				"line": 9
+			},
+			{
+				"rule": "package_managers.dependabot.dependabot-missing-cooldown.dependabot-missing-cooldown",
+				"severity": "MEDIUM",
+				"file": ".github/dependabot.yml",
+				"line": 15
+			},
+			{
+				"rule": "package_managers.dependabot.dependabot-missing-cooldown.dependabot-missing-cooldown",
+				"severity": "MEDIUM",
+				"file": ".github/dependabot.yml",
+				"line": 21
+			},
+			{
+				"rule": "yaml.github-actions.security.github-actions-mutable-action-tag.github-actions-mutable-action-tag",
+				"severity": "WARNING",
+				"file": ".github/workflows/backend.yaml",
+				"line": 30
+			},
+			{
+				"rule": "yaml.github-actions.security.github-actions-mutable-action-tag.github-actions-mutable-action-tag",
+				"severity": "WARNING",
+				"file": ".github/workflows/backend.yaml",
+				"line": 32
+			},
+			{
+				"rule": "yaml.github-actions.security.github-actions-mutable-action-tag.github-actions-mutable-action-tag",
+				"severity": "WARNING",
+				"file": ".github/workflows/docker.yaml",
+				"line": 70
+			},
+			{
+				"rule": "yaml.github-actions.security.github-actions-mutable-action-tag.github-actions-mutable-action-tag",
+				"severity": "WARNING",
+				"file": ".github/workflows/docker.yaml",
+				"line": 73
+			},
+			{
+				"rule": "yaml.github-actions.security.github-actions-mutable-action-tag.github-actions-mutable-action-tag",
+				"severity": "WARNING",
+				"file": ".github/workflows/docker.yaml",
+				"line": 76
+			},
+			{
+				"rule": "yaml.github-actions.security.github-actions-mutable-action-tag.github-actions-mutable-action-tag",
+				"severity": "WARNING",
+				"file": ".github/workflows/docker.yaml",
+				"line": 90
+			},
+			{
+				"rule": "yaml.github-actions.security.github-actions-mutable-action-tag.github-actions-mutable-action-tag",
+				"severity": "WARNING",
+				"file": ".github/workflows/docker.yaml",
+				"line": 98
+			},
+			{
+				"rule": "yaml.github-actions.security.github-actions-mutable-action-tag.github-actions-mutable-action-tag",
+				"severity": "WARNING",
+				"file": ".github/workflows/docker.yaml",
+				"line": 114
+			},
+			{
+				"rule": "yaml.github-actions.security.github-actions-mutable-action-tag.github-actions-mutable-action-tag",
+				"severity": "WARNING",
+				"file": ".github/workflows/docker.yaml",
+				"line": 125
+			},
+			{
+				"rule": "yaml.github-actions.security.github-actions-mutable-action-tag.github-actions-mutable-action-tag",
+				"severity": "WARNING",
+				"file": ".github/workflows/docker.yaml",
+				"line": 149
+			},
+			{
+				"rule": "yaml.github-actions.security.github-actions-mutable-action-tag.github-actions-mutable-action-tag",
+				"severity": "WARNING",
+				"file": ".github/workflows/docker.yaml",
+				"line": 186
+			},
+			{
+				"rule": "yaml.github-actions.security.github-actions-mutable-action-tag.github-actions-mutable-action-tag",
+				"severity": "WARNING",
+				"file": ".github/workflows/docker.yaml",
+				"line": 207
+			},
+			{
+				"rule": "yaml.github-actions.security.github-actions-mutable-action-tag.github-actions-mutable-action-tag",
+				"severity": "WARNING",
+				"file": ".github/workflows/docker.yaml",
+				"line": 211
+			},
+			{
+				"rule": "yaml.github-actions.security.github-actions-mutable-action-tag.github-actions-mutable-action-tag",
+				"severity": "WARNING",
+				"file": ".github/workflows/docker.yaml",
+				"line": 220
+			},
+			{
+				"rule": "yaml.github-actions.security.github-actions-mutable-action-tag.github-actions-mutable-action-tag",
+				"severity": "WARNING",
+				"file": ".github/workflows/docker.yaml",
+				"line": 256
+			},
+			{
+				"rule": "yaml.github-actions.security.github-actions-mutable-action-tag.github-actions-mutable-action-tag",
+				"severity": "WARNING",
+				"file": ".github/workflows/docker.yaml",
+				"line": 264
+			},
+			{
+				"rule": "yaml.github-actions.security.github-actions-mutable-action-tag.github-actions-mutable-action-tag",
+				"severity": "WARNING",
+				"file": ".github/workflows/docker.yaml",
+				"line": 284
+			},
+			{
+				"rule": "yaml.github-actions.security.github-actions-mutable-action-tag.github-actions-mutable-action-tag",
+				"severity": "WARNING",
+				"file": ".github/workflows/docker.yaml",
+				"line": 339
+			},
+			{
+				"rule": "yaml.github-actions.security.github-actions-mutable-action-tag.github-actions-mutable-action-tag",
+				"severity": "WARNING",
+				"file": ".github/workflows/docker.yaml",
+				"line": 342
+			},
+			{
+				"rule": "yaml.github-actions.security.github-actions-mutable-action-tag.github-actions-mutable-action-tag",
+				"severity": "WARNING",
+				"file": ".github/workflows/docker.yaml",
+				"line": 349
+			},
+			{
+				"rule": "yaml.github-actions.security.github-actions-mutable-action-tag.github-actions-mutable-action-tag",
+				"severity": "WARNING",
+				"file": ".github/workflows/email-verification.yml",
+				"line": 19
+			},
+			{
+				"rule": "yaml.github-actions.security.github-actions-mutable-action-tag.github-actions-mutable-action-tag",
+				"severity": "WARNING",
+				"file": ".github/workflows/email-verification.yml",
+				"line": 20
+			},
+			{
+				"rule": "yaml.github-actions.security.github-actions-mutable-action-tag.github-actions-mutable-action-tag",
+				"severity": "WARNING",
+				"file": ".github/workflows/frontend.yaml",
+				"line": 26
+			},
+			{
+				"rule": "yaml.github-actions.security.github-actions-mutable-action-tag.github-actions-mutable-action-tag",
+				"severity": "WARNING",
+				"file": ".github/workflows/frontend.yaml",
+				"line": 28
+			},
+			{
+				"rule": "yaml.github-actions.security.github-actions-mutable-action-tag.github-actions-mutable-action-tag",
+				"severity": "WARNING",
+				"file": ".github/workflows/frontend.yaml",
+				"line": 55
+			},
+			{
+				"rule": "yaml.github-actions.security.github-actions-mutable-action-tag.github-actions-mutable-action-tag",
+				"severity": "WARNING",
+				"file": ".github/workflows/frontend.yaml",
+				"line": 57
+			},
+			{
+				"rule": "yaml.github-actions.security.github-actions-mutable-action-tag.github-actions-mutable-action-tag",
+				"severity": "WARNING",
+				"file": ".github/workflows/issue-label.yaml",
+				"line": 15
+			},
+			{
+				"rule": "yaml.github-actions.security.github-actions-mutable-action-tag.github-actions-mutable-action-tag",
+				"severity": "WARNING",
+				"file": ".github/workflows/issue-label.yaml",
+				"line": 75
+			},
+			{
+				"rule": "yaml.github-actions.security.github-actions-mutable-action-tag.github-actions-mutable-action-tag",
+				"severity": "WARNING",
+				"file": ".github/workflows/regression.yaml",
+				"line": 32
+			},
+			{
+				"rule": "yaml.github-actions.security.github-actions-mutable-action-tag.github-actions-mutable-action-tag",
+				"severity": "WARNING",
+				"file": ".github/workflows/regression.yaml",
+				"line": 33
+			},
+			{
+				"rule": "yaml.github-actions.security.github-actions-mutable-action-tag.github-actions-mutable-action-tag",
+				"severity": "WARNING",
+				"file": ".github/workflows/release-pypi.yml",
+				"line": 19
+			},
+			{
+				"rule": "yaml.github-actions.security.github-actions-mutable-action-tag.github-actions-mutable-action-tag",
+				"severity": "WARNING",
+				"file": ".github/workflows/release-pypi.yml",
+				"line": 24
+			},
+			{
+				"rule": "yaml.github-actions.security.github-actions-mutable-action-tag.github-actions-mutable-action-tag",
+				"severity": "WARNING",
+				"file": ".github/workflows/release-pypi.yml",
+				"line": 27
+			},
+			{
+				"rule": "yaml.github-actions.security.github-actions-mutable-action-tag.github-actions-mutable-action-tag",
+				"severity": "WARNING",
+				"file": ".github/workflows/release-pypi.yml",
+				"line": 39
+			},
+			{
+				"rule": "yaml.github-actions.security.github-actions-mutable-action-tag.github-actions-mutable-action-tag",
+				"severity": "WARNING",
+				"file": ".github/workflows/release.yml",
+				"line": 24
+			},
+			{
+				"rule": "yaml.github-actions.security.github-actions-mutable-action-tag.github-actions-mutable-action-tag",
+				"severity": "WARNING",
+				"file": ".github/workflows/release.yml",
+				"line": 68
+			},
+			{
+				"rule": "yaml.github-actions.security.github-actions-mutable-action-tag.github-actions-mutable-action-tag",
+				"severity": "WARNING",
+				"file": ".github/workflows/release.yml",
+				"line": 78
+			},
+			{
+				"rule": "package_managers.npm.npm-missing-minimum-release-age.npm-missing-minimum-release-age",
+				"severity": "MEDIUM",
+				"file": ".npmrc",
+				"line": 1
+			},
+			{
+				"rule": "python.lang.security.audit.logging.logger-credential-leak.python-logger-credential-disclosure",
+				"severity": "WARNING",
+				"file": "backend/answerai/internal/db.py",
+				"line": 201
+			},
+			{
+				"rule": "python.lang.security.audit.logging.logger-credential-leak.python-logger-credential-disclosure",
+				"severity": "WARNING",
+				"file": "backend/answerai/internal/db.py",
+				"line": 222
+			},
+			{
+				"rule": "python.lang.security.audit.logging.logger-credential-leak.python-logger-credential-disclosure",
+				"severity": "WARNING",
+				"file": "backend/answerai/main.py",
+				"line": 2064
+			},
+			{
+				"rule": "python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text",
+				"severity": "ERROR",
+				"file": "backend/answerai/migrations/versions/461111b60977_add_missing_primary_keys_to_legacy_.py",
+				"line": 63
+			},
+			{
+				"rule": "python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text",
+				"severity": "ERROR",
+				"file": "backend/answerai/migrations/versions/b10670c03dd5_update_user_table.py",
+				"line": 55
+			},
+			{
+				"rule": "python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text",
+				"severity": "ERROR",
+				"file": "backend/answerai/migrations/versions/b10670c03dd5_update_user_table.py",
+				"line": 64
+			},
+			{
+				"rule": "python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text",
+				"severity": "ERROR",
+				"file": "backend/answerai/migrations/versions/b10670c03dd5_update_user_table.py",
+				"line": 67
+			},
+			{
+				"rule": "python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text",
+				"severity": "ERROR",
+				"file": "backend/answerai/migrations/versions/f1e2d3c4b5a6_add_access_grant_table.py",
+				"line": 92
+			},
+			{
+				"rule": "python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text",
+				"severity": "ERROR",
+				"file": "backend/answerai/migrations/versions/f1e2d3c4b5a6_add_access_grant_table.py",
+				"line": 319
+			},
+			{
+				"rule": "python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text",
+				"severity": "ERROR",
+				"file": "backend/answerai/migrations/versions/f1e2d3c4b5a6_add_access_grant_table.py",
+				"line": 331
+			},
+			{
+				"rule": "python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text",
+				"severity": "ERROR",
+				"file": "backend/answerai/models/chats.py",
+				"line": 2231
+			},
+			{
+				"rule": "python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text",
+				"severity": "ERROR",
+				"file": "backend/answerai/models/chats.py",
+				"line": 2257
+			},
+			{
+				"rule": "python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text",
+				"severity": "ERROR",
+				"file": "backend/answerai/models/chats.py",
+				"line": 2289
+			},
+			{
+				"rule": "python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text",
+				"severity": "ERROR",
+				"file": "backend/answerai/models/chats.py",
+				"line": 2484
+			},
+			{
+				"rule": "python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text",
+				"severity": "ERROR",
+				"file": "backend/answerai/models/chats.py",
+				"line": 2563
+			},
+			{
+				"rule": "python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text",
+				"severity": "ERROR",
+				"file": "backend/answerai/models/chats.py",
+				"line": 2567
+			},
+			{
+				"rule": "python.lang.security.use-defused-xml.use-defused-xml",
+				"severity": "ERROR",
+				"file": "backend/answerai/retrieval/loaders/youtube.py",
+				"line": 4
+			},
+			{
+				"rule": "python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text",
+				"severity": "ERROR",
+				"file": "backend/answerai/retrieval/vector/dbs/pgvector.py",
+				"line": 237
+			},
+			{
+				"rule": "python.lang.security.use-defused-xml.use-defused-xml",
+				"severity": "ERROR",
+				"file": "backend/answerai/retrieval/web/yandex.py",
+				"line": 6
+			},
+			{
+				"rule": "python.lang.security.use-defused-xml.use-defused-xml",
+				"severity": "ERROR",
+				"file": "backend/answerai/retrieval/web/yandex.py",
+				"line": 7
+			},
+			{
+				"rule": "python.lang.security.use-defused-xml-parse.use-defused-xml-parse",
+				"severity": "ERROR",
+				"file": "backend/answerai/retrieval/web/yandex.py",
+				"line": 91
+			},
+			{
+				"rule": "python.lang.security.audit.logging.logger-credential-leak.python-logger-credential-disclosure",
+				"severity": "WARNING",
+				"file": "backend/answerai/routers/auths.py",
+				"line": 1659
+			},
+			{
+				"rule": "python.jwt.security.unverified-jwt-decode.unverified-jwt-decode",
+				"severity": "ERROR",
+				"file": "backend/answerai/routers/auths.py",
+				"line": 1748
+			},
+			{
+				"rule": "python.lang.security.audit.logging.logger-credential-leak.python-logger-credential-disclosure",
+				"severity": "WARNING",
+				"file": "backend/answerai/routers/auths.py",
+				"line": 1750
+			},
+			{
+				"rule": "python.lang.security.audit.logging.logger-credential-leak.python-logger-credential-disclosure",
+				"severity": "WARNING",
+				"file": "backend/answerai/routers/openai.py",
+				"line": 455
+			},
+			{
+				"rule": "python.lang.security.audit.logging.logger-credential-leak.python-logger-credential-disclosure",
+				"severity": "WARNING",
+				"file": "backend/answerai/routers/retrieval.py",
+				"line": 235
+			},
+			{
+				"rule": "python.lang.security.audit.logging.logger-credential-leak.python-logger-credential-disclosure",
+				"severity": "WARNING",
+				"file": "backend/answerai/routers/retrieval.py",
+				"line": 1441
+			},
+			{
+				"rule": "python.lang.security.audit.logging.logger-credential-leak.python-logger-credential-disclosure",
+				"severity": "WARNING",
+				"file": "backend/answerai/routers/scim.py",
+				"line": 288
+			},
+			{
+				"rule": "python.lang.security.audit.logging.logger-credential-leak.python-logger-credential-disclosure",
+				"severity": "WARNING",
+				"file": "backend/answerai/utils/oauth.py",
+				"line": 1100
+			},
+			{
+				"rule": "python.lang.security.audit.logging.logger-credential-leak.python-logger-credential-disclosure",
+				"severity": "WARNING",
+				"file": "backend/answerai/utils/oauth.py",
+				"line": 1133
+			},
+			{
+				"rule": "python.lang.security.audit.logging.logger-credential-leak.python-logger-credential-disclosure",
+				"severity": "WARNING",
+				"file": "backend/answerai/utils/oauth.py",
+				"line": 1211
+			},
+			{
+				"rule": "python.lang.security.audit.logging.logger-credential-leak.python-logger-credential-disclosure",
+				"severity": "WARNING",
+				"file": "backend/answerai/utils/oauth.py",
+				"line": 1309
+			},
+			{
+				"rule": "python.jwt.security.unverified-jwt-decode.unverified-jwt-decode",
+				"severity": "ERROR",
+				"file": "backend/answerai/utils/oauth.py",
+				"line": 1424
+			},
+			{
+				"rule": "python.lang.security.audit.logging.logger-credential-leak.python-logger-credential-disclosure",
+				"severity": "WARNING",
+				"file": "backend/answerai/utils/oauth.py",
+				"line": 1428
+			},
+			{
+				"rule": "python.lang.security.audit.logging.logger-credential-leak.python-logger-credential-disclosure",
+				"severity": "WARNING",
+				"file": "backend/answerai/utils/oauth.py",
+				"line": 1435
+			},
+			{
+				"rule": "python.lang.security.audit.logging.logger-credential-leak.python-logger-credential-disclosure",
+				"severity": "WARNING",
+				"file": "backend/answerai/utils/oauth.py",
+				"line": 1482
+			},
+			{
+				"rule": "python.lang.security.audit.logging.logger-credential-leak.python-logger-credential-disclosure",
+				"severity": "WARNING",
+				"file": "backend/answerai/utils/oauth.py",
+				"line": 1564
+			},
+			{
+				"rule": "python.lang.security.audit.logging.logger-credential-leak.python-logger-credential-disclosure",
+				"severity": "WARNING",
+				"file": "backend/answerai/utils/oauth.py",
+				"line": 1944
+			},
+			{
+				"rule": "python.lang.security.audit.logging.logger-credential-leak.python-logger-credential-disclosure",
+				"severity": "WARNING",
+				"file": "backend/answerai/utils/oauth.py",
+				"line": 1953
+			},
+			{
+				"rule": "python.jwt.security.unverified-jwt-decode.unverified-jwt-decode",
+				"severity": "ERROR",
+				"file": "backend/answerai/utils/oauth.py",
+				"line": 2350
+			},
+			{
+				"rule": "python.lang.security.audit.exec-detected.exec-detected",
+				"severity": "WARNING",
+				"file": "backend/answerai/utils/plugin.py",
+				"line": 242
+			},
+			{
+				"rule": "python.lang.security.audit.exec-detected.exec-detected",
+				"severity": "WARNING",
+				"file": "backend/answerai/utils/plugin.py",
+				"line": 291
+			},
+			{
+				"rule": "javascript.browser.security.wildcard-postmessage-configuration.wildcard-postmessage-configuration",
+				"severity": "WARNING",
+				"file": "src/lib/pyodide/pyodideSandboxHost.ts",
+				"line": 286
+			}
+		]
+	},
+	"bandit": {
+		"MEDIUM": 51,
+		"LOW": 154
+	},
+	"npm": {
+		"info": 0,
+		"low": 10,
+		"moderate": 20,
+		"high": 11,
+		"critical": 2,
+		"total": 43
+	},
+	"python_scopes": {
+		"direct_pins": {
+			"distributions_evaluated": 115,
+			"advisory_entries": 12,
+			"affected": [
+				{
+					"name": "chromadb",
+					"version": "1.5.9",
+					"advisories": [
+						{
+							"id": "PYSEC-2026-311",
+							"aliases": ["GHSA-f4j7-r4q5-qw2c", "CVE-2026-45829"],
+							"fixed_versions": []
+						},
+						{
+							"id": "PYSEC-2026-311",
+							"aliases": ["GHSA-f4j7-r4q5-qw2c", "CVE-2026-45829"],
+							"fixed_versions": []
+						},
+						{
+							"id": "PYSEC-2026-3814",
+							"aliases": ["CVE-2026-45833", "GHSA-36p7-vc44-83pf"],
+							"fixed_versions": []
+						},
+						{
+							"id": "PYSEC-2026-3815",
+							"aliases": ["GHSA-xph7-9rjv-w5fr", "CVE-2026-45831"],
+							"fixed_versions": []
+						},
+						{
+							"id": "PYSEC-2026-3813",
+							"aliases": ["CVE-2026-45830", "GHSA-2wm9-hf6c-p5cr"],
+							"fixed_versions": []
+						}
+					]
+				},
+				{
+					"name": "transformers",
+					"version": "5.5.4",
+					"advisories": [
+						{
+							"id": "PYSEC-2026-3929",
+							"aliases": ["CVE-2026-9856", "GHSA-xrqw-3rrv-vx5w"],
+							"fixed_versions": ["5.10.0"]
+						},
+						{
+							"id": "PYSEC-2026-4174",
+							"aliases": ["CVE-2026-80047", "GHSA-x9r9-c232-4q39"],
+							"fixed_versions": []
+						}
+					]
+				},
+				{
+					"name": "sentence-transformers",
+					"version": "5.5.1",
+					"advisories": [
+						{
+							"id": "PYSEC-2026-4164",
+							"aliases": ["CVE-2026-68770", "GHSA-jhr6-gm9c-rqjv"],
+							"fixed_versions": ["5.6.0"]
+						}
+					]
+				},
+				{
+					"name": "accelerate",
+					"version": "1.13.0",
+					"advisories": [
+						{
+							"id": "PYSEC-2026-3804",
+							"aliases": ["CVE-2026-69112", "GHSA-4j2p-28q2-5m79"],
+							"fixed_versions": []
+						}
+					]
+				},
+				{
+					"name": "pyarrow",
+					"version": "20.0.0",
+					"advisories": [
+						{
+							"id": "PYSEC-2026-113",
+							"aliases": ["CVE-2026-25087", "GHSA-rgxp-2hwp-jwgg"],
+							"fixed_versions": ["23.0.1"]
+						},
+						{
+							"id": "PYSEC-2026-113",
+							"aliases": ["CVE-2026-25087", "GHSA-rgxp-2hwp-jwgg"],
+							"fixed_versions": ["23.0.1"]
+						}
+					]
+				},
+				{
+					"name": "unstructured",
+					"version": "0.22.31",
+					"advisories": [
+						{
+							"id": "PYSEC-2026-3930",
+							"aliases": ["GHSA-4mvj-m6j5-pmf7", "CVE-2026-71428"],
+							"fixed_versions": ["0.24.0"]
+						}
+					]
+				}
+			]
+		},
+		"application_lock_before": {
+			"distributions_evaluated": 256,
+			"advisory_entries": 34,
+			"affected": [
+				{
+					"name": "accelerate",
+					"version": "1.13.0",
+					"advisories": [
+						{
+							"id": "PYSEC-2026-3804",
+							"aliases": ["CVE-2026-69112", "GHSA-4j2p-28q2-5m79"],
+							"fixed_versions": []
+						}
+					]
+				},
+				{
+					"name": "anyio",
+					"version": "4.14.0",
+					"advisories": [
+						{
+							"id": "PYSEC-2026-4025",
+							"aliases": ["GHSA-82r6-8w77-94w6", "CVE-2026-63374"],
+							"fixed_versions": ["4.14.2"]
+						},
+						{
+							"id": "PYSEC-2026-4023",
+							"aliases": ["CVE-2026-63349", "GHSA-3w57-8xmc-8v26"],
+							"fixed_versions": ["4.14.2"]
+						},
+						{
+							"id": "PYSEC-2026-4024",
+							"aliases": ["CVE-2026-64847", "GHSA-5p39-cfhj-2xmp"],
+							"fixed_versions": ["4.14.2"]
+						}
+					]
+				},
+				{
+					"name": "chromadb",
+					"version": "1.5.9",
+					"advisories": [
+						{
+							"id": "PYSEC-2026-311",
+							"aliases": ["CVE-2026-45829", "GHSA-f4j7-r4q5-qw2c"],
+							"fixed_versions": []
+						},
+						{
+							"id": "PYSEC-2026-311",
+							"aliases": ["CVE-2026-45829", "GHSA-f4j7-r4q5-qw2c"],
+							"fixed_versions": []
+						},
+						{
+							"id": "PYSEC-2026-3814",
+							"aliases": ["GHSA-36p7-vc44-83pf", "CVE-2026-45833"],
+							"fixed_versions": []
+						},
+						{
+							"id": "PYSEC-2026-3815",
+							"aliases": ["GHSA-xph7-9rjv-w5fr", "CVE-2026-45831"],
+							"fixed_versions": []
+						},
+						{
+							"id": "PYSEC-2026-3813",
+							"aliases": ["CVE-2026-45830", "GHSA-2wm9-hf6c-p5cr"],
+							"fixed_versions": []
+						}
+					]
+				},
+				{
+					"name": "fsspec",
+					"version": "2025.3.0",
+					"advisories": [
+						{
+							"id": "CVE-2026-104851",
+							"aliases": ["GHSA-27vj-qcqg-25rc"],
+							"fixed_versions": ["2026.6.0"]
+						}
+					]
+				},
+				{
+					"name": "h2",
+					"version": "4.3.0",
+					"advisories": [
+						{
+							"id": "PYSEC-2026-3628",
+							"aliases": ["CVE-2026-71554", "GHSA-6hr6-w5qg-qmwg"],
+							"fixed_versions": ["4.4.1"]
+						},
+						{
+							"id": "PYSEC-2026-3628",
+							"aliases": ["CVE-2026-71554", "GHSA-6hr6-w5qg-qmwg"],
+							"fixed_versions": ["4.4.1"]
+						}
+					]
+				},
+				{
+					"name": "hpack",
+					"version": "4.1.0",
+					"advisories": [
+						{
+							"id": "PYSEC-2026-4053",
+							"aliases": ["CVE-2026-59980", "GHSA-8v8h-hg4w-mvq2"],
+							"fixed_versions": ["4.2.0"]
+						}
+					]
+				},
+				{
+					"name": "multidict",
+					"version": "6.7.1",
+					"advisories": [
+						{
+							"id": "CVE-2026-104874",
+							"aliases": ["GHSA-54p9-h82j-f925"],
+							"fixed_versions": ["6.9.1"]
+						}
+					]
+				},
+				{
+					"name": "oauthlib",
+					"version": "3.3.1",
+					"advisories": [
+						{
+							"id": "PYSEC-2026-4114",
+							"aliases": ["GHSA-xpv3-w29h-x7cv", "CVE-2026-49265"],
+							"fixed_versions": ["4.0.0"]
+						}
+					]
+				},
+				{
+					"name": "pyarrow",
+					"version": "20.0.0",
+					"advisories": [
+						{
+							"id": "PYSEC-2026-113",
+							"aliases": ["CVE-2026-25087", "GHSA-rgxp-2hwp-jwgg"],
+							"fixed_versions": ["23.0.1"]
+						},
+						{
+							"id": "PYSEC-2026-113",
+							"aliases": ["CVE-2026-25087", "GHSA-rgxp-2hwp-jwgg"],
+							"fixed_versions": ["23.0.1"]
+						}
+					]
+				},
+				{
+					"name": "pyasn1",
+					"version": "0.6.3",
+					"advisories": [
+						{
+							"id": "PYSEC-2026-3456",
+							"aliases": ["GHSA-8ppf-4f7h-5ppj", "CVE-2026-59885"],
+							"fixed_versions": ["0.6.4"]
+						},
+						{
+							"id": "PYSEC-2026-3457",
+							"aliases": ["CVE-2026-59886", "GHSA-hm4w-wwcw-mr6r"],
+							"fixed_versions": ["0.6.4"]
+						},
+						{
+							"id": "PYSEC-2026-3456",
+							"aliases": ["GHSA-8ppf-4f7h-5ppj", "CVE-2026-59885"],
+							"fixed_versions": ["0.6.4"]
+						},
+						{
+							"id": "PYSEC-2026-3457",
+							"aliases": ["CVE-2026-59886", "GHSA-hm4w-wwcw-mr6r"],
+							"fixed_versions": ["0.6.4"]
+						},
+						{
+							"id": "PYSEC-2026-3455",
+							"aliases": ["GHSA-m4p7-r5rc-7g4j", "CVE-2026-59884"],
+							"fixed_versions": ["0.6.4"]
+						},
+						{
+							"id": "PYSEC-2026-3455",
+							"aliases": ["GHSA-m4p7-r5rc-7g4j", "CVE-2026-59884"],
+							"fixed_versions": ["0.6.4"]
+						}
+					]
+				},
+				{
+					"name": "sentence-transformers",
+					"version": "5.5.1",
+					"advisories": [
+						{
+							"id": "PYSEC-2026-4164",
+							"aliases": ["CVE-2026-68770", "GHSA-jhr6-gm9c-rqjv"],
+							"fixed_versions": ["5.6.0"]
+						}
+					]
+				},
+				{
+					"name": "setuptools",
+					"version": "81.0.0",
+					"advisories": [
+						{
+							"id": "PYSEC-2026-3447",
+							"aliases": ["CVE-2026-59890", "GHSA-h35f-9h28-mq5c", "BIT-setuptools-2026-59890"],
+							"fixed_versions": ["83.0.0"]
+						},
+						{
+							"id": "PYSEC-2026-3447",
+							"aliases": ["CVE-2026-59890", "GHSA-h35f-9h28-mq5c", "BIT-setuptools-2026-59890"],
+							"fixed_versions": ["83.0.0"]
+						}
+					]
+				},
+				{
+					"name": "soupsieve",
+					"version": "2.8.4",
+					"advisories": [
+						{
+							"id": "PYSEC-2026-4170",
+							"aliases": ["CVE-2026-86000", "GHSA-gjv8-xp57-g29c"],
+							"fixed_versions": ["2.9.0"]
+						},
+						{
+							"id": "PYSEC-2026-4171",
+							"aliases": ["GHSA-j934-xhv5-fg8f", "CVE-2026-85999"],
+							"fixed_versions": ["2.9.0"]
+						}
+					]
+				},
+				{
+					"name": "torch",
+					"version": "2.12.1",
+					"advisories": [
+						{
+							"id": "PYSEC-2025-194",
+							"aliases": ["CVE-2025-3000", "GHSA-rrmf-rvhw-rf47", "BIT-pytorch-2025-3000"],
+							"fixed_versions": ["2.13.0"]
+						}
+					]
+				},
+				{
+					"name": "transformers",
+					"version": "5.5.4",
+					"advisories": [
+						{
+							"id": "PYSEC-2026-3929",
+							"aliases": ["CVE-2026-9856", "GHSA-xrqw-3rrv-vx5w"],
+							"fixed_versions": ["5.10.0"]
+						},
+						{
+							"id": "PYSEC-2026-4174",
+							"aliases": ["CVE-2026-80047", "GHSA-x9r9-c232-4q39"],
+							"fixed_versions": []
+						}
+					]
+				},
+				{
+					"name": "urllib3",
+					"version": "2.7.0",
+					"advisories": [
+						{
+							"id": "PYSEC-2026-4177",
+							"aliases": ["GHSA-vxq7-64xx-v4gw", "CVE-2026-97689"],
+							"fixed_versions": ["2.8.0"]
+						},
+						{
+							"id": "PYSEC-2026-4176",
+							"aliases": ["CVE-2026-97688", "GHSA-gh4c-6fx4-qh6g"],
+							"fixed_versions": ["2.8.0"]
+						},
+						{
+							"id": "PYSEC-2026-4175",
+							"aliases": ["GHSA-8988-9cw3-xx77", "CVE-2026-97687"],
+							"fixed_versions": ["2.8.0"]
+						}
+					]
+				}
+			]
+		},
+		"application_lock_after": {
+			"distributions_evaluated": 256,
+			"advisory_entries": 16,
+			"affected": [
+				{
+					"name": "accelerate",
+					"version": "1.13.0",
+					"advisories": [
+						{
+							"id": "PYSEC-2026-3804",
+							"aliases": ["GHSA-4j2p-28q2-5m79", "CVE-2026-69112"],
+							"fixed_versions": []
+						}
+					]
+				},
+				{
+					"name": "chromadb",
+					"version": "1.5.9",
+					"advisories": [
+						{
+							"id": "PYSEC-2026-311",
+							"aliases": ["GHSA-f4j7-r4q5-qw2c", "CVE-2026-45829"],
+							"fixed_versions": []
+						},
+						{
+							"id": "PYSEC-2026-311",
+							"aliases": ["GHSA-f4j7-r4q5-qw2c", "CVE-2026-45829"],
+							"fixed_versions": []
+						},
+						{
+							"id": "PYSEC-2026-3814",
+							"aliases": ["CVE-2026-45833", "GHSA-36p7-vc44-83pf"],
+							"fixed_versions": []
+						},
+						{
+							"id": "PYSEC-2026-3815",
+							"aliases": ["CVE-2026-45831", "GHSA-xph7-9rjv-w5fr"],
+							"fixed_versions": []
+						},
+						{
+							"id": "PYSEC-2026-3813",
+							"aliases": ["GHSA-2wm9-hf6c-p5cr", "CVE-2026-45830"],
+							"fixed_versions": []
+						}
+					]
+				},
+				{
+					"name": "fsspec",
+					"version": "2025.3.0",
+					"advisories": [
+						{
+							"id": "CVE-2026-104851",
+							"aliases": ["GHSA-27vj-qcqg-25rc"],
+							"fixed_versions": ["2026.6.0"]
+						}
+					]
+				},
+				{
+					"name": "oauthlib",
+					"version": "3.3.1",
+					"advisories": [
+						{
+							"id": "PYSEC-2026-4114",
+							"aliases": ["CVE-2026-49265", "GHSA-xpv3-w29h-x7cv"],
+							"fixed_versions": ["4.0.0"]
+						}
+					]
+				},
+				{
+					"name": "pyarrow",
+					"version": "20.0.0",
+					"advisories": [
+						{
+							"id": "PYSEC-2026-113",
+							"aliases": ["GHSA-rgxp-2hwp-jwgg", "CVE-2026-25087"],
+							"fixed_versions": ["23.0.1"]
+						},
+						{
+							"id": "PYSEC-2026-113",
+							"aliases": ["GHSA-rgxp-2hwp-jwgg", "CVE-2026-25087"],
+							"fixed_versions": ["23.0.1"]
+						}
+					]
+				},
+				{
+					"name": "sentence-transformers",
+					"version": "5.5.1",
+					"advisories": [
+						{
+							"id": "PYSEC-2026-4164",
+							"aliases": ["GHSA-jhr6-gm9c-rqjv", "CVE-2026-68770"],
+							"fixed_versions": ["5.6.0"]
+						}
+					]
+				},
+				{
+					"name": "setuptools",
+					"version": "81.0.0",
+					"advisories": [
+						{
+							"id": "PYSEC-2026-3447",
+							"aliases": ["GHSA-h35f-9h28-mq5c", "CVE-2026-59890", "BIT-setuptools-2026-59890"],
+							"fixed_versions": ["83.0.0"]
+						},
+						{
+							"id": "PYSEC-2026-3447",
+							"aliases": ["BIT-setuptools-2026-59890", "CVE-2026-59890", "GHSA-h35f-9h28-mq5c"],
+							"fixed_versions": ["83.0.0"]
+						}
+					]
+				},
+				{
+					"name": "torch",
+					"version": "2.12.1",
+					"advisories": [
+						{
+							"id": "PYSEC-2025-194",
+							"aliases": ["CVE-2025-3000", "BIT-pytorch-2025-3000", "GHSA-rrmf-rvhw-rf47"],
+							"fixed_versions": ["2.13.0"]
+						}
+					]
+				},
+				{
+					"name": "transformers",
+					"version": "5.5.4",
+					"advisories": [
+						{
+							"id": "PYSEC-2026-3929",
+							"aliases": ["GHSA-xrqw-3rrv-vx5w", "CVE-2026-9856"],
+							"fixed_versions": ["5.10.0"]
+						},
+						{
+							"id": "PYSEC-2026-4174",
+							"aliases": ["CVE-2026-80047", "GHSA-x9r9-c232-4q39"],
+							"fixed_versions": []
+						}
+					]
+				}
+			]
+		},
+		"full_requirements_resolution": {
+			"distributions_evaluated": 333,
+			"advisory_entries": 14,
+			"affected": [
+				{
+					"name": "accelerate",
+					"version": "1.13.0",
+					"advisories": [
+						{
+							"id": "PYSEC-2026-3804",
+							"aliases": ["CVE-2026-69112", "GHSA-4j2p-28q2-5m79"],
+							"fixed_versions": []
+						}
+					]
+				},
+				{
+					"name": "chromadb",
+					"version": "1.5.9",
+					"advisories": [
+						{
+							"id": "PYSEC-2026-311",
+							"aliases": ["GHSA-f4j7-r4q5-qw2c", "CVE-2026-45829"],
+							"fixed_versions": []
+						},
+						{
+							"id": "PYSEC-2026-311",
+							"aliases": ["GHSA-f4j7-r4q5-qw2c", "CVE-2026-45829"],
+							"fixed_versions": []
+						},
+						{
+							"id": "PYSEC-2026-3814",
+							"aliases": ["CVE-2026-45833", "GHSA-36p7-vc44-83pf"],
+							"fixed_versions": []
+						},
+						{
+							"id": "PYSEC-2026-3815",
+							"aliases": ["CVE-2026-45831", "GHSA-xph7-9rjv-w5fr"],
+							"fixed_versions": []
+						},
+						{
+							"id": "PYSEC-2026-3813",
+							"aliases": ["CVE-2026-45830", "GHSA-2wm9-hf6c-p5cr"],
+							"fixed_versions": []
+						}
+					]
+				},
+				{
+					"name": "datasets",
+					"version": "4.0.0",
+					"advisories": [
+						{
+							"id": "PYSEC-2026-3716",
+							"aliases": ["CVE-2026-66007", "GHSA-379c-qx7v-6h59"],
+							"fixed_versions": ["5.0.1"]
+						}
+					]
+				},
+				{
+					"name": "fsspec",
+					"version": "2025.3.0",
+					"advisories": [
+						{
+							"id": "CVE-2026-104851",
+							"aliases": ["GHSA-27vj-qcqg-25rc"],
+							"fixed_versions": ["2026.6.0"]
+						}
+					]
+				},
+				{
+					"name": "pyarrow",
+					"version": "20.0.0",
+					"advisories": [
+						{
+							"id": "PYSEC-2026-113",
+							"aliases": ["GHSA-rgxp-2hwp-jwgg", "CVE-2026-25087"],
+							"fixed_versions": ["23.0.1"]
+						},
+						{
+							"id": "PYSEC-2026-113",
+							"aliases": ["GHSA-rgxp-2hwp-jwgg", "CVE-2026-25087"],
+							"fixed_versions": ["23.0.1"]
+						}
+					]
+				},
+				{
+					"name": "sentence-transformers",
+					"version": "5.5.1",
+					"advisories": [
+						{
+							"id": "PYSEC-2026-4164",
+							"aliases": ["CVE-2026-68770", "GHSA-jhr6-gm9c-rqjv"],
+							"fixed_versions": ["5.6.0"]
+						}
+					]
+				},
+				{
+					"name": "transformers",
+					"version": "5.5.4",
+					"advisories": [
+						{
+							"id": "PYSEC-2026-3929",
+							"aliases": ["CVE-2026-9856", "GHSA-xrqw-3rrv-vx5w"],
+							"fixed_versions": ["5.10.0"]
+						},
+						{
+							"id": "PYSEC-2026-4174",
+							"aliases": ["CVE-2026-80047", "GHSA-x9r9-c232-4q39"],
+							"fixed_versions": []
+						}
+					]
+				},
+				{
+					"name": "unstructured",
+					"version": "0.22.31",
+					"advisories": [
+						{
+							"id": "PYSEC-2026-3930",
+							"aliases": ["GHSA-4mvj-m6j5-pmf7", "CVE-2026-71428"],
+							"fixed_versions": ["0.24.0"]
+						}
+					]
+				}
+			]
+		},
+		"installed_test_environment": {
+			"distributions_evaluated": 118,
+			"advisory_entries": 0,
+			"affected": []
+		}
+	},
+	"git_secrets": {
+		"leaks_reported": 0,
+		"shallow_history": true,
+		"report_redaction_percent": 100
+	},
+	"validation": {
+		"backend_tests_passed": 82,
+		"frontend_tests_passed": 9,
+		"live_production_pentest": false,
+		"production_container_os_scan": false
+	}
+}

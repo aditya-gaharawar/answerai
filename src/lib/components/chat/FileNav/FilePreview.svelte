@@ -393,7 +393,10 @@
 					? ' allow-downloads'
 					: ''}{($settings?.iframeSandboxAllowForms ?? true)
 					? ' allow-forms'
-					: ''}{($settings?.iframeSandboxAllowSameOrigin ?? false) ? ' allow-same-origin' : ''}"
+					: ''}{($settings?.iframeSandboxAllowSameOrigin ?? false) &&
+				!($settings?.iframeSandboxAllowScripts ?? true)
+					? ' allow-same-origin'
+					: ''}"
 				class="w-full h-full border-none bg-white"
 				title={$i18n.t('HTML Preview')}
 			/>
@@ -409,7 +412,10 @@
 					? ' allow-downloads'
 					: ''}{($settings?.iframeSandboxAllowForms ?? true)
 					? ' allow-forms'
-					: ''}{($settings?.iframeSandboxAllowSameOrigin ?? false) ? ' allow-same-origin' : ''}"
+					: ''}{($settings?.iframeSandboxAllowSameOrigin ?? false) &&
+				!($settings?.iframeSandboxAllowScripts ?? true)
+					? ' allow-same-origin'
+					: ''}"
 				class="w-full h-full border-none bg-white"
 				title={$i18n.t('HTML Preview')}
 			/>

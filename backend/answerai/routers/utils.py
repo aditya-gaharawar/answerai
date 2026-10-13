@@ -40,6 +40,9 @@ async def format_code(form_data: CodeForm, user=Depends(get_admin_user)):
 
 @router.post('/code/execute')
 async def execute_code(request: Request, form_data: CodeForm, user=Depends(get_verified_user)):
+    from answerai.utils.security_policy import require_user_permission
+
+    await require_user_permission(user, 'features.code_interpreter')
     if not await Config.get('code_execution.enable'):
         raise HTTPException(
             status_code=403,

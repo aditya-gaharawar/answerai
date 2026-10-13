@@ -36,6 +36,7 @@ PERMISSIONS = {
     'features.direct_connections': 'direct_connections',
     'features.automations': 'automations',
     'workspace.tools': 'tools',
+    'workspace.tools_import': 'tools',
 }
 
 

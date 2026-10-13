@@ -222,7 +222,8 @@
 										? ' allow-forms'
 										: ''}{($settings?.iframeSandboxAllowDownloads ?? true)
 										? ' allow-downloads'
-										: ''}{($settings?.iframeSandboxAllowSameOrigin ?? false)
+										: ''}{($settings?.iframeSandboxAllowSameOrigin ?? false) &&
+									!($settings?.iframeSandboxAllowScripts ?? true)
 										? ' allow-same-origin'
 										: ''}"
 									srcdoc={injectCsp(document.document, $config?.ui?.iframe_csp ?? '')}

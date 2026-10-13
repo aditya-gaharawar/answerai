@@ -259,7 +259,8 @@
 									? ' allow-downloads'
 									: ''}{($settings?.iframeSandboxAllowForms ?? true)
 									? ' allow-forms'
-									: ''}{($settings?.iframeSandboxAllowSameOrigin ?? false)
+									: ''}{($settings?.iframeSandboxAllowSameOrigin ?? false) &&
+								!($settings?.iframeSandboxAllowScripts ?? true)
 									? ' allow-same-origin'
 									: ''}"
 								on:load={iframeLoadHandler}

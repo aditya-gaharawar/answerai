@@ -6,6 +6,7 @@
 </script>
 
 <script lang="ts">
+	import { buildIframeSandbox } from '$lib/utils/iframe-sandbox';
 	import { onDestroy, onMount, tick } from 'svelte';
 	import { config } from '$lib/stores';
 	import { injectCsp } from '$lib/utils/csp';
@@ -38,16 +39,13 @@
 	let registeredWindow: Window | null = null;
 
 	// Derived: build sandbox attribute from flags
-	$: sandbox =
-		[
-			allowScripts && 'allow-scripts',
-			allowForms && 'allow-forms',
-			allowSameOrigin && 'allow-same-origin',
-			allowPopups && 'allow-popups',
-			allowDownloads && 'allow-downloads'
-		]
-			.filter(Boolean)
-			.join(' ') || undefined;
+	$: sandbox = buildIframeSandbox({
+		allowScripts,
+		allowForms,
+		allowSameOrigin,
+		allowPopups,
+		allowDownloads
+	});
 
 	// Detect URL vs raw HTML and prep src/srcdoc
 	$: isUrl = typeof src === 'string' && /^(https?:)?\/\//i.test(src);

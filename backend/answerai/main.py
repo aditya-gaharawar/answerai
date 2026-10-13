@@ -153,6 +153,7 @@ from answerai.routers import (
     analytics,
     audio,
     auths,
+    admin_controls,
     billing,
     live,
     automations,
@@ -849,12 +850,15 @@ if ENABLE_COMPRESSION_MIDDLEWARE:
 # CancelledError storms across the request path. See
 # `answerai.utils.asgi_middleware` for the rationale.
 app.add_middleware(AppHTTPMiddleware)
+from answerai.utils.security_policy import RequestBodyLimitMiddleware
+
+app.add_middleware(RequestBodyLimitMiddleware)
 
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=CORS_ALLOW_ORIGIN,
-    allow_credentials=True,
+    allow_credentials='*' not in CORS_ALLOW_ORIGIN,
     allow_methods=['*'],
     allow_headers=['*'],
 )
@@ -877,6 +881,7 @@ app.include_router(retrieval.router, prefix='/api/v1/retrieval', tags=['retrieva
 app.include_router(configs.router, prefix='/api/v1/configs', tags=['configs'])
 
 app.include_router(auths.router, prefix='/api/v1/auths', tags=['auths'])
+app.include_router(admin_controls.router, prefix='/api/v1/admin/controls', tags=['admin controls'])
 app.include_router(billing.router, prefix='/api/v1/billing', tags=['billing'])
 app.include_router(live.router, prefix='/api/v1/live', tags=['live'])
 app.include_router(email_verification.router, prefix='/api/v1/auths/email', tags=['email verification'])

@@ -354,8 +354,19 @@ async def get_socket_session_user(sid: str, *, wait_for_disconnect: bool = True)
     """Session user from this worker's local Socket.IO store; only locally connected sids are ever looked up."""
     try:
         session = await sio.get_session(sid)
-        if session.get('user') and await get_verified_user_by_token(session.get('token', ''), REDIS):
-            return session['user']
+        if session.get('user'):
+            current_user = await get_verified_user_by_token(session.get('token', ''), REDIS)
+            if current_user:
+                # Authorization must use the current role, not the connection-time snapshot.
+                return current_user.model_dump(
+                    exclude={
+                        'profile_image_url',
+                        'profile_banner_image_url',
+                        'date_of_birth',
+                        'bio',
+                        'gender',
+                    }
+                )
     except Exception:
         log.debug('Socket authentication expired for %s', sid)
     LOCAL_AUTHENTICATED_SIDS.discard(sid)
@@ -940,6 +951,25 @@ async def yjs_document_state(sid, data):
         if sid not in active_session_ids:
             log.warning(f'Session {sid} not in room {room}. Cannot send state.')
             return
+
+        user = await get_socket_session_user(sid, wait_for_disconnect=False)
+        if not user:
+            return
+        # Room membership is a routing hint, not proof of current resource access.
+        if document_id.startswith('note:'):
+            if user.get('role') != 'admin' and not await has_permission(
+                user['id'], 'features.notes', await Config.get('user.permissions')
+            ):
+                return
+            note = await Notes.get_note_by_id(document_id.split(':', 1)[1])
+            if not note or (
+                user.get('role') != 'admin'
+                and user['id'] != note.user_id
+                and not await AccessGrants.has_access(
+                    user_id=user['id'], resource_type='note', resource_id=note.id, permission='read'
+                )
+            ):
+                return
 
         if not await YDOC_MANAGER.document_exists(document_id):
             log.warning(f'Document {document_id} not found')

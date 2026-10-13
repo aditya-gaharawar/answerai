@@ -2993,7 +2993,7 @@ async def reset_upload_dir(request: Request, user=Depends(get_admin_user)) -> bo
 if ENV == 'dev':
 
     @router.get('/ef/{text}')
-    async def get_embeddings(request: Request, text: str | None = 'Hello World!'):
+    async def get_embeddings(request: Request, text: str | None = 'Hello World!', user=Depends(get_admin_user)):
         return {'result': await request.app.state.EMBEDDING_FUNCTION(text, prefix=RAG_EMBEDDING_QUERY_PREFIX)}
 
 

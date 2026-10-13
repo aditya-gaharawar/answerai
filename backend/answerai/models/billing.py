@@ -38,7 +38,7 @@ class UsageBucket(Base):
     user_id = Column(String, nullable=False, index=True)
     metric = Column(String, nullable=False)
     window = Column(Integer, nullable=False)
-    starts_at = Column(BigInteger, nullable=False)
+    starts_at = Column(BigInteger, nullable=False, index=True)
     used = Column(Integer, nullable=False, default=0)
 
 

@@ -155,7 +155,9 @@ async def generate_chat_completion(
     from answerai.utils.plans import reserve_generation
 
     await reserve_generation(request, user, form_data)
-    log.debug('generate_chat_completion: %s', form_data)
+    from answerai.utils.secret_redaction import redact_value
+
+    log.debug('generate_chat_completion: %s', redact_value(form_data))
     if BYPASS_MODEL_ACCESS_CONTROL:
         bypass_filter = True
 

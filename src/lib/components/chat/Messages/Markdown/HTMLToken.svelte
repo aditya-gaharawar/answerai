@@ -118,7 +118,10 @@
 					? ' allow-downloads'
 					: ''}{($settings?.iframeSandboxAllowForms ?? true)
 					? ' allow-forms'
-					: ''}{($settings?.iframeSandboxAllowSameOrigin ?? false) ? ' allow-same-origin' : ''}"
+					: ''}{($settings?.iframeSandboxAllowSameOrigin ?? false) &&
+				!($settings?.iframeSandboxAllowScripts ?? true)
+					? ' allow-same-origin'
+					: ''}"
 				referrerpolicy="strict-origin-when-cross-origin"
 				allowfullscreen
 				width="100%"
