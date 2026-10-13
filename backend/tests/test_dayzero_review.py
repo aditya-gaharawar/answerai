@@ -18,15 +18,11 @@ pytest_plugins = ['test_email_verification']
 
 @pytest.mark.asyncio
 async def test_socket_session_uses_current_role_after_admin_demotion(harness, monkeypatch):
-    target = await Auths.insert_new_auth(
-        'former-admin@example.com', 'test-hash', 'Former admin', role='admin'
-    )
+    target = await Auths.insert_new_auth('former-admin@example.com', 'test-hash', 'Former admin', role='admin')
     auth = await Auths.get_auth_by_id(target.id)
     token = create_token({'id': target.id, 'session_stamp': auth.session_stamp})
     stale = target.model_dump()
-    sio = SimpleNamespace(
-        get_session=AsyncMock(return_value={'user': stale, 'token': token}), disconnect=AsyncMock()
-    )
+    sio = SimpleNamespace(get_session=AsyncMock(return_value={'user': stale, 'token': token}), disconnect=AsyncMock())
     monkeypatch.setattr(sockets, 'sio', sio)
     await Users.update_user_by_id(target.id, {'role': 'user'})
     resolved = await sockets.get_socket_session_user('local-test-session')
@@ -38,9 +34,7 @@ async def test_socket_session_uses_current_role_after_admin_demotion(harness, mo
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize('proof', [True, False, None, 'true', 1])
-async def test_unverified_provider_email_cannot_link_existing_account_via_token_exchange(
-    harness, monkeypatch, proof
-):
+async def test_unverified_provider_email_cannot_link_existing_account_via_token_exchange(harness, monkeypatch, proof):
     client, _, _, app, _ = harness
     victim = await Auths.insert_new_auth('victim@example.com', 'test-hash', 'Victim', role='user')
     provider = SimpleNamespace(
@@ -75,9 +69,7 @@ async def test_document_state_rechecks_read_access_for_existing_room(harness, mo
 
     target = await Auths.insert_new_auth('demoted-reader@example.com', 'test-hash', 'Reader', role='admin')
     owner = await Auths.insert_new_auth('note-owner@example.com', 'test-hash', 'Owner', role='user')
-    note = await Notes.insert_new_note(
-        owner.id, NoteForm(title='Private', data={'content': {'md': 'private proof'}})
-    )
+    note = await Notes.insert_new_note(owner.id, NoteForm(title='Private', data={'content': {'md': 'private proof'}}))
     auth = await Auths.get_auth_by_id(target.id)
     token = create_token({'id': target.id, 'session_stamp': auth.session_stamp})
     sio = SimpleNamespace(
@@ -121,12 +113,8 @@ def test_release_tag_cannot_become_shell_code(tmp_path):
     )
     marker = tmp_path / 'shell-executed'
     tag = 'v$(touch${IFS}' + str(marker) + ')'
-    assert (
-        subprocess.run(['git', 'check-ref-format', 'refs/tags/' + tag], capture_output=True).returncode == 0
-    )
-    script = (
-        step['run'].replace('${{ github.ref }}', 'refs/tags/' + tag).replace('${{ github.ref_name }}', tag)
-    )
+    assert subprocess.run(['git', 'check-ref-format', 'refs/tags/' + tag], capture_output=True).returncode == 0
+    script = step['run'].replace('${{ github.ref }}', 'refs/tags/' + tag).replace('${{ github.ref_name }}', tag)
     script = script.replace('${{ matrix.suffix }}', '')
     result = subprocess.run(
         ['bash', '-eu', '-c', script],

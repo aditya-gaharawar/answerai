@@ -45,15 +45,11 @@ async def test_code_execution_permission_before_jupyter_request(harness, monkeyp
     assert result.status_code == 403
     executor.assert_not_called()
     permissions.return_value = True
-    assert (
-        await client.post('/api/v1/utils/code/execute', json={'code': 'print("allowed")'})
-    ).status_code == 200
+    assert (await client.post('/api/v1/utils/code/execute', json={'code': 'print("allowed")'})).status_code == 200
     executor.assert_awaited_once()
     app.dependency_overrides[get_current_user] = lambda: admin
     permissions.return_value = False
-    assert (
-        await client.post('/api/v1/utils/code/execute', json={'code': 'print("admin")'})
-    ).status_code == 200
+    assert (await client.post('/api/v1/utils/code/execute', json={'code': 'print("admin")'})).status_code == 200
 
 
 @pytest.mark.asyncio
@@ -118,9 +114,7 @@ async def test_streaming_body_and_cookie_origin_guard(harness):
     async def private():
         return {'private': True}
 
-    async with httpx.AsyncClient(
-        transport=httpx.ASGITransport(app=app), base_url='https://answerai.in'
-    ) as client:
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url='https://answerai.in') as client:
         result = await client.post('/upload', content=b'x', headers={'Content-Length': '1048577'})
         assert result.status_code == 413 and not reached
 
@@ -132,9 +126,7 @@ async def test_streaming_body_and_cookie_origin_guard(harness):
         assert result.status_code == 413 and not reached
         for method, path in [('POST', '/upload'), ('GET', '/private')]:
             for origin in ['https://attacker.invalid', 'null']:
-                result = await client.request(
-                    method, path, headers={'Cookie': 'token=test-session', 'Origin': origin}
-                )
+                result = await client.request(method, path, headers={'Cookie': 'token=test-session', 'Origin': origin})
                 assert result.status_code == 403
         assert (
             await client.post(
@@ -149,9 +141,7 @@ async def test_streaming_body_and_cookie_origin_guard(harness):
                 headers={'Authorization': 'Bearer explicit-client-key', 'Origin': 'https://client.invalid'},
             )
         ).status_code == 200
-        await Config.upsert(
-            {'security.policy': {'allowed_cookie_origins': ['https://owned-frontend.example']}}
-        )
+        await Config.upsert({'security.policy': {'allowed_cookie_origins': ['https://owned-frontend.example']}})
         assert (
             await client.get(
                 '/private',
@@ -189,9 +179,7 @@ def test_nested_and_truncated_audit_credentials_are_redacted():
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize(
-    'claim,expected', [(True, True), (False, False), (None, False), ('true', False), (1, False)]
-)
+@pytest.mark.parametrize('claim,expected', [(True, True), (False, False), (None, False), ('true', False), (1, False)])
 async def test_oauth_email_proof_is_strict(harness, claim, expected):
     assert await policy.oauth_email_trusted('oidc', {'email_verified': claim}) is expected
     await Config.upsert({'security.policy': {'trusted_oauth_email_providers': ['enterprise']}})
@@ -221,11 +209,7 @@ async def test_admin_account_lookup_controls_and_action_ledger(harness, monkeypa
     assert await is_valid_token(decode_token(token))
     async with get_async_db() as db:
         db.add(LiveLease(user_id=user.id, session_id='active-call', expires_at=9999999999))
-        db.add(
-            UsageBucket(
-                id='test-usage', user_id=user.id, metric='messages', window=86400, starts_at=0, used=20
-            )
-        )
+        db.add(UsageBucket(id='test-usage', user_id=user.id, metric='messages', window=86400, starts_at=0, used=20))
         await db.commit()
     import sys
     from types import ModuleType
@@ -269,9 +253,7 @@ async def test_admin_controls_never_accessible_to_members(harness):
     app.dependency_overrides[get_current_user] = lambda: user
     for path in ['policy', 'overview', 'actions', 'accounts/' + user.id]:
         assert (await client.get('/api/v1/admin/controls/' + path)).status_code == 401
-    assert (
-        await client.post('/api/v1/admin/controls/policy', json={'max_request_mib': 1024})
-    ).status_code == 401
+    assert (await client.post('/api/v1/admin/controls/policy', json={'max_request_mib': 1024})).status_code == 401
 
 
 @pytest.mark.asyncio

@@ -94,9 +94,7 @@ class RequestBodyLimitMiddleware:
         headers = dict(scope.get('headers', []))
         origin = headers.get(b'origin', b'').decode('latin-1')
         cookie = headers.get(b'cookie', b'').decode('latin-1')
-        cookie_auth_origin = (
-            origin and re.search(r'(?:^|;\s*)token=', cookie) and b'authorization' not in headers
-        )
+        cookie_auth_origin = origin and re.search(r'(?:^|;\s*)token=', cookie) and b'authorization' not in headers
         if scope['method'] not in {'POST', 'PUT', 'PATCH'} and not cookie_auth_origin:
             return await self.app(scope, receive, send)
         policy = await security_policy()
@@ -125,9 +123,7 @@ class RequestBodyLimitMiddleware:
                 if declared < 0:
                     raise ValueError
             except ValueError:
-                return await JSONResponse({'detail': 'Invalid Content-Length.'}, status_code=400)(
-                    scope, receive, send
-                )
+                return await JSONResponse({'detail': 'Invalid Content-Length.'}, status_code=400)(scope, receive, send)
             if declared > limit:
                 return await JSONResponse(
                     {'detail': 'Request body exceeds the configured size limit.'}, status_code=413
