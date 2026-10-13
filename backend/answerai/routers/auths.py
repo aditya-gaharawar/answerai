@@ -1701,11 +1701,16 @@ async def token_exchange(
             detail='Token missing required email claim',
         )
     email = email.lower()
+    from answerai.utils.security_policy import oauth_email_trusted
+
+    trusted_email = await oauth_email_trusted(provider, user_data)
 
     # Enforce domain allowlist — same check as the normal OAuth callback
     oauth_allowed_domains = await Config.get('oauth.allowed_domains', [])
     if isinstance(oauth_allowed_domains, str):
-        oauth_allowed_domains = [domain.strip() for domain in oauth_allowed_domains.split(',') if domain.strip()]
+        oauth_allowed_domains = [
+            domain.strip() for domain in oauth_allowed_domains.split(',') if domain.strip()
+        ]
     if '*' not in oauth_allowed_domains and email.split('@')[-1] not in oauth_allowed_domains:
         log.warning(f'Token exchange denied: email domain not in allowed domains list')
         raise HTTPException(
@@ -1713,10 +1718,13 @@ async def token_exchange(
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
 
+    if '*' not in oauth_allowed_domains and not trusted_email:
+        raise HTTPException(status_code=403, detail=ERROR_MESSAGES.ACCESS_PROHIBITED)
+
     # Try to find the user by OAuth sub
     user = await Users.get_user_by_oauth_sub(provider, sub, db=db)
 
-    if not user and await Config.get('oauth.merge_accounts_by_email'):
+    if not user and trusted_email and await Config.get('oauth.merge_accounts_by_email'):
         # Try to find by email if merge is enabled
         user = await Users.get_user_by_email(email, db=db)
         if user:

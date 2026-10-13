@@ -240,9 +240,11 @@ jobs:
             $(printf '${{ env.FULL_IMAGE_NAME }}@sha256:%s ' *)
 
       - name: Inspect image
+        env:
+          IMAGE_VERSION: ${{ steps.meta.outputs.version }}
         if: steps.check.outputs.skip != 'true'
         run: |
-          docker buildx imagetools inspect ${{ env.FULL_IMAGE_NAME }}:${{ steps.meta.outputs.version }}
+          docker buildx imagetools inspect "${FULL_IMAGE_NAME}:${IMAGE_VERSION}"
 
   notify-helm-charts:
     runs-on: ubuntu-latest
@@ -355,9 +357,13 @@ jobs:
           DOCKERHUB_IMAGE="answerai/answerai"
           SUFFIX="${{ matrix.suffix }}"
 
-          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
-            VERSION="${{ github.ref_name }}"
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            VERSION="$GITHUB_REF_NAME"
             VERSION="${VERSION#v}"
+            if [[ ! "$VERSION" =~ ^[0-9][0-9A-Za-z_.-]*$ ]]; then
+              echo "Invalid Docker release tag" >&2
+              exit 1
+            fi
             MAJOR_MINOR="${VERSION%.*}"
 
             echo "tags<<EOF" >> $GITHUB_OUTPUT
@@ -379,12 +385,14 @@ jobs:
           echo "dockerhub_image=${DOCKERHUB_IMAGE}" >> $GITHUB_OUTPUT
 
       - name: Copy images from GHCR to Docker Hub
+        env:
+          DOCKERHUB_IMAGE: ${{ steps.tags.outputs.dockerhub_image }}
+          PUBLISH_TAGS: ${{ steps.tags.outputs.tags }}
         run: |
-          DOCKERHUB_IMAGE="${{ steps.tags.outputs.dockerhub_image }}"
           SUFFIX="${{ matrix.suffix }}"
 
-          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
-            VERSION="${{ github.ref_name }}"
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            VERSION="$GITHUB_REF_NAME"
             VERSION="${VERSION#v}"
             SOURCE_TAG="${VERSION}${SUFFIX}"
           else
@@ -395,7 +403,7 @@ jobs:
             fi
           fi
 
-          SOURCE="${{ env.FULL_IMAGE_NAME }}:${SOURCE_TAG}"
+          SOURCE="${FULL_IMAGE_NAME}:${SOURCE_TAG}"
 
           echo "Copying from ${SOURCE} to Docker Hub..."
 
@@ -415,4 +423,4 @@ jobs:
               echo "Copy attempt ${ATTEMPT} for ${DEST} failed, retrying in 15s..."
               sleep 15
             done
-          done <<< "${{ steps.tags.outputs.tags }}"
+          done <<< "$PUBLISH_TAGS"

@@ -36,3 +36,16 @@ pytest>=8
 pytest-asyncio>=1.0
 black==26.5.1
 mcp==1.28.1
+
+# Exercise actual Socket.IO authorization handlers.
+pycrdt==0.14.8
+
+# Fixed transitive versions used by the resolved application lockfile.
+anyio==4.14.2
+h2==4.4.1
+hpack==4.2.0
+multidict==6.9.1
+pyasn1==0.6.4
+soupsieve==2.9
+urllib3==2.8.0
+PyYAML==6.0.3
