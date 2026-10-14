@@ -29,7 +29,7 @@
 		loadCounts();
 	}
 
-	const scrollToTab = (tabId) => {
+	const scrollToTab = (/** @type {string} */ tabId) => {
 		const tabElement = document.getElementById(tabId);
 		if (tabElement) {
 			tabElement.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'start' });

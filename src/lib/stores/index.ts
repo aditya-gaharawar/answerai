@@ -37,7 +37,7 @@ export const USAGE_POOL: Writable<null | string[]> = writable(null);
 export const theme = writable('system');
 
 export const shortCodesToEmojis = writable(
-	Object.entries(emojiShortCodes).reduce((acc, [key, value]) => {
+	Object.entries(emojiShortCodes).reduce<Record<string, string>>((acc, [key, value]) => {
 		if (typeof value === 'string') {
 			acc[value] = key;
 		} else {
@@ -232,9 +232,34 @@ type OllamaModelDetails = {
 	quantization_level: string;
 };
 
+export type ServerConnection = {
+    url: string;
+    key?: string;
+    name?: string;
+    enabled?: boolean;
+    auth_type?: string;
+    path?: string;
+    config?: { enable?: boolean; [key: string]: unknown };
+};
+
 type Settings = {
+    terminalServers?: ServerConnection[];
+    showFormattingToolbar?: boolean;
+    insertPromptAsRichText?: boolean;
+    temporaryChatByDefault?: boolean;
+    chatFadeStreamingText?: boolean;
+    tools?: string[];
+    floatingActionButtons?: boolean;
+    showFloatingActionButtons?: boolean;
+    regenerateMenu?: boolean;
+    keepFollowUpPrompts?: boolean;
+    insertFollowUpPrompt?: boolean;
+    displayMultiModelResponsesInTabs?: boolean;
+    insertSuggestionPrompt?: boolean;
+    enableMessageQueue?: boolean;
+    version?: string;
 	pinnedModels?: string[];
-	toolServers?: never[];
+	toolServers?: ServerConnection[];
 	detectArtifacts?: boolean;
 	showUpdateToast?: boolean;
 	showChangelog?: boolean;
@@ -250,7 +275,7 @@ type Settings = {
 	imageCompressionSize?: any;
 	textScale?: number;
 	fontFamily?: string | null;
-	widescreenMode?: null;
+	widescreenMode?: boolean;
 	largeTextAsFile?: boolean;
 	promptAutocomplete?: boolean;
 	hapticFeedback?: boolean;
@@ -274,7 +299,7 @@ type Settings = {
 	scrollOnResponseGeneration?: boolean;
 	showFilesOnTerminalSelect?: boolean;
 	terminalFileDisplay?: 'sidebar' | 'inline';
-	directConnections?: null;
+	directConnections?: boolean;
 	chatBubble?: boolean;
 	copyFormatted?: boolean;
 	models?: string[];
@@ -342,6 +367,11 @@ type Document = {
 };
 
 type Config = {
+    onboarding?: boolean;
+    user_count?: number;
+    file?: { max_count?: number | null; max_size?: number | null; image_compression?: { width?: number; height?: number }; allowed_extensions?: string[] };
+    code?: { engine?: string };
+    metadata?: { favicon?: string; [key: string]: unknown };
 	audio?: {
 		realtime?: { enabled: boolean; model: string; voice: string };
 		stt: { engine: string };
@@ -410,6 +440,10 @@ type PromptSuggestion = {
 };
 
 export type SessionUser = {
+    token?: string;
+    expires_at?: number;
+    status_emoji?: string;
+    status_message?: string;
 	permissions: any;
 	id: string;
 	email: string;

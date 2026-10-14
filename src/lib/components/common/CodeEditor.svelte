@@ -124,7 +124,7 @@
 	// Generate unique IDs for requests
 	let _formatReqId = 0;
 
-	const formatPythonCodePyodide = (code) => {
+	const formatPythonCodePyodide = (code: string) => {
 		return new Promise((resolve, reject) => {
 			const id = `format-${++_formatReqId}`;
 			let timeout;

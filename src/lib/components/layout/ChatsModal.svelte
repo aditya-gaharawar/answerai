@@ -63,7 +63,7 @@
 	export let unarchiveHandler: null | Function = null;
 	export let unshareHandler: null | Function = null;
 
-	const setSortKey = (key) => {
+	const setSortKey = (key: string) => {
 		if (orderBy === key) {
 			direction = direction === 'asc' ? 'desc' : 'asc';
 		} else {
@@ -72,7 +72,7 @@
 		}
 	};
 
-	const deleteHandler = async (chatId) => {
+	const deleteHandler = async (chatId: string) => {
 		const res = await deleteChatById(localStorage.token, chatId).catch((error) => {
 			toast.error(`${error}`);
 		});

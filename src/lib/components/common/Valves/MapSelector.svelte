@@ -2,12 +2,13 @@
 	import { onMount, onDestroy } from 'svelte';
 
 	let map;
+	/** @type {HTMLDivElement} */
 	let mapElement;
 
 	export let setViewLocation = [51.505, -0.09];
 	export let points = [];
 
-	export let onClick = (e) => {};
+	export let onClick = (/** @type {string} */ e) => {};
 
 	let markerGroupLayer = null;
 

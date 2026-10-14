@@ -42,8 +42,8 @@
 
 	export let open = false;
 
-	let triggerEl;
-	let contentEl;
+	let triggerEl: HTMLButtonElement;
+	let contentEl: HTMLDivElement;
 
 	$: selectedLabel = items.find((i) => i.value === value)?.label ?? placeholder;
 

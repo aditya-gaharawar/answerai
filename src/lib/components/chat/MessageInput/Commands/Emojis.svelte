@@ -31,8 +31,8 @@
 				.sort((a, b) => {
 					// Score: 0 = exact match, 1 = prefix match, 2 = substring match
 					const score = (emoji) => {
-						if (emoji.shortCodes.some((c) => c.toLowerCase() === q)) return 0;
-						if (emoji.shortCodes.some((c) => c.toLowerCase().startsWith(q))) return 1;
+						if (emoji.shortCodes.some((c: string) => c.toLowerCase() === q)) return 0;
+						if (emoji.shortCodes.some((c: string) => c.toLowerCase().startsWith(q))) return 1;
 						return 2;
 					};
 					return score(a) - score(b);

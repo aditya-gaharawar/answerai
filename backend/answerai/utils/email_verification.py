@@ -80,7 +80,10 @@ class EmailSettings(BaseModel):
     @field_validator('public_url')
     @classmethod
     def valid_public_url(cls, value):
+        if any(char.isspace() or ord(char) < 32 for char in value):
+            raise ValueError('Public URL must not contain whitespace or control characters.')
         parts = urlsplit(value)
+        parts.port  # Reject malformed or out-of-range ports before saving a broken link.
         local = parts.hostname in {'localhost', '127.0.0.1', '::1'}
         if (parts.scheme != 'https' and not (local and parts.scheme == 'http')) or not parts.hostname:
             raise ValueError('Public URL must use HTTPS, or HTTP on localhost for development.')

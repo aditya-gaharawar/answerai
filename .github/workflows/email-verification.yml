@@ -23,5 +23,5 @@ jobs:
           cache: pip
           cache-dependency-path: backend/tests/requirements.txt
       - run: python -m pip install -r backend/tests/requirements.txt
-      - run: python -m pytest backend/tests/test_email_verification.py backend/tests/test_billing_live.py backend/tests/test_security_controls.py backend/tests/test_dayzero_review.py -q
+      - run: python -m pytest backend/tests/test_email_verification.py backend/tests/test_billing_live.py backend/tests/test_security_controls.py backend/tests/test_dayzero_review.py backend/tests/test_security_rescan.py backend/tests/test_system_review.py -q
       - run: python scripts/audit-branding.py

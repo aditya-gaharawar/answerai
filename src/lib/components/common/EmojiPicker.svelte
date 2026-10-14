@@ -39,7 +39,7 @@
 
 	function saveRecentEmoji(emojiName: string) {
 		// Remove if already present, then prepend
-		const updated = [emojiName, ...recentEmojiNames.filter((n) => n !== emojiName)].slice(
+		const updated = [emojiName, ...recentEmojiNames.filter((n: string) => n !== emojiName)].slice(
 			0,
 			MAX_RECENT
 		);

@@ -34,9 +34,9 @@
 	export let id = '';
 	export let edit = true;
 
-	export let onSave = (e) => {};
+	export let onSave = (e: string) => {};
 	export let onUpdate = (e, codeBlockId = '') => {};
-	export let onPreview = (e) => {};
+	export let onPreview = (e: string) => {};
 
 	export let save = false;
 	export let run = true;
@@ -219,7 +219,7 @@
 		}
 	};
 
-	const executePythonAsWorker = async (code) => {
+	const executePythonAsWorker = async (code: string) => {
 		let packages = [
 			/\bimport\s+requests\b|\bfrom\s+requests\b/.test(code) ? 'requests' : null,
 			/\bimport\s+bs4\b|\bfrom\s+bs4\b/.test(code) ? 'beautifulsoup4' : null,
@@ -359,7 +359,7 @@
 	};
 
 	let mermaid = null;
-	const renderMermaid = async (code) => {
+	const renderMermaid = async (code: string) => {
 		if (!mermaid) {
 			mermaid = await initMermaid();
 		}

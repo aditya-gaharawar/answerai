@@ -17,7 +17,7 @@
 
 	const i18n = getContext('i18n');
 
-	let previewElement = null;
+	let previewElement: HTMLDivElement | null = null;
 
 	const handleKeyDown = (event: KeyboardEvent) => {
 		if (

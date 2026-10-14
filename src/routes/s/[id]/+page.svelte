@@ -25,7 +25,7 @@
 
 	let autoScroll = true;
 	let processing = '';
-	let messagesComponent;
+	let messagesComponent: InstanceType<typeof Messages>;
 
 	// let chatId = $page.params.id;
 	let showModelSelector = false;

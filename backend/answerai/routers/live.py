@@ -284,7 +284,7 @@ async def call(ws: WebSocket):  # noqa: C901 - explicit provider protocol and li
         await acquire_lease(user.id, lease_id)
         leased = True
         await reserve(user.id, [('call_starts', 60, 3, 1)])
-        async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=None, sock_connect=15)) as session:
+        async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=30, sock_connect=15)) as session:
             url = (
                 'wss://api.openai.com/v1/realtime?model=' + config.openai_model if provider == 'openai' else GEMINI_URL
             )

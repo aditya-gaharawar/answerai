@@ -19,3 +19,9 @@ declare global {
 }
 
 export {};
+
+// The root layout provides this store through setContext('i18n', i18n).
+// Keep the named context contract visible to every consumer without assertions.
+declare module 'svelte' {
+	export function getContext(key: 'i18n'): typeof import('$lib/i18n').i18n;
+}

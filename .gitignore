@@ -315,3 +315,6 @@ cypress/screenshots
 # Local security scanner reports
 .security-audit/
 .security-review/
+
+# Generated ONNX browser runtime assets
+static/wasm/

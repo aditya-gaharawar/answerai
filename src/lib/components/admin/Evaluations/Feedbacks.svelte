@@ -46,7 +46,7 @@
 	let selectedModelId: string = '';
 	let modelIds: string[] = [];
 
-	const setSortKey = (key) => {
+	const setSortKey = (key: string) => {
 		if (orderBy === key) {
 			direction = direction === 'asc' ? 'desc' : 'asc';
 		} else {

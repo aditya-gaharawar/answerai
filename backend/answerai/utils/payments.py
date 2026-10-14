@@ -43,7 +43,10 @@ async def api(provider, method, path, data=None, idempotency=None):
                 **({'data': data} if provider == 'stripe' else {'json': data}),
             )
             response.raise_for_status()
-            return response.json()
+            result = response.json()
+            if not isinstance(result, dict):
+                raise ValueError('Expected a provider JSON object.')
+            return result
     except (httpx.HTTPError, ValueError):
         raise HTTPException(
             503, 'Payment provider is unavailable or configuration is invalid. Please try again later.'
@@ -99,7 +102,7 @@ async def catalogue(config):
                         'interval_count': plan['interval'],
                     }
                 )
-        except HTTPException:
+        except (HTTPException, KeyError, TypeError, ValueError):
             continue
     return result
 
@@ -218,6 +221,8 @@ async def start_checkout(user, provider):
 
 
 def verify_signature(provider, body, signature, now=None):
+    if not isinstance(signature, str) or not signature.isascii() or len(signature) > 4096:
+        raise HTTPException(400, 'Invalid payment signature.')
     if provider == 'stripe':
         secret = os.getenv('STRIPE_WEBHOOK_SECRET', '')
         parts = {}

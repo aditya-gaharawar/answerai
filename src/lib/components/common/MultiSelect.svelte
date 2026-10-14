@@ -12,8 +12,8 @@
 	export let className = '';
 
 	let open = false;
-	let triggerEl;
-	let contentEl;
+	let triggerEl: HTMLButtonElement;
+	let contentEl: HTMLDivElement;
 
 	$: items = options.map((option) =>
 		typeof option === 'object' && option !== null
@@ -26,7 +26,7 @@
 		.filter((item) => selectedValues.includes(item.value))
 		.map((item) => item.label);
 
-	const toggleItem = (itemValue) => {
+	const toggleItem = (itemValue: string) => {
 		const current = Array.isArray(value) ? value : [];
 		value = current.includes(itemValue)
 			? current.filter((v) => v !== itemValue)

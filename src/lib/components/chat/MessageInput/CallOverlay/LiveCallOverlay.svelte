@@ -13,6 +13,8 @@
 	let cameraError = '';
 	let video: HTMLVideoElement;
 	let camera: MediaStream | undefined;
+	let cameraPending = false;
+	let cameraGeneration = 0;
 	let cameraTimer: ReturnType<typeof setInterval>;
 	let elapsed = 0;
 	let clock: ReturnType<typeof setInterval>;
@@ -26,7 +28,10 @@
 	let call = new LiveCall(
 		() => {
 			call = call;
-			if (!call.connected) stopCamera();
+			if (!call.connected) {
+				stopCamera();
+				clearInterval(clock);
+			}
 		},
 		(event) => {
 			if (event.type === 'ready') {
@@ -54,9 +59,12 @@
 		current[role] = '';
 		current = current;
 		transcript = [...transcript.slice(-99), { role, text }];
+		const model = call.model;
 		if (saveTranscript && bridge)
 			historyQueue = historyQueue
-				.then(() => bridge.recordLiveTranscript(role, text, call.model))
+				.then(async () => {
+					await bridge.recordLiveTranscript(role, text, model);
+				})
 				.catch(() => {
 					historyError = 'A transcript could not be saved to this chat.';
 				});
@@ -70,29 +78,36 @@
 		await call.connect(provider);
 	}
 	function stopCamera() {
+		cameraGeneration++;
+		cameraPending = false;
 		clearInterval(cameraTimer);
 		camera?.getTracks().forEach((track) => track.stop());
 		camera = undefined;
 	}
 	async function toggleCamera() {
+		if (cameraPending || !call.connected) return;
 		cameraError = '';
 		if (camera) {
 			stopCamera();
 			return;
 		}
+		const generation = ++cameraGeneration;
+		cameraPending = true;
 		try {
 			const stream = await navigator.mediaDevices.getUserMedia({
 				video: { width: 640, height: 480, facingMode: 'user' },
 				audio: false
 			});
-			if (destroyed || !call.connected) {
+			if (destroyed || !call.connected || generation !== cameraGeneration) {
 				stream.getTracks().forEach((track) => track.stop());
 				return;
 			}
 			camera = stream;
 			await tick();
+			if (generation !== cameraGeneration || !video) return;
 			video.srcObject = stream;
 			await video.play();
+			if (generation !== cameraGeneration) return;
 			stream.getVideoTracks()[0].onended = stopCamera;
 			const canvas = document.createElement('canvas');
 			canvas.width = 640;
@@ -103,8 +118,12 @@
 				call.video(canvas.toDataURL('image/jpeg', 0.65).split(',')[1]);
 			}, 1100);
 		} catch {
-			stopCamera();
-			cameraError = 'Camera access failed. Allow camera access in your browser and try again.';
+			if (generation === cameraGeneration) {
+				stopCamera();
+				cameraError = 'Camera access failed. Allow camera access in your browser and try again.';
+			}
+		} finally {
+			if (generation === cameraGeneration) cameraPending = false;
 		}
 	}
 	function endCall() {
@@ -220,7 +239,7 @@
 				>
 				{#if options.camera_allowed}<button
 						class="rounded-xl border px-4 py-3"
-						disabled={!call.connected}
+						disabled={!call.connected || cameraPending}
 						aria-pressed={!!camera}
 						on:click={toggleCamera}>{camera ? 'Camera off' : 'Camera on'}</button
 					>{/if}

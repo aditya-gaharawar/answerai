@@ -53,12 +53,14 @@ export class LiveCall {
 		try {
 			if (!navigator.mediaDevices?.getUserMedia)
 				throw new Error('Microphone access requires HTTPS or localhost.');
-			this.context = new AudioContext({ sampleRate: 24000 });
-			if (this.context.sampleRate !== 24000 || !this.context.audioWorklet)
+			const context = new AudioContext({ sampleRate: 24000 });
+			this.context = context;
+			if (context.sampleRate !== 24000 || !context.audioWorklet)
 				throw new Error(
 					'This browser does not support live-call audio. Try an updated Chrome, Edge, or Safari.'
 				);
-			await this.context.resume();
+			await context.resume();
+			if (generation !== this.generation) return;
 			const stream = await navigator.mediaDevices.getUserMedia({
 				audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true }
 			});
@@ -67,12 +69,12 @@ export class LiveCall {
 				return;
 			}
 			this.stream = stream;
-			await this.context.audioWorklet.addModule(new URL('./realtime-audio.js', import.meta.url));
+			await context.audioWorklet.addModule(new URL('./realtime-audio.js', import.meta.url));
 			if (generation !== this.generation) return;
-			this.node = new AudioWorkletNode(this.context, 'realtime-audio', { outputChannelCount: [1] });
-			this.source = this.context.createMediaStreamSource(stream);
+			this.node = new AudioWorkletNode(context, 'realtime-audio', { outputChannelCount: [1] });
+			this.source = context.createMediaStreamSource(stream);
 			this.source.connect(this.node);
-			this.node.connect(this.context.destination);
+			this.node.connect(context.destination);
 			this.node.port.onmessage = ({ data }) => {
 				if (data.type === 'input' && this.connected && !this.muted) {
 					if ((this.ws?.bufferedAmount ?? 0) > 96000) {
@@ -92,7 +94,10 @@ export class LiveCall {
 			url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
 			const ws = new WebSocket(url);
 			this.ws = ws;
-			ws.onopen = () => this.send({ type: 'auth', token: localStorage.token, provider });
+			ws.onopen = () => {
+				if (generation === this.generation)
+					this.send({ type: 'auth', token: localStorage.token, provider });
+			};
 			ws.onmessage = ({ data }) => {
 				if (generation !== this.generation) return;
 				try {
@@ -101,7 +106,9 @@ export class LiveCall {
 					this.fail('Invalid live audio response.');
 				}
 			};
-			ws.onerror = () => this.fail('Live connection failed. Please try again.');
+			ws.onerror = () => {
+				if (generation === this.generation) this.fail('Live connection failed. Please try again.');
+			};
 			ws.onclose = () => {
 				if (generation === this.generation) this.fail('The call ended. You can start a new call.');
 			};
@@ -202,6 +209,7 @@ export class LiveCall {
 		clearInterval(this.timer);
 		clearTimeout(this.timeout);
 		if (this.ws) {
+			this.ws.onopen = null;
 			this.ws.onclose = null;
 			this.ws.onerror = null;
 			this.ws.onmessage = null;
@@ -218,7 +226,7 @@ export class LiveCall {
 		this.source = undefined;
 		this.stream?.getTracks().forEach((track) => track.stop());
 		this.stream = undefined;
-		void this.context?.close();
+		void this.context?.close().catch(() => {});
 		this.context = undefined;
 		this.connected = this.connecting = this.speaking = false;
 		this.level = this.queued = 0;

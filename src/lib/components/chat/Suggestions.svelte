@@ -40,7 +40,7 @@
 		return true;
 	}
 
-	const getFilteredPrompts = (inputValue) => {
+	const getFilteredPrompts = (inputValue: string) => {
 		if (inputValue.length > 500) {
 			filteredPrompts = [];
 		} else {

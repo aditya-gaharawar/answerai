@@ -5,6 +5,7 @@
 	export let show = true;
 	export let getStartedHandler = () => {};
 
+	/** @type {HTMLVideoElement} */
 	let videoElement;
 	let playOnInteractionRegistered = false;
 

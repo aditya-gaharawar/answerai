@@ -39,7 +39,7 @@
 	export let direct = false;
 	export let connection: any = null;
 
-	let inputElement = null;
+	let inputElement: HTMLInputElement | null = null;
 
 	let type = 'openapi'; // 'openapi', 'mcp'
 

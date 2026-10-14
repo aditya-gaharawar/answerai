@@ -159,7 +159,7 @@
 	let dragged = false;
 	let loading = false;
 
-	let inputElement = null;
+	let inputElement: InstanceType<typeof RichTextInput> | null = null;
 
 	// Computed HTML for editor: fall back to markdown if HTML is missing
 	$: editorHtml =

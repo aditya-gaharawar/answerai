@@ -31,7 +31,7 @@
 	let currentId = null;
 
 	let scrollEnd = true;
-	let messagesContainerElement = null;
+	let messagesContainerElement: HTMLDivElement | null = null;
 	let chatInputElement = null;
 
 	let top = false;
@@ -60,7 +60,7 @@
 		}
 	};
 
-	const updateLastReadAt = async (channelId) => {
+	const updateLastReadAt = async (channelId: string) => {
 		$socket?.emit('events:channel', {
 			channel_id: channelId,
 			message_id: null,

@@ -97,13 +97,15 @@
 	export let onToolCallResolved = (e) => {};
 	export let onSetInputText = (text) => {};
 
+	/** @type {HTMLDivElement} */
 	let contentContainerElement;
+	/** @type {InstanceType<typeof FloatingButtons>} */
 	let floatingButtonsElement;
 
 	let sourceIds = [];
 	$: getSourceIds(sources);
 
-	const getSourceIds = (sources) => {
+	const getSourceIds = ( sources) => {
 		const result = [];
 		const seenIds = new Set();
 		for (const source of sources ?? []) {
@@ -133,7 +135,7 @@
 	/** @param {string} messageContent */
 	const formatMessageContent = (messageContent) =>
 		model?.info?.meta?.capabilities?.citations == false
-			? replaceOutsideCode(messageContent, (segment) =>
+			? replaceOutsideCode(messageContent, (/** @type {string} */ segment) =>
 					segment.replace(/\s*(\[(?:\d+(?:#[^,\]\s]+)?(?:,\s*\d+(?:#[^,\]\s]+)?)*)\])+/g, '')
 				)
 			: messageContent;
@@ -181,7 +183,7 @@
 		}
 	);
 
-	const updateButtonPosition = (event) => {
+	const updateButtonPosition = ( event) => {
 		const buttonsContainerElement = document.getElementById(`floating-buttons-${id}`);
 		if (
 			!contentContainerElement?.contains(event.target) &&
@@ -248,7 +250,7 @@
 		}
 	};
 
-	const keydownHandler = (e) => {
+	const keydownHandler = ( e) => {
 		if (e.key === 'Escape') {
 			closeFloatingButtons();
 		}

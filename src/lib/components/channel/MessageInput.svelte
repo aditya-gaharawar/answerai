@@ -83,7 +83,7 @@
 	$: queueKey = JSON.stringify([$user?.id, channel?.id, parentId]);
 	$: messageQueue = $channelRequestQueues[queueKey] ?? [];
 
-	let filesInputElement;
+	let filesInputElement: HTMLInputElement;
 	let inputFiles;
 
 	let showInputVariablesModal = false;
@@ -272,7 +272,7 @@
 		return word;
 	};
 
-	const replaceCommandWithText = (text) => {
+	const replaceCommandWithText = (text: string) => {
 		const chatInput = document.getElementById('chat-input');
 		if (!chatInput) return;
 
@@ -699,7 +699,7 @@
 					const codepoint = props.id;
 					const emoji = codepoint
 						.split('-')
-						.map((cp) => String.fromCodePoint(parseInt(cp, 16)))
+						.map((cp: string) => String.fromCodePoint(parseInt(cp, 16)))
 						.join('');
 					editor.chain().focus().deleteRange(range).insertContent(emoji).run();
 				},

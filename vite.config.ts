@@ -2,7 +2,6 @@ import { sveltekit } from '@sveltejs/kit/vite';
 import { defineConfig } from 'vite';
 import { resolveBuildInfo } from './scripts/build-info.js';
 
-import { viteStaticCopy } from 'vite-plugin-static-copy';
 
 const backendTarget = process.env.WEBUI_BACKEND_URL || 'http://localhost:8080';
 const buildInfo = resolveBuildInfo();
@@ -11,18 +10,7 @@ export default defineConfig({
 	resolve: {
 		conditions: ['onnxruntime-web-use-extern-wasm']
 	},
-	plugins: [
-		sveltekit(),
-		viteStaticCopy({
-			targets: [
-				{
-					src: 'node_modules/onnxruntime-web/dist/*.jsep.*',
-
-					dest: 'wasm'
-				}
-			]
-		})
-	],
+	plugins: [sveltekit()],
 	define: {
 		APP_VERSION: JSON.stringify(process.env.npm_package_version),
 		APP_BUILD_HASH: JSON.stringify(buildInfo.hash),

@@ -121,7 +121,7 @@
 	onDestroy(clearBackgroundPreview);
 	let success = false;
 
-	let filesInputElement;
+	let filesInputElement: HTMLInputElement;
 	let inputFiles;
 
 	let showSystemPrompt = true;
@@ -466,7 +466,7 @@
 
 		modelInfo.params.system = system.trim() === '' ? null : system;
 		modelInfo.params.stop = params.stop
-			? (typeof params.stop === 'string' ? params.stop.split(',') : params.stop).filter((s) =>
+			? (typeof params.stop === 'string' ? params.stop.split(',') : params.stop).filter((s: string) =>
 					s.trim()
 				)
 			: null;

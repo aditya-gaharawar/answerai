@@ -13,11 +13,11 @@ export const exportModels = async (token: string, ids?: string[]) => {
 
 export const getModelItems = async (
 	token: string = '',
-	query,
-	viewOption,
-	selectedTag,
-	orderBy,
-	direction,
+	query: string,
+	viewOption: string,
+	selectedTag: string,
+	orderBy: string,
+	direction: string,
 	page,
 	signal?: AbortSignal
 ) => {

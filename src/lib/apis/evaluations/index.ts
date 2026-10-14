@@ -160,8 +160,8 @@ export const getFeedbackModelIds = async (token: string = '') => {
 
 export const getFeedbackItems = async (
 	token: string = '',
-	orderBy,
-	direction,
+	orderBy: string,
+	direction: string,
 	page,
 	modelId: string = ''
 ) => {

@@ -27,10 +27,10 @@ const ALLOWED_SURROUNDING_CHARS_REGEX = new RegExp(`[${ALLOWED_SURROUNDING_CHARS
 // const inlineRule = /^(\${1,2})(?!\$)((?:\\.|[^\\\n])*?(?:\\.|[^\\\n\$]))\1(?=[\s?!\.,:？！。，：]|$)/;
 // const blockRule = /^(\${1,2})\n((?:\\[^]|[^\\])+?)\n\1(?:\n|$)/;
 
-const inlinePatterns = [];
-const blockPatterns = [];
+const inlinePatterns: string[] = [];
+const blockPatterns: string[] = [];
 
-function escapeRegex(string) {
+function escapeRegex(string: string) {
 	return string.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
 }
 
@@ -115,7 +115,7 @@ export default function (options = {}) {
 	};
 }
 
-function katexStart(src, displayMode: boolean) {
+function katexStart(src: string, displayMode: boolean) {
 	for (let i = 0; i < src.length; i++) {
 		const ch = src.charCodeAt(i);
 
@@ -165,7 +165,7 @@ function katexTokenizer(src, tokens, displayMode: boolean) {
 		const text = match
 			.slice(2)
 			.filter((item) => item)
-			.find((item) => item.trim());
+			.find((item: string) => item.trim());
 
 		return {
 			type,

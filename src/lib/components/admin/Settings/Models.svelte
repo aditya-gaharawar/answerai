@@ -103,7 +103,7 @@
 	let savingModelOrder = false;
 	let savingModelsSettings = false;
 	let modelOrderDirty = false;
-	let modelDefaultsPanel = null;
+	let modelDefaultsPanel: InstanceType<typeof ModelDefaultsPanel> | null = null;
 	let modelDefaultsDirty = false;
 
 	let viewOption = 'available';

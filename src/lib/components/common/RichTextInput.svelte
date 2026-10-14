@@ -45,7 +45,7 @@
 	// This rule eliminates that hack so <pre><code> content is untouched.
 	turndownService.addRule('singleNewlineParagraphs', {
 		filter: 'p',
-		replacement: function (content) {
+		replacement: function (content: string) {
 			return '\n' + content + '\n';
 		}
 	});
@@ -107,7 +107,7 @@
 			node.nodeName === 'LI' &&
 			(node.getAttribute('data-checked') === 'true' ||
 				node.getAttribute('data-checked') === 'false'),
-		replacement: function (content, node) {
+		replacement: function (content: string, node) {
 			const checked = node.getAttribute('data-checked') === 'true';
 			// Trim TipTap's block wrapper; 4-space continuation keeps sublists and fences nested.
 			content = content.trim().replace(/\n(?=.)/g, '\n    ');
@@ -433,7 +433,7 @@
 		};
 	}
 
-	export const replaceCommandWithText = async (text) => {
+	export const replaceCommandWithText = async (text: string) => {
 		const { state, dispatch } = editor.view;
 		const { selection } = state;
 		const pos = selection.from;
@@ -798,7 +798,7 @@
 			}
 
 			if (!raw) {
-				async function tryParse(value, attempts = 3, interval = 100) {
+				async function tryParse(value: string, attempts = 3, interval = 100) {
 					try {
 						// Try parsing the value
 						return marked.parse(value.replaceAll(`\n<br/>`, `<br/>`), {
@@ -1361,7 +1361,7 @@
 			.turndown(
 				(preserveBreaks ? htmlValue.replace(/<p><\/p>/g, '<br/>') : htmlValue).replace(
 					/ {2,}/g,
-					(m) => m.replace(/ /g, '\u00a0')
+					(m: string) => m.replace(/ /g, '\u00a0')
 				)
 			)
 			.replace(/\u00a0/g, ' ');

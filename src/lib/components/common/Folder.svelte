@@ -25,7 +25,7 @@
 
 	export let dragAndDrop = true;
 
-	let folderElement;
+	let folderElement: HTMLDivElement;
 	let loaded = false;
 
 	let draggedOver = false;

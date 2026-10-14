@@ -32,7 +32,7 @@
 		onUpdate({ name: name.trim() || webhook.name, profile_image_url: image });
 	}
 
-	let filesInputElement;
+	let filesInputElement: HTMLInputElement;
 	let inputFiles;
 
 	const handleImageUpload = () => {

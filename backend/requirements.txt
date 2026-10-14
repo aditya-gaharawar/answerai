@@ -59,10 +59,10 @@ chromadb==1.5.9
 weaviate-client==4.20.3
 opensearch-py==3.2.0
 
-transformers==5.5.4
-sentence-transformers==5.5.1
+transformers>=5.10.1,<6
+sentence-transformers==5.6.0
 accelerate==1.13.0
-pyarrow==20.0.0 # fix: pin pyarrow version to 20 for rpi compatibility #15897
+pyarrow==23.0.1
 einops==0.8.2 
 
 ftfy==6.3.1
@@ -72,7 +72,7 @@ docx2txt==0.9
 python-docx==1.2.0
 python-pptx==1.0.2
 msoffcrypto-tool==6.0.0
-unstructured==0.22.31
+unstructured==0.24.0
 
 Markdown==3.10.2
 beautifulsoup4==4.14.3
@@ -145,3 +145,10 @@ opentelemetry-instrumentation-logging==0.63b1
 opentelemetry-instrumentation-httpx==0.63b1
 opentelemetry-instrumentation-aiohttp-client==0.63b1
 opentelemetry-instrumentation-system-metrics==0.63b1
+
+# Security floors for transitive dependencies used by document/ML integrations.
+fsspec>=2026.6.0
+datasets>=5.0.1
+oauthlib>=4.0.0
+setuptools>=83.0.0
+torch>=2.13.0

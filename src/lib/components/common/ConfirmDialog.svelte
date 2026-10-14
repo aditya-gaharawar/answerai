@@ -37,7 +37,7 @@
 		init();
 	}
 
-	let modalElement = null;
+	let modalElement: HTMLDivElement | null = null;
 	let mounted = false;
 
 	let focusTrap: FocusTrap.FocusTrap | null = null;

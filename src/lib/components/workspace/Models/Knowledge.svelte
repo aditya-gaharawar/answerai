@@ -29,7 +29,7 @@
 
 	let loaded = false;
 
-	let filesInputElement = null;
+	let filesInputElement: HTMLInputElement | null = null;
 	let inputFiles = null;
 
 	let showItemModal = false;

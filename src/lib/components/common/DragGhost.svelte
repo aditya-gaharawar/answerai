@@ -4,7 +4,7 @@
 	export let x;
 	export let y;
 
-	let popupElement = null;
+	let popupElement: HTMLDivElement | null = null;
 
 	onMount(() => {
 		document.body.appendChild(popupElement);

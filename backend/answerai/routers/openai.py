@@ -527,7 +527,10 @@ async def speech(request: Request, user=Depends(get_verified_user)):
         _, api_base_urls, _, _ = await get_openai_runtime_config()
         idx = api_base_urls.index('https://api.openai.com/v1')
 
+        from answerai.utils.security_policy import validate_speech_input
+
         body = await request.body()
+        validate_speech_input(body)
         name = hashlib.sha256(body).hexdigest()
 
         SPEECH_CACHE_DIR = CACHE_DIR / 'audio' / 'speech'
@@ -1923,6 +1926,9 @@ async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
     Disabled by default. Set ENABLE_OPENAI_API_PASSTHROUGH=True to enable.
     """
 
+    # Provider resources belong to the server project, not individual app users.
+    if user.role != 'admin':
+        raise HTTPException(status_code=403, detail='Provider passthrough requires an administrator.')
     if not ENABLE_OPENAI_API_PASSTHROUGH:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,

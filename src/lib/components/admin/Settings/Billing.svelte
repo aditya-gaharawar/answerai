@@ -85,7 +85,7 @@
 					class="space-y-3 rounded-xl border border-gray-200 p-4 dark:border-gray-800"
 				>
 					<legend class="px-2 font-semibold capitalize">{name} plan</legend
-					>{#each [['messages_per_day', 'Generation requests per day'], ['requests_per_minute', 'Requests per minute'], ['live_minutes_per_day', 'Live minutes per day'], ['max_call_minutes', 'Maximum minutes per call']] as [key, label]}<label
+					>{#each [['messages_per_day', 'Generation requests per day'], ['requests_per_minute', 'Requests per minute'], ['audio_requests_per_day', 'Speech and transcription requests per day'], ['live_minutes_per_day', 'Live minutes per day'], ['max_call_minutes', 'Maximum minutes per call']] as [key, label]}<label
 							class="block text-sm"
 							>{label}<input
 								class={inputClass}

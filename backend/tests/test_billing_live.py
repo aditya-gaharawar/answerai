@@ -433,20 +433,21 @@ async def test_live_provider_access_and_config_secrets(harness, monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_live_websocket_authentication_and_provider_lifecycle(harness, monkeypatch):  # noqa: C901
+@pytest.mark.parametrize('provider', ['gemini', 'openai'])
+async def test_live_websocket_authentication_and_provider_lifecycle(harness, monkeypatch, provider):  # noqa: C901
     from aiohttp import WSMsgType
     from fastapi.testclient import TestClient
 
     _, _, _, app, admin = harness
     app.include_router(live.router, prefix='/api/v1/live')
     await Config.upsert({'live.settings': {'enabled': True}})
-    monkeypatch.setenv('GEMINI_LIVE_API_KEY', 'test-server-key')
+    monkeypatch.setenv('GEMINI_LIVE_API_KEY' if provider == 'gemini' else 'OPENAI_REALTIME_API_KEY', 'test-server-key')
     monkeypatch.setattr(live, 'get_verified_user_by_token', AsyncMock(return_value=None))
 
     def invalid_call():
         with TestClient(app) as client:
             with client.websocket_connect('/api/v1/live/call') as socket:
-                socket.send_json({'type': 'auth', 'token': 'invalid', 'provider': 'gemini'})
+                socket.send_json({'type': 'auth', 'token': 'invalid', 'provider': provider})
                 result = socket.receive_json()
                 assert result['type'] == 'error'
                 assert 'Sign in' in result['message']
@@ -468,6 +469,19 @@ async def test_live_websocket_authentication_and_provider_lifecycle(harness, mon
 
         async def send_json(self, message):
             sent.append(message)
+            if message.get('type') == 'input_audio_buffer.append':
+                await self.pending.put(
+                    SimpleNamespace(
+                        type=WSMsgType.TEXT,
+                        data=json.dumps(
+                            {
+                                'type': 'conversation.item.input_audio_transcription.completed',
+                                'transcript': 'Backend heard audio',
+                            }
+                        ),
+                    )
+                )
+                await self.pending.put(SimpleNamespace(type=WSMsgType.TEXT, data=json.dumps({'type': 'response.done'})))
             if message.get('realtimeInput', {}).get('audio'):
                 await self.pending.put(
                     SimpleNamespace(
@@ -484,7 +498,12 @@ async def test_live_websocket_authentication_and_provider_lifecycle(harness, mon
                 )
 
         async def receive(self):
-            return SimpleNamespace(type=WSMsgType.BINARY, data=b'{"setupComplete": {}}')
+            return SimpleNamespace(
+                type=WSMsgType.BINARY,
+                data=json.dumps(
+                    {'setupComplete': {}} if provider == 'gemini' else {'type': 'session.updated'}
+                ).encode(),
+            )
 
         def __aiter__(self):
             return self
@@ -500,8 +519,14 @@ async def test_live_websocket_authentication_and_provider_lifecycle(harness, mon
             pass
 
         def ws_connect(self, url, **kwargs):
-            assert url == live.GEMINI_URL
-            assert kwargs['headers'] == {'x-goog-api-key': 'test-server-key'}
+            assert url == (
+                live.GEMINI_URL if provider == 'gemini' else 'wss://api.openai.com/v1/realtime?model=gpt-realtime'
+            )
+            assert kwargs['headers'] == (
+                {'x-goog-api-key': 'test-server-key'}
+                if provider == 'gemini'
+                else {'Authorization': 'Bearer test-server-key'}
+            )
             return Upstream()
 
     monkeypatch.setattr(live.aiohttp, 'ClientSession', lambda **kwargs: ProviderSession())
@@ -510,9 +535,9 @@ async def test_live_websocket_authentication_and_provider_lifecycle(harness, mon
     def valid_call():
         with TestClient(app) as client:
             with client.websocket_connect('/api/v1/live/call') as socket:
-                socket.send_json({'type': 'auth', 'token': 'test', 'provider': 'gemini'})
+                socket.send_json({'type': 'auth', 'token': 'test', 'provider': provider})
                 ready = socket.receive_json()
-                assert ready['type'] == 'ready' and ready['input_rate'] == 16000
+                assert ready['type'] == 'ready' and ready['input_rate'] == (16000 if provider == 'gemini' else 24000)
                 socket.send_json({'type': 'audio', 'data': base64.b64encode(b'\0\0' * 640).decode()})
                 transcript = socket.receive_json()
                 assert transcript['type'] == 'transcript' and transcript['text'] == 'Backend heard audio'
@@ -520,8 +545,12 @@ async def test_live_websocket_authentication_and_provider_lifecycle(harness, mon
                 socket.send_json({'type': 'end'})
 
     await asyncio.to_thread(valid_call)
-    assert sent[0]['setup']['model'].startswith('models/')
-    assert sent[1]['realtimeInput']['audio']['mimeType'] == 'audio/pcm;rate=16000'
+    if provider == 'gemini':
+        assert sent[0]['setup']['model'].startswith('models/')
+        assert sent[1]['realtimeInput']['audio']['mimeType'] == 'audio/pcm;rate=16000'
+    else:
+        assert sent[0]['type'] == 'session.update'
+        assert sent[1]['type'] == 'input_audio_buffer.append'
     async with get_async_db() as db:
         assert await db.get(LiveLease, admin.id) is None
 

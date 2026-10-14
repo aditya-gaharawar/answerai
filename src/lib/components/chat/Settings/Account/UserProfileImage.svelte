@@ -16,7 +16,7 @@
 	export let variant = 'default';
 	export let displayName = '';
 
-	let profileImageInputElement;
+	let profileImageInputElement: HTMLInputElement;
 </script>
 
 <input

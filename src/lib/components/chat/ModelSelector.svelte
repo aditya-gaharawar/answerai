@@ -19,7 +19,7 @@
 	export let align: 'start' | 'end' = 'start';
 
 	let compareModels = selectedModels.length > 1;
-	let selector;
+	let selector: InstanceType<typeof Selector>;
 
 	export const open = () => selector?.open();
 

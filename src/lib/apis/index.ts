@@ -1783,11 +1783,17 @@ export interface ModelConfig {
 export interface ModelMeta {
 	voice_avatar?: import('$lib/utils/voice-avatar').VoiceAvatarConfig | null;
 	voice?: { voice?: string };
-	toolIds: never[];
+	toolIds: string[];
+	skillIds?: string[];
+	defaultFeatureIds?: string[];
+	defaultFilterIds?: string[];
+	terminalId?: string;
+	tags?: { name: string }[];
+	user?: { id: string; name: string; email?: string; profile_image_url?: string };
 	description?: string;
 	i18n?: Record<string, Record<string, any>>;
 	hidden?: boolean;
-	capabilities?: object;
+	capabilities?: Record<string, boolean>;
 	profile_image_url?: string;
 	background_image_url?: string | null;
 }
@@ -1801,5 +1807,6 @@ export interface ModelControl {
 }
 
 export interface ModelParams {
+	compact_token_threshold?: number;
 	model_controls?: Record<string, ModelControl>;
 }

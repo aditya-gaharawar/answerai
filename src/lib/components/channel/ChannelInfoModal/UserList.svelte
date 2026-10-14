@@ -42,7 +42,7 @@
 	let orderBy = 'name'; // default sort key
 	let direction = 'asc'; // default sort order
 
-	const setSortKey = (key) => {
+	const setSortKey = (key: string) => {
 		if (!sort) {
 			return;
 		}

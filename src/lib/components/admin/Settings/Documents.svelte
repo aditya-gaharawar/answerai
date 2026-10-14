@@ -267,8 +267,8 @@
 			FILE_IMAGE_COMPRESSION_WIDTH: RAGConfig.FILE_IMAGE_COMPRESSION_WIDTH ?? '',
 			FILE_IMAGE_COMPRESSION_HEIGHT: RAGConfig.FILE_IMAGE_COMPRESSION_HEIGHT ?? '',
 			ALLOWED_FILE_EXTENSIONS: RAGConfig.ALLOWED_FILE_EXTENSIONS.split(',')
-				.map((ext) => ext.trim())
-				.filter((ext) => ext !== ''),
+				.map((ext: string) => ext.trim())
+				.filter((ext: string) => ext !== ''),
 			DOCLING_PARAMS:
 				typeof RAGConfig.DOCLING_PARAMS === 'string' && RAGConfig.DOCLING_PARAMS.trim() !== ''
 					? JSON.parse(RAGConfig.DOCLING_PARAMS)
@@ -289,8 +289,8 @@
 					? JSON.parse(RAGConfig.MINERU_PARAMS)
 					: {},
 			MINERU_FILE_EXTENSIONS: RAGConfig.MINERU_FILE_EXTENSIONS.split(',')
-				.map((ext) => ext.trim())
-				.filter((ext) => ext !== '')
+				.map((ext: string) => ext.trim())
+				.filter((ext: string) => ext !== '')
 		});
 		dispatch('save');
 	};

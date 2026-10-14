@@ -770,7 +770,10 @@ async def speech(request: Request, user=Depends(get_verified_user)):
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
 
+    from answerai.utils.security_policy import validate_speech_input
+
     body = await request.body()
+    validate_speech_input(body)
     payload = None
     if engine == 'openai-realtime':
         try:

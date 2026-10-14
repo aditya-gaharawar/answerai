@@ -189,7 +189,7 @@ export function unescapeHtml(html: string): string {
 	return decode(html);
 }
 
-export const capitalizeFirstLetter = (string) => {
+export const capitalizeFirstLetter = (string: string) => {
 	return string.charAt(0).toUpperCase() + string.slice(1);
 };
 
@@ -464,7 +464,7 @@ export const compressImage = async (imageUrl, maxWidth, maxHeight) => {
 		img.src = imageUrl;
 	});
 };
-export const generateInitialsImage = (name) => {
+export const generateInitialsImage = (name: string) => {
 	const canvas = document.createElement('canvas');
 	const ctx = canvas.getContext('2d');
 	canvas.width = 100;
@@ -544,7 +544,7 @@ export const copyToClipboard = async (text, html = null, formatted = false) => {
 		if (!html) {
 			const options = {
 				throwOnError: false,
-				highlight: function (code, lang) {
+				highlight: function (code: string, lang: string) {
 					const language = hljs.getLanguage(lang) ? lang : 'plaintext';
 					return hljs.highlight(code, { language }).value;
 				}
@@ -684,7 +684,7 @@ export const compareVersion = (latest, current) => {
 			}) < 0;
 };
 
-export const extractCurlyBraceWords = (text) => {
+export const extractCurlyBraceWords = (text: string) => {
 	const regex = /\{\{([^}]+)\}\}/g;
 	const matches = [];
 	let match;
@@ -700,7 +700,7 @@ export const extractCurlyBraceWords = (text) => {
 	return matches;
 };
 
-export const removeLastWordFromString = (inputString, wordString) => {
+export const removeLastWordFromString = (inputString: string, wordString: string) => {
 	console.log('inputString', inputString);
 	// Split the string by newline characters to handle lines separately
 	const lines = inputString.split('\n');
@@ -733,12 +733,12 @@ export const removeLastWordFromString = (inputString, wordString) => {
 	return resultString;
 };
 
-export const removeFirstHashWord = (inputString) => {
+export const removeFirstHashWord = (inputString: string) => {
 	// Split the string into an array of words
 	const words = inputString.split(' ');
 
 	// Find the index of the first word that starts with #
-	const index = words.findIndex((word) => word.startsWith('#'));
+	const index = words.findIndex((word: string) => word.startsWith('#'));
 
 	// Remove the first word with #
 	if (index !== -1) {
@@ -751,7 +751,7 @@ export const removeFirstHashWord = (inputString) => {
 	return resultString;
 };
 
-export const transformFileName = (fileName) => {
+export const transformFileName = (fileName: string) => {
 	// Convert to lowercase
 	const lowerCaseFileName = fileName.toLowerCase();
 
@@ -1071,7 +1071,7 @@ export const cleanText = (content: string) => {
 	return removeFormattings(removeEmojis(content.trim()));
 };
 
-export const removeDetails = (content, types) => {
+export const removeDetails = (content: string, types: string[]) => {
 	return replaceOutsideCode(content, (segment) => {
 		for (const type of types) {
 			segment = segment.replace(
@@ -1083,7 +1083,7 @@ export const removeDetails = (content, types) => {
 	}).trim();
 };
 
-export const removeAllDetails = (content) => {
+export const removeAllDetails = (content: string) => {
 	// First pass: strip <details> blocks on the full string before code-fence
 	// splitting, so blocks whose body contains triple backticks are caught.
 	// (replaceOutsideCode splits on ``` fences, which breaks the <details>
@@ -1095,7 +1095,7 @@ export const removeAllDetails = (content) => {
 	}).trim();
 };
 
-export const processDetails = (content) => {
+export const processDetails = (content: string) => {
 	content = removeDetails(content, ['reasoning', 'code_interpreter']);
 
 	// This regex matches <details> tags with type="tool_calls" and captures their attributes to convert them to a string
@@ -1227,7 +1227,7 @@ export const getMessageContentParts = (content: string, splitOn: string = 'punct
 	return messageContentParts;
 };
 
-export const blobToFile = (blob, fileName) => {
+export const blobToFile = (blob, fileName: string) => {
 	// Create a new File object from the Blob
 	const file = new File([blob], fileName, { type: blob.type });
 	return file;
@@ -1322,7 +1322,7 @@ const MONTH_NAMES = [
 	'December'
 ];
 
-export const getTimeRange = (timestamp) => {
+export const getTimeRange = (timestamp: number) => {
 	const now = new Date();
 	const date = new Date(timestamp * 1000); // Convert Unix timestamp to milliseconds
 
@@ -1358,7 +1358,7 @@ export const getTimeRange = (timestamp) => {
  * @param content {string} - The content string with potential frontmatter.
  * @returns {Object} - The extracted frontmatter as a dictionary.
  */
-export const extractFrontmatter = (content) => {
+export const extractFrontmatter = (content: string) => {
 	const frontmatter = {};
 	let frontmatterStarted = false;
 	let frontmatterEnded = false;
@@ -1401,7 +1401,7 @@ export const bestMatchingLanguage = (supportedLanguages, preferredLanguages, def
 	const languages = supportedLanguages.map((lang) => lang.code);
 
 	const match = preferredLanguages
-		.map((prefLang) => languages.find((lang) => lang.startsWith(prefLang)))
+		.map((prefLang) => languages.find((lang: string) => lang.startsWith(prefLang)))
 		.find(Boolean);
 
 	return match || defaultLocale;
@@ -2482,8 +2482,8 @@ export const parseFrontmatter = (content: string): Record<string, unknown> => {
 	}
 };
 
-export const formatSkillName = (name) => {
-	return name.replace(/[-_]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+export const formatSkillName = (name: string) => {
+	return name.replace(/[-_]/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase());
 };
 
 /**

@@ -63,6 +63,7 @@
 	export let onItemMove = () => {};
 	export let onFolderUnreadCounts = () => {};
 
+	/** @type {HTMLDivElement} */
 	let folderElement;
 
 	let showFolderModal = false;

@@ -1,37 +1,17 @@
 <script lang="ts">
-	import { getContext, onMount } from 'svelte';
+	import { getContext } from 'svelte';
 	const i18n = getContext('i18n');
 
 	import Switch from '$lib/components/common/Switch.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 
-	import { DEFAULT_PERMISSIONS } from '$lib/constants/permissions';
+	import { resolvePermissions, type Permissions, type PermissionOverrides } from '$lib/constants/permissions';
 	import { config } from '$lib/stores';
 
-	export let permissions = {};
-	export let defaultPermissions = {};
+	export let permissions: Permissions = resolvePermissions();
+	export let defaultPermissions: PermissionOverrides = {};
 
-	// Reactive statement to ensure all fields are present in `permissions`
-	$: {
-		permissions = fillMissingProperties(permissions, DEFAULT_PERMISSIONS);
-	}
-
-	function fillMissingProperties(obj: any, defaults: any) {
-		return {
-			...defaults,
-			...obj,
-			workspace: { ...defaults.workspace, ...obj.workspace },
-			sharing: { ...defaults.sharing, ...obj.sharing },
-			access_grants: { ...defaults.access_grants, ...obj.access_grants },
-			chat: { ...defaults.chat, ...obj.chat },
-			features: { ...defaults.features, ...obj.features },
-			settings: { ...defaults.settings, ...obj.settings }
-		};
-	}
-
-	onMount(() => {
-		permissions = fillMissingProperties(permissions, DEFAULT_PERMISSIONS);
-	});
+	$: permissions = resolvePermissions(permissions);
 </script>
 
 <div class="space-y-2">

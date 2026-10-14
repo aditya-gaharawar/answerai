@@ -49,3 +49,4 @@ pyasn1==0.6.4
 soupsieve==2.9
 urllib3==2.8.0
 PyYAML==6.0.3
+aiofiles==25.1.0

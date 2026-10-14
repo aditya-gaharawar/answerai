@@ -166,6 +166,7 @@
 					<ul class="mt-6 space-y-3 text-sm">
 						<li>{plans[name].messages_per_day} generation requests per day</li>
 						<li>{plans[name].requests_per_minute} requests per minute</li>
+						<li>{plans[name].audio_requests_per_day} speech and transcription requests per day</li>
 						<li>
 							{plans[name].models.includes('*')
 								? 'All models shared with your account'

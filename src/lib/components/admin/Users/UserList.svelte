@@ -75,7 +75,7 @@
 	const sortState = (key, orderBy, direction) =>
 		orderBy === key ? (direction === 'asc' ? 'ascending' : 'descending') : 'none';
 
-	const setSortKey = (key) => {
+	const setSortKey = (key: string) => {
 		if (orderBy === key) {
 			direction = direction === 'asc' ? 'desc' : 'asc';
 		} else {
@@ -84,7 +84,7 @@
 		}
 	};
 
-	const roleClass = (role) => {
+	const roleClass = (role: string) => {
 		if (role === 'admin') {
 			return 'text-[#4f6f93] dark:text-[#8ba6c6]';
 		}

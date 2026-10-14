@@ -214,7 +214,7 @@
 
 	let showRateComment = false;
 
-	const copyToClipboard = async (text) => {
+	const copyToClipboard = async (text: string) => {
 		text = removeAllDetails(text);
 
 		if (($config?.ui?.response_watermark ?? '').trim() !== '') {
@@ -496,7 +496,7 @@
 				...(history.messages[message.parentId].childrenIds.length > 1
 					? {
 							sibling_model_ids: history.messages[message.parentId].childrenIds
-								.filter((id) => id !== message.id)
+								.filter((id: string) => id !== message.id)
 								.map((id) => history.messages[id]?.selectedModelId ?? history.messages[id].model)
 						}
 					: {})

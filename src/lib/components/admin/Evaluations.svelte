@@ -22,7 +22,7 @@
 		scrollToTab(selectedTab);
 	}
 
-	const scrollToTab = (tabId) => {
+	const scrollToTab = (/** @type {string} */ tabId) => {
 		const tabElement = document.getElementById(tabId);
 		if (tabElement) {
 			tabElement.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'start' });
@@ -35,7 +35,7 @@
 	$: formattedFeedbackCount =
 		$adminFeedbackCount === null ? null : formatNumber($adminFeedbackCount);
 
-	const getLeaderboardCount = (res) => {
+	const getLeaderboardCount = ( res) => {
 		const entries = res?.entries ?? [];
 		const modelMap = new Map(($_models ?? []).map((model) => [model.id, model]));
 		const activeModelCount = ($_models ?? []).filter(

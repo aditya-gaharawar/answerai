@@ -841,7 +841,7 @@
 	const OVERSCAN = 10;
 
 	let listScrollTop = 0;
-	let listContainer;
+	let listContainer: HTMLDivElement;
 	let listViewportHeight = 288;
 
 	const trackListViewport = (node: HTMLElement) => {

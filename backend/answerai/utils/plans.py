@@ -48,6 +48,7 @@ class Plan(BaseModel):
     )
     messages_per_day: int = Field(default=20, ge=0, le=1000000)
     requests_per_minute: int = Field(default=5, ge=0, le=10000)
+    audio_requests_per_day: int = Field(default=20, ge=0, le=1000000)
     live_minutes_per_day: int = Field(default=0, ge=0, le=1440)
     max_call_minutes: int = Field(default=15, ge=1, le=120)
     features: dict[str, bool] = Field(default_factory=lambda: {key: key == 'uploads' for key in FEATURES})
@@ -74,6 +75,7 @@ class BillingSettings(BaseModel):
             },
             messages_per_day=1000,
             requests_per_minute=60,
+            audio_requests_per_day=200,
             live_minutes_per_day=60,
             max_call_minutes=30,
             features={key: key != 'direct_connections' for key in FEATURES},
@@ -122,6 +124,7 @@ async def entitlement(user, config=None):
                     'models': [],
                     'messages_per_day': 0,
                     'requests_per_minute': 0,
+                    'audio_requests_per_day': 0,
                 }
             ),
             config,
@@ -268,11 +271,20 @@ async def enforce_http(request, user):  # noqa: C901 - provider/route dispatch
                     + [(feature, 86400, plan.feature_limits.get(feature, 0), 1) for feature in requested_features],
                 )
         if path.startswith('/openai/'):
-            allowed = ('/chat/completions', '/responses', '/audio/speech')
-            if not any(path.endswith(item) for item in allowed):
+            allowed = {'/openai/chat/completions', '/openai/responses', '/openai/audio/speech'}
+            if path not in allowed:
                 config = await settings()
                 if config.enabled and user.role != 'admin':
                     raise denied('provider passthrough')
+        if path in {'/openai/audio/speech', '/api/v1/audio/speech', '/api/v1/audio/transcriptions'}:
+            name, plan, config = await entitlement(user)
+            if name == 'blocked':
+                raise denied('audio')
+            if config.enabled and name != 'admin':
+                await reserve(
+                    user.id,
+                    [('requests', 60, plan.requests_per_minute, 1), ('audio', 86400, plan.audio_requests_per_day, 1)],
+                )
         generation = path in {
             '/api/chat/completions',
             '/api/v1/chat/completions',
@@ -294,7 +306,10 @@ async def enforce_http(request, user):  # noqa: C901 - provider/route dispatch
             )
         )
         if generation:
-            body = await request.json()
+            try:
+                body = await request.json()
+            except ValueError:
+                raise HTTPException(400, 'Invalid JSON body.') from None
             if not isinstance(body, dict):
                 raise HTTPException(400, 'Expected a JSON object.')
             await reserve_generation(request, user, body)

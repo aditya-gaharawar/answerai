@@ -261,3 +261,13 @@ if (process.env.USE_SLIM === 'true') {
 	await downloadPyPIWheels();
 	await verifyBundledWheels();
 }
+
+
+// Copy a fixed set of package-owned runtime assets into Svelte's static directory.
+// This avoids exposing a development-server file-copy middleware.
+await mkdir('static/wasm', { recursive: true });
+for (const name of await readdir('node_modules/onnxruntime-web/dist')) {
+    if (name.includes('.jsep.') && /\.(wasm|mjs|js)$/.test(name)) {
+        await copyFile(`node_modules/onnxruntime-web/dist/${name}`, `static/wasm/${name}`);
+    }
+}

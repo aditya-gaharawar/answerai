@@ -25,9 +25,9 @@ router = APIRouter(route_class=MfaRoute)
 
 async def target_user(identifier):
     user = (
-        await Users.get_user_by_email(identifier.strip())
+        await Users.get_user_by_email(identifier.strip().lower())
         if '@' in identifier
-        else await Users.get_user_by_id(identifier)
+        else await Users.get_user_by_id(identifier.strip())
     )
     if not user:
         raise HTTPException(404, 'Account not found.')

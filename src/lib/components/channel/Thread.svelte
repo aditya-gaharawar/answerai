@@ -23,7 +23,7 @@
 	let messages = null;
 	let top = false;
 
-	let messagesContainerElement = null;
+	let messagesContainerElement: HTMLDivElement | null = null;
 	let chatInputElement = null;
 
 	let replyToMessage = null;

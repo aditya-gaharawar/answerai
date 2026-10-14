@@ -12,7 +12,7 @@
 	export let onRequestClose: (() => void) | null = null;
 	const requestClose = () => (onRequestClose ? onRequestClose() : (show = false));
 
-	let modalElement = null;
+	let modalElement: HTMLDivElement | null = null;
 	let mounted = false;
 
 	const handleKeyDown = (event: KeyboardEvent) => {

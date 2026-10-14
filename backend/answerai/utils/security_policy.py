@@ -152,3 +152,20 @@ class RequestBodyLimitMiddleware:
             if exc.status_code != 413 or started:
                 raise
             await JSONResponse({'detail': exc.detail}, status_code=413)(scope, receive, send)
+
+
+def validate_speech_input(body: bytes) -> dict:
+    """Bound TTS work before provider dispatch, independently of the plan toggle."""
+    from answerai.utils.json_codec import JSONCodec
+
+    if len(body) > 65536:
+        raise HTTPException(413, 'Speech request is too large.')
+    try:
+        payload = JSONCodec.loads(body)
+    except (ValueError, TypeError):
+        raise HTTPException(400, 'Invalid speech JSON.') from None
+    if not isinstance(payload, dict) or not isinstance(payload.get('input'), str) or not payload['input'].strip():
+        raise HTTPException(400, 'Speech input must be nonempty text.')
+    if len(payload['input']) > 4096:
+        raise HTTPException(413, 'Speech input must not exceed 4096 characters.')
+    return payload

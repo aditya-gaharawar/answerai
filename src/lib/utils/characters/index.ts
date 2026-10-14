@@ -118,7 +118,7 @@ const decodeTextChunk = (data) => {
 const extractCharacter = (json) => {
 	function getTrimmedValue(json, keys) {
 		return keys
-			.map((key) => {
+			.map((key: string) => {
 				const keyParts = key.split('.');
 				let value = json;
 				for (const part of keyParts) {
