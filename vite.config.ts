@@ -1,14 +1,13 @@
 import { sveltekit } from '@sveltejs/kit/vite';
-import { defineConfig } from 'vite';
+import { defaultClientConditions, defineConfig } from 'vite';
 import { resolveBuildInfo } from './scripts/build-info.js';
-
 
 const backendTarget = process.env.WEBUI_BACKEND_URL || 'http://localhost:8080';
 const buildInfo = resolveBuildInfo();
 
 export default defineConfig({
 	resolve: {
-		conditions: ['onnxruntime-web-use-extern-wasm']
+		conditions: ['onnxruntime-web-use-extern-wasm', ...defaultClientConditions]
 	},
 	plugins: [sveltekit()],
 	define: {

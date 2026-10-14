@@ -55,7 +55,16 @@ export const TTSWorker = writable(null);
 export const chatId = writable('');
 export const chatTitle = writable('');
 
-export const channels = writable([]);
+type ChannelListItem = {
+	id: string;
+	type: string | null;
+	is_channel_muted: boolean;
+	unread_count: number;
+	last_message_at: number | null;
+	[key: string]: unknown;
+};
+
+export const channels = writable<ChannelListItem[]>([]);
 export const channelId = writable(null);
 
 export { chats, pinnedChats } from './chatList';
@@ -233,31 +242,31 @@ type OllamaModelDetails = {
 };
 
 export type ServerConnection = {
-    url: string;
-    key?: string;
-    name?: string;
-    enabled?: boolean;
-    auth_type?: string;
-    path?: string;
-    config?: { enable?: boolean; [key: string]: unknown };
+	url: string;
+	key?: string;
+	name?: string;
+	enabled?: boolean;
+	auth_type?: string;
+	path?: string;
+	config?: { enable?: boolean; [key: string]: unknown };
 };
 
 type Settings = {
-    terminalServers?: ServerConnection[];
-    showFormattingToolbar?: boolean;
-    insertPromptAsRichText?: boolean;
-    temporaryChatByDefault?: boolean;
-    chatFadeStreamingText?: boolean;
-    tools?: string[];
-    floatingActionButtons?: boolean;
-    showFloatingActionButtons?: boolean;
-    regenerateMenu?: boolean;
-    keepFollowUpPrompts?: boolean;
-    insertFollowUpPrompt?: boolean;
-    displayMultiModelResponsesInTabs?: boolean;
-    insertSuggestionPrompt?: boolean;
-    enableMessageQueue?: boolean;
-    version?: string;
+	terminalServers?: ServerConnection[];
+	showFormattingToolbar?: boolean;
+	insertPromptAsRichText?: boolean;
+	temporaryChatByDefault?: boolean;
+	chatFadeStreamingText?: boolean;
+	tools?: string[];
+	floatingActionButtons?: boolean;
+	showFloatingActionButtons?: boolean;
+	regenerateMenu?: boolean;
+	keepFollowUpPrompts?: boolean;
+	insertFollowUpPrompt?: boolean;
+	displayMultiModelResponsesInTabs?: boolean;
+	insertSuggestionPrompt?: boolean;
+	enableMessageQueue?: boolean;
+	version?: string;
 	pinnedModels?: string[];
 	toolServers?: ServerConnection[];
 	detectArtifacts?: boolean;
@@ -367,11 +376,16 @@ type Document = {
 };
 
 type Config = {
-    onboarding?: boolean;
-    user_count?: number;
-    file?: { max_count?: number | null; max_size?: number | null; image_compression?: { width?: number; height?: number }; allowed_extensions?: string[] };
-    code?: { engine?: string };
-    metadata?: { favicon?: string; [key: string]: unknown };
+	onboarding?: boolean;
+	user_count?: number;
+	file?: {
+		max_count?: number | null;
+		max_size?: number | null;
+		image_compression?: { width?: number; height?: number };
+		allowed_extensions?: string[];
+	};
+	code?: { engine?: string };
+	metadata?: { favicon?: string; [key: string]: unknown };
 	audio?: {
 		realtime?: { enabled: boolean; model: string; voice: string };
 		stt: { engine: string };
@@ -411,6 +425,7 @@ type Config = {
 		enable_tools?: boolean;
 		enable_functions?: boolean;
 		enable_tool_servers?: boolean;
+		enable_apps?: boolean;
 		enable_autocomplete_generation: boolean;
 		enable_direct_connections: boolean;
 		enable_direct_integrations?: boolean;
@@ -440,10 +455,10 @@ type PromptSuggestion = {
 };
 
 export type SessionUser = {
-    token?: string;
-    expires_at?: number;
-    status_emoji?: string;
-    status_message?: string;
+	token?: string;
+	expires_at?: number;
+	status_emoji?: string;
+	status_message?: string;
 	permissions: any;
 	id: string;
 	email: string;

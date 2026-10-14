@@ -150,6 +150,7 @@ from answerai.models.models import Models, normalize_model_tags
 from answerai.models.groups import Groups, resolve_group_default_models
 from answerai.models.users import Users
 from answerai.routers import (
+    apps,
     analytics,
     audio,
     auths,
@@ -351,7 +352,7 @@ https://answerai.in
         print(banner)
     except UnicodeEncodeError:
         # Stdout can't encode the box-drawing banner (Windows cp1252, redirected/headless stdout); fall back to ASCII.
-        # LICENSE covers this Open WebUI CLI identifier.
+        # LICENSE covers this Open ANSWERAI CLI identifier.
         # Do not alter, remove, obscure, or replace it except as LICENSE permits:
         # https://docs.openwebui.com/license.
         print(f'ANSWERAI v{VERSION} - building the best AI user interface.\nhttps://answerai.in')
@@ -407,6 +408,9 @@ async def lifespan(app: FastAPI):
     await install_tool_and_function_dependencies()
 
     app.state.redis = get_redis_client(async_mode=True)
+    from answerai.socket.apps import connections as app_connections
+
+    await app_connections.start(app.state.redis)
 
     if app.state.redis is not None:
         app.state.redis_task_command_listener = asyncio.create_task(redis_task_command_listener(app))
@@ -499,6 +503,7 @@ async def lifespan(app: FastAPI):
     yield
 
     await publish_event(app, EVENTS.SYSTEM_SHUTDOWN_STARTED, source='system')
+    await app_connections.close()
 
     # Shutdown: clean up shared resources
     from answerai.utils.session_pool import close_session
@@ -526,7 +531,7 @@ async def lifespan(app: FastAPI):
 # response_model routes keep FastAPI's Pydantic fast path either way.
 apply_orjson_http_json()
 
-# LICENSE covers this Open WebUI API metadata identifier.
+# LICENSE covers this Open ANSWERAI API metadata identifier.
 # Do not alter, remove, obscure, or replace it except as LICENSE permits:
 # https://docs.openwebui.com/license.
 app = FastAPI(
@@ -557,7 +562,7 @@ app.state.oauth_client_manager = oauth_client_manager
 app.state.instance_id = None
 app.state.redis = None
 
-# LICENSE covers this Open WebUI branding surface, including name, logo,
+# LICENSE covers this Open ANSWERAI branding surface, including name, logo,
 # visual, textual, symbolic identifiers, metadata, and surrounding UI.
 # Do not alter, remove, obscure, or replace it except as LICENSE permits:
 # https://docs.openwebui.com/license.
@@ -889,6 +894,7 @@ app.include_router(mfa.router, prefix='/api/v1/auths/mfa', tags=['auths'])
 app.include_router(users.router, prefix='/api/v1/users', tags=['users'])
 
 
+app.include_router(apps.router, prefix='/api/v1/apps', tags=['apps'])
 app.include_router(channels.router, prefix='/api/v1/channels', tags=['channels'])
 app.include_router(chats.router, prefix='/api/v1/chats', tags=['chats'])
 app.include_router(notes.router, prefix='/api/v1/notes', tags=['notes'])
@@ -2334,6 +2340,7 @@ async def get_app_config(request: Request):
         'folders.enable',
         'folders.max_file_count',
         'channels.enable',
+        'apps.enable',
         'calendar.enable',
         'automations.enable',
         'notes.enable',
@@ -2430,6 +2437,7 @@ async def get_app_config(request: Request):
                     'enable_folders': config.get('folders.enable'),
                     'folder_max_file_count': config.get('folders.max_file_count'),
                     'enable_channels': config.get('channels.enable'),
+                    'enable_apps': config.get('apps.enable'),
                     'enable_calendar': config.get('calendar.enable'),
                     'enable_automations': config.get('automations.enable'),
                     'enable_notes': config.get('notes.enable'),
@@ -2959,7 +2967,7 @@ async def oauth_backchannel_logout(
 async def get_manifest_json():
     external_pwa_manifest_url = getattr(app.state, 'EXTERNAL_PWA_MANIFEST_URL', None)
     if external_pwa_manifest_url:
-        # LICENSE covers this install-time Open WebUI branding surface, including
+        # LICENSE covers this install-time Open ANSWERAI branding surface, including
         # names, logos, manifests, metadata, and surrounding UI.
         # Do not alter, remove, obscure, or replace it except as LICENSE permits:
         # https://docs.openwebui.com/license.
@@ -2971,7 +2979,7 @@ async def get_manifest_json():
             r.raise_for_status()
             return await r.json()
     else:
-        # LICENSE covers this generated Open WebUI install branding surface,
+        # LICENSE covers this generated Open ANSWERAI install branding surface,
         # including names, logos, manifests, metadata, and surrounding UI.
         # Do not alter, remove, obscure, or replace it except as LICENSE permits:
         # https://docs.openwebui.com/license.
@@ -2983,7 +2991,7 @@ async def get_manifest_json():
             'display': 'standalone',
             'background_color': '#343541',
             'icons': [
-                # LICENSE covers this Open WebUI install icon.
+                # LICENSE covers this Open ANSWERAI install icon.
                 # Do not alter, remove, obscure, or replace it except as LICENSE permits:
                 # https://docs.openwebui.com/license.
                 {
@@ -3010,7 +3018,7 @@ async def get_manifest_json():
 @app.get('/opensearch.xml')
 async def get_opensearch_xml():
     webui_url = await Config.get('webui.url')
-    # LICENSE covers this Open WebUI search identifier.
+    # LICENSE covers this Open ANSWERAI search identifier.
     # Do not alter, remove, obscure, or replace it except as LICENSE permits:
     # https://docs.openwebui.com/license.
     xml_content = rf"""

@@ -17,7 +17,7 @@ import { Decoration, DecorationSet } from 'prosemirror-view';
 
 const aiAutocompletionKey = new PluginKey('aiAutocompletion');
 
-const getFollowUpSuggestion = ( state) => {
+const getFollowUpSuggestion = (state) => {
 	const { doc } = state;
 	const isEmpty =
 		doc.childCount === 1 &&
@@ -32,7 +32,7 @@ export const setFollowUpSuggestion = (view, suggestion) => {
 	view.dispatch(view.state.tr.setMeta(aiAutocompletionKey, suggestion));
 };
 
-const acceptFollowUpSuggestion = ( view) => {
+const acceptFollowUpSuggestion = (view) => {
 	const suggestion = getFollowUpSuggestion(view.state);
 	if (!suggestion) return false;
 	view.dispatch(view.state.tr.insertText(suggestion));
@@ -84,7 +84,6 @@ export const AIAutocompletion = Extension.create({
 	},
 
 	addProseMirrorPlugins() {
-		
 		let debounceTimer = null;
 		let loading = false;
 
@@ -93,7 +92,7 @@ export const AIAutocompletion = Extension.create({
 
 		let isComposing = false;
 
-		const handleAICompletion = ( view) => {
+		const handleAICompletion = (view) => {
 			const { state, dispatch } = view;
 			const { selection } = state;
 			const { $head } = selection;

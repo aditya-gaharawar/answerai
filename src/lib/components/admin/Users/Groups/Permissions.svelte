@@ -5,7 +5,11 @@
 	import Switch from '$lib/components/common/Switch.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 
-	import { resolvePermissions, type Permissions, type PermissionOverrides } from '$lib/constants/permissions';
+	import {
+		resolvePermissions,
+		type Permissions,
+		type PermissionOverrides
+	} from '$lib/constants/permissions';
 	import { config } from '$lib/stores';
 
 	export let permissions: Permissions = resolvePermissions();

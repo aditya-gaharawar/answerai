@@ -53,7 +53,6 @@
 	let modelIds = [];
 	let filterMode = 'include';
 
-	
 	let accessGrants = [];
 
 	/** @type {HTMLInputElement} */
@@ -78,7 +77,7 @@
 		}
 
 		if (!edit) {
-			if ($models.find(( model) => model.name === name)) {
+			if ($models.find((model) => model.name === name)) {
 				loading = false;
 				toast.error($i18n.t('Model name already exists, please choose a different one'));
 				return;

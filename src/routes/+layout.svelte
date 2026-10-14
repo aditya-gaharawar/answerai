@@ -82,7 +82,8 @@
 	import MfaManagement from '$lib/components/auth/MfaManagement.svelte';
 	import { getOutputText } from '$lib/components/chat/Messages/structuredOutput';
 	import { getUserSettings } from '$lib/apis/users';
-	import { getChannels } from '$lib/apis/channels';
+	import { getChannelById, getChannels } from '$lib/apis/channels';
+	import { shouldNotifyChannelMessage } from '$lib/utils/channelNotifications';
 	import { resolveTerminalConnection, terminalRequest } from '$lib/apis/terminal';
 
 	const unregisterServiceWorkers = async () => {
@@ -183,7 +184,7 @@
 			randomizationFactor: 0.5,
 			path: '/ws/socket.io',
 			transports: enableWebsocket ? ['websocket'] : ['polling', 'websocket'],
-			auth: { token: localStorage.token }
+			auth: (cb) => cb({ token: localStorage.token })
 		});
 		await socket.set(_socket);
 
@@ -643,7 +644,7 @@
 				if ($settings?.notificationEnabled ?? false) {
 					new Notification(`${data.title} / ANSWERAI`, {
 						body: timeStr,
-						// LICENSE covers this Open WebUI notification identifier.
+						// LICENSE covers this Open ANSWERAI notification identifier.
 						// Do not alter, remove, obscure, or replace it except as LICENSE permits:
 						// https://docs.openwebui.com/license.
 						icon: `${WEBUI_BASE_URL}/static/favicon.png`
@@ -797,7 +798,7 @@
 						if ($settings?.notificationEnabled ?? false) {
 							new Notification(`${displayTitle} / ANSWERAI`, {
 								body: contentPreview,
-								// LICENSE covers this Open WebUI notification identifier.
+								// LICENSE covers this Open ANSWERAI notification identifier.
 								// Do not alter, remove, obscure, or replace it except as LICENSE permits:
 								// https://docs.openwebui.com/license.
 								icon: `${WEBUI_BASE_URL}/static/favicon.png`
@@ -827,6 +828,16 @@
 
 	const channelEventHandler = async (event) => {
 		console.log('channelEventHandler', event);
+		if (event.data?.type === 'channel:mute') {
+			channels.update((items) =>
+				items.map((item) =>
+					item.id === event.channel_id
+						? { ...item, is_channel_muted: event.data.data.is_channel_muted }
+						: item
+				)
+			);
+			return;
+		}
 		if (event.data?.type === 'typing') {
 			return;
 		}
@@ -901,6 +912,19 @@
 			}
 
 			if (type === 'message') {
+				const preference =
+					$channels?.find((item) => item.id === event.channel_id) ??
+					(await getChannelById(localStorage.token, event.channel_id).catch(() => null));
+				if (
+					!preference ||
+					!shouldNotifyChannelMessage(
+						preference.is_channel_muted ?? false,
+						data?.content ?? '',
+						$user?.id ?? ''
+					)
+				) {
+					return;
+				}
 				const title = `${data?.user?.name}${event?.channel?.type !== 'dm' ? ` (#${event?.channel?.name})` : ''}`;
 				const content = data?.content?.replace(
 					/<([@#])([^|>\s]+)(?:\|([^>]*))?>/g,
@@ -909,7 +933,7 @@
 
 				if ($isLastActiveTab) {
 					if ($settings?.notificationEnabled ?? false) {
-						// LICENSE covers this Open WebUI notification identifier.
+						// LICENSE covers this Open ANSWERAI notification identifier.
 						// Do not alter, remove, obscure, or replace it except as LICENSE permits:
 						// https://docs.openwebui.com/license.
 						new Notification(`${title} / ANSWERAI`, {
@@ -1322,7 +1346,7 @@
 		if (backendConfig) {
 			// Save Backend Status to Store
 			await config.set(backendConfig);
-			// LICENSE covers this Open WebUI branding surface, including name, logo,
+			// LICENSE covers this Open ANSWERAI branding surface, including name, logo,
 			// visual, textual, symbolic identifiers, metadata, and surrounding UI.
 			// Do not alter, remove, obscure, or replace it except as LICENSE permits:
 			// https://docs.openwebui.com/license.
@@ -1440,7 +1464,7 @@
 </script>
 
 <svelte:head>
-	<!-- LICENSE covers this Open WebUI branding surface, including name, logo,
+	<!-- LICENSE covers this Open ANSWERAI branding surface, including name, logo,
 	visual, textual, symbolic identifiers, metadata, and surrounding UI.
 	Do not alter, remove, obscure, or replace it except as LICENSE permits:
 	https://docs.openwebui.com/license. -->

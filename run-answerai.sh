@@ -14,7 +14,7 @@ Usage: ./run-answerai.sh [--skip-setup]
 Default: create .venv, install all dependencies, build the frontend, start the server.
 --skip-setup: start an already installed and built checkout.
 
-Requires Python 3.11 or 3.12 and Node.js 22 with npm for setup.
+Requires Python 3.11 or 3.12 and Node.js 22.17 or later in the 22.x series with npm for setup.
 Optional: copy .env.example to .env and edit SMTP/provider settings.
 Environment variables override .env. HOST defaults to 0.0.0.0; PORT to 8080.
 Ctrl+C stops the server. Data and the generated signing key persist in backend/.
@@ -39,7 +39,7 @@ if [[ "${1:-}" != --skip-setup ]]; then
   "$PYTHON_BIN" -c 'import sys; assert (3,11) <= sys.version_info[:2] < (3,13), "Python 3.11 or 3.12 is required"'
   command -v node >/dev/null 2>&1 || { echo "Install Node.js 22 first." >&2; exit 1; }
   command -v npm >/dev/null 2>&1 || { echo "Install npm first." >&2; exit 1; }
-  node -e 'if (Number(process.versions.node.split(".")[0]) !== 22) { console.error("Node.js 22 is required."); process.exit(1); }'
+  node -e 'const [major, minor] = process.versions.node.split(".").map(Number); if (major !== 22 || minor < 17) { console.error("Node.js 22.17 or later in the 22.x series is required."); process.exit(1); }'
 
   if [[ ! -x .venv/bin/python ]]; then
     echo "Creating Python virtual environment..."

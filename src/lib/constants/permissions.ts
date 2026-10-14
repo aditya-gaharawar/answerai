@@ -78,23 +78,22 @@ export const DEFAULT_PERMISSIONS = {
 	}
 } as const;
 
-
 export type Permissions = {
-    -readonly [Section in keyof typeof DEFAULT_PERMISSIONS]: {
-        -readonly [Permission in keyof (typeof DEFAULT_PERMISSIONS)[Section]]: boolean;
-    };
+	-readonly [Section in keyof typeof DEFAULT_PERMISSIONS]: {
+		-readonly [Permission in keyof (typeof DEFAULT_PERMISSIONS)[Section]]: boolean;
+	};
 };
 export type PermissionOverrides = {
-    [Section in keyof Permissions]?: Partial<Permissions[Section]>;
+	[Section in keyof Permissions]?: Partial<Permissions[Section]>;
 };
 
 export function resolvePermissions(overrides: PermissionOverrides = {}): Permissions {
-    return {
-        workspace: { ...DEFAULT_PERMISSIONS.workspace, ...overrides.workspace },
-        sharing: { ...DEFAULT_PERMISSIONS.sharing, ...overrides.sharing },
-        access_grants: { ...DEFAULT_PERMISSIONS.access_grants, ...overrides.access_grants },
-        chat: { ...DEFAULT_PERMISSIONS.chat, ...overrides.chat },
-        features: { ...DEFAULT_PERMISSIONS.features, ...overrides.features },
-        settings: { ...DEFAULT_PERMISSIONS.settings, ...overrides.settings }
-    };
+	return {
+		workspace: { ...DEFAULT_PERMISSIONS.workspace, ...overrides.workspace },
+		sharing: { ...DEFAULT_PERMISSIONS.sharing, ...overrides.sharing },
+		access_grants: { ...DEFAULT_PERMISSIONS.access_grants, ...overrides.access_grants },
+		chat: { ...DEFAULT_PERMISSIONS.chat, ...overrides.chat },
+		features: { ...DEFAULT_PERMISSIONS.features, ...overrides.features },
+		settings: { ...DEFAULT_PERMISSIONS.settings, ...overrides.settings }
+	};
 }

@@ -3,17 +3,18 @@
 	import { safeImageUrl } from '$lib/utils/safeImageUrl';
 
 	export let className = 'size-8';
-	// LICENSE covers this Open WebUI fallback logo.
+	// LICENSE covers this Open ANSWERAI fallback logo.
 	// Do not alter, remove, obscure, or replace it except as LICENSE permits:
 	// https://docs.openwebui.com/license.
 	const FALLBACK_SRC = `${WEBUI_BASE_URL}/static/favicon.png`;
 
 	export let src = FALLBACK_SRC;
+	export let allowExternal = false;
 </script>
 
 <img
 	aria-hidden="true"
-	src={safeImageUrl(src)}
+	src={safeImageUrl(src, allowExternal)}
 	class=" {className} object-cover rounded-2xl"
 	alt="profile"
 	draggable="false"

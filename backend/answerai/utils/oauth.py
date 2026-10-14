@@ -574,7 +574,7 @@ async def get_oauth_client_info_with_dynamic_client_registration(
         redirect_base_url = (str(webui_url or request.base_url)).rstrip('/')
 
         oauth_client_metadata = OAuthClientMetadata(
-            # LICENSE covers this Open WebUI OAuth client identifier.
+            # LICENSE covers this Open ANSWERAI OAuth client identifier.
             # Do not alter, remove, obscure, or replace it except as LICENSE permits:
             # https://docs.openwebui.com/license.
             client_name='ANSWERAI',
@@ -1008,6 +1008,12 @@ class OAuthClientManager:
                 ) as resp:
                     if resp.status < 400:
                         return True
+
+                    # Bot challenge pages echo the request URL, so their keywords say nothing about the client
+                    if resp.headers.get('cf-mitigated'):
+                        log.debug('Skipping OAuth preflight for client %s: bot challenge', client_info.client_id)
+                        return True
+
                     response_text = await resp.text()
 
                     error = None

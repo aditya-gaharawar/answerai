@@ -319,7 +319,7 @@
 </script>
 
 <svelte:head>
-	<!-- LICENSE covers this Open WebUI browser-title identifier.
+	<!-- LICENSE covers this Open ANSWERAI browser-title identifier.
 	Do not alter, remove, obscure, or replace it except as LICENSE permits:
 	https://docs.openwebui.com/license. -->
 	{#if channel?.type === 'dm'}
@@ -374,7 +374,7 @@
 							<Messages
 								{channel}
 								{top}
-								{messages}
+								bind:messages
 								{replyToMessage}
 								onReply={async (message) => {
 									replyToMessage = message;
@@ -407,6 +407,7 @@
 				<div class=" pb-3 px-3">
 					<MessageInput
 						id="root"
+						{messages}
 						bind:chatInputElement
 						bind:replyToMessage
 						{typingUsers}

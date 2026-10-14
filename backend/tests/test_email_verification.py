@@ -481,7 +481,40 @@ def test_full_fresh_database_migration_chain(tmp_path, monkeypatch):
     command.upgrade(config, 'head')
     engine = create_engine(url)
     with engine.connect() as connection:
-        assert connection.exec_driver_sql('SELECT version_num FROM alembic_version').scalar_one() == 'a729d60cf132'
-        assert 'email_verification' in inspect(connection).get_table_names()
+        assert connection.exec_driver_sql('SELECT version_num FROM alembic_version').scalar_one() == 'b2a10c9d8e74'
+        assert {'email_verification', 'billing_account', 'admin_action', 'app'} <= set(
+            inspect(connection).get_table_names()
+        )
         assert 'email_verified' in {column['name'] for column in inspect(connection).get_columns('auth')}
+    engine.dispose()
+
+
+def test_existing_answerai_database_upgrade_preserves_billing(tmp_path, monkeypatch):
+    from pathlib import Path
+
+    from alembic import command
+    from alembic.config import Config as AlembicConfig
+    from answerai import env
+    from sqlalchemy import inspect
+
+    url = f'sqlite:///{tmp_path}/existing-answerai.db'
+    monkeypatch.setattr(env, 'DATABASE_URL', url)
+    base = Path(__file__).parents[1] / 'answerai'
+    config = AlembicConfig(str(base / 'alembic.ini'))
+    config.set_main_option('script_location', str(base / 'migrations'))
+    command.upgrade(config, 'a729d60cf132')
+    engine = create_engine(url)
+    with engine.begin() as connection:
+        connection.exec_driver_sql(
+            'INSERT INTO billing_account (user_id, override, override_until, checkout_until) '
+            "VALUES ('existing-user', 'plus', 2000000000, 0)"
+        )
+    command.upgrade(config, 'head')
+    with engine.connect() as connection:
+        assert connection.exec_driver_sql('SELECT version_num FROM alembic_version').scalar_one() == 'b2a10c9d8e74'
+        assert connection.exec_driver_sql(
+            "SELECT override, override_until FROM billing_account WHERE user_id = 'existing-user'"
+        ).one() == ('plus', 2000000000)
+        assert 'app' in inspect(connection).get_table_names()
+        assert 'app_id' in {column['name'] for column in inspect(connection).get_columns('channel_member')}
     engine.dispose()

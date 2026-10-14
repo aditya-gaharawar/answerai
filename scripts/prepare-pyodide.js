@@ -137,9 +137,11 @@ async function downloadPackages() {
 
 async function copyPyodide() {
 	console.log('Copying Pyodide files into static directory');
-	// Copy all files from node_modules/pyodide to static/pyodide
-	for await (const entry of await readdir('node_modules/pyodide')) {
-		await copyFile(`node_modules/pyodide/${entry}`, `static/pyodide/${entry}`);
+	// Runtime files live at the package root; nested npm dependencies are not assets.
+	for (const entry of await readdir('node_modules/pyodide', { withFileTypes: true })) {
+		if (entry.isFile()) {
+			await copyFile(`node_modules/pyodide/${entry.name}`, `static/pyodide/${entry.name}`);
+		}
 	}
 }
 
@@ -262,12 +264,11 @@ if (process.env.USE_SLIM === 'true') {
 	await verifyBundledWheels();
 }
 
-
 // Copy a fixed set of package-owned runtime assets into Svelte's static directory.
 // This avoids exposing a development-server file-copy middleware.
 await mkdir('static/wasm', { recursive: true });
 for (const name of await readdir('node_modules/onnxruntime-web/dist')) {
-    if (name.includes('.jsep.') && /\.(wasm|mjs|js)$/.test(name)) {
-        await copyFile(`node_modules/onnxruntime-web/dist/${name}`, `static/wasm/${name}`);
-    }
+	if (name.includes('.jsep.') && /\.(wasm|mjs|js)$/.test(name)) {
+		await copyFile(`node_modules/onnxruntime-web/dist/${name}`, `static/wasm/${name}`);
+	}
 }

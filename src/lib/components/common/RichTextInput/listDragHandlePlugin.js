@@ -39,7 +39,7 @@ export function listDragHandlePlugin(options = {}) {
 		'ordered_list'
 	]);
 
-	const isListNode = ( node) => node && listTypeNames.has(node.type.name);
+	const isListNode = (node) => node && listTypeNames.has(node.type.name);
 
 	function listTypeToItemTypeName(listNode) {
 		const name = listNode?.type?.name;
@@ -168,9 +168,8 @@ export function listDragHandlePlugin(options = {}) {
 		return wantedType.create(newAttrs, Fragment.from(normalizedContent), itemNode.marks);
 	}
 	// ---------- decorations ----------
-	
+
 	function buildHandleDecos(doc) {
-		
 		const decos = [];
 		doc.descendants((node, pos) => {
 			if (!isListItem(node)) return;
@@ -207,7 +206,6 @@ export function listDragHandlePlugin(options = {}) {
 		return null;
 	}
 
-	
 	function infoFromCoords(view, clientX, clientY) {
 		const result = view.posAtCoords({ left: clientX, top: clientY });
 		if (!result) return null;
@@ -236,7 +234,7 @@ export function listDragHandlePlugin(options = {}) {
 	}
 
 	// ---------- state ----------
-	const init = ( state) => ({
+	const init = (state) => ({
 		decorations: buildHandleDecos(state.doc),
 		dragging: null, // {fromStart, startMouse:{x,y}, ghostEl, active}
 		dropTarget: null // {start, end, mode, toPos}
@@ -256,7 +254,7 @@ export function listDragHandlePlugin(options = {}) {
 		return next;
 	};
 
-	const decorationsProp = ( state) => {
+	const decorationsProp = (state) => {
 		const ps = listPointerDragKey.getState(state);
 		if (!ps) return null;
 		let deco = ps.decorations;
@@ -276,14 +274,13 @@ export function listDragHandlePlugin(options = {}) {
 	};
 
 	// ---------- helpers ----------
-	const setDrag = ( view,  dragging) =>
+	const setDrag = (view, dragging) =>
 		view.dispatch(view.state.tr.setMeta(listPointerDragKey, { type: 'set-drag', dragging }));
 	const setDrop = (view, drop) =>
 		view.dispatch(view.state.tr.setMeta(listPointerDragKey, { type: 'set-drop', drop }));
-	const clearAll = ( view) =>
+	const clearAll = (view) =>
 		view.dispatch(view.state.tr.setMeta(listPointerDragKey, { type: 'clear' }));
 
-	
 	function moveItem(view, fromStart, toPos) {
 		const { state, dispatch } = view;
 		const { doc } = state;
@@ -365,7 +362,6 @@ export function listDragHandlePlugin(options = {}) {
 		return { ok: true, newStart: mappedTo };
 	}
 
-	
 	function ensureGhost(view, fromStart) {
 		const el = document.createElement('div');
 		el.className = classDraggingGhost;
@@ -383,7 +379,7 @@ export function listDragHandlePlugin(options = {}) {
 		document.body.appendChild(el);
 		return el;
 	}
-	const updateGhost = ( ghost, /** @type {number} */ dx, /** @type {number} */ dy) => {
+	const updateGhost = (ghost, /** @type {number} */ dx, /** @type {number} */ dy) => {
 		if (ghost) ghost.style.transform = `translate(${Math.round(dx)}px, ${Math.round(dy)}px)`;
 	};
 
@@ -416,7 +412,7 @@ export function listDragHandlePlugin(options = {}) {
 					const ghostEl = ensureGhost(view, fromStart);
 					setDrag(view, { fromStart, startMouse, ghostEl, active: false });
 
-					const onMove = ( e) => {
+					const onMove = (e) => {
 						const ps = listPointerDragKey.getState(view.state);
 						if (!ps?.dragging) return;
 
@@ -455,7 +451,7 @@ export function listDragHandlePlugin(options = {}) {
 						if (ps?.dragging?.ghostEl) ps.dragging.ghostEl.remove();
 
 						// Helper: figure out the list item node type name at/around a pos
-						const getListItemTypeNameAt = ( doc, /** @type {number} */ pos) => {
+						const getListItemTypeNameAt = (doc, /** @type {number} */ pos) => {
 							const direct = doc.nodeAt(pos);
 							if (direct && isListItem(direct)) return direct.type.name;
 

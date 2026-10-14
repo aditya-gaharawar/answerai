@@ -535,7 +535,7 @@ ${content}
 
 				fileItem.url = `${uploadedFile.id}`;
 
-				files = files;
+				files = files.map((item) => (item?.itemId === tempItemId ? fileItem : item));
 			} else {
 				files = files.filter((item) => item?.itemId !== tempItemId);
 			}
@@ -952,7 +952,7 @@ ${content}
 </script>
 
 <svelte:head>
-	<!-- LICENSE covers this Open WebUI browser-title identifier.
+	<!-- LICENSE covers this Open ANSWERAI browser-title identifier.
 	Do not alter, remove, obscure, or replace it except as LICENSE permits:
 	https://docs.openwebui.com/license. -->
 	<title>

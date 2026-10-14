@@ -66,8 +66,13 @@
 			const pdfjs = await import('pdfjs-dist');
 			pdfjs.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
 
-			pdfDoc?.destroy();
-			pdfDoc = await pdfjs.getDocument({ data: pdfData }).promise;
+			void pdfDoc?.loadingTask.destroy().catch(() => {});
+			const loadedDocument = await pdfjs.getDocument({ data: pdfData }).promise;
+			if (token !== loadToken) {
+				await loadedDocument.loadingTask.destroy();
+				return;
+			}
+			pdfDoc = loadedDocument;
 
 			const rendered: string[] = [];
 			for (let i = 1; i <= pdfDoc.numPages; i++) {
@@ -131,7 +136,7 @@
 	onDestroy(() => {
 		loadToken++;
 		resizeObserver?.disconnect();
-		pdfDoc?.destroy();
+		void pdfDoc?.loadingTask.destroy().catch(() => {});
 	});
 </script>
 

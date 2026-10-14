@@ -12,7 +12,7 @@ import uuid
 import wave
 from fnmatch import fnmatch
 from pathlib import Path
-from typing import Optional
+from typing import Literal, Optional
 from urllib.parse import urlencode, urlsplit, urlunsplit
 
 import aiofiles
@@ -101,11 +101,14 @@ TTS_CONFIG_KEYS = {
 
 REALTIME_CONFIG_KEYS = {
     'ENABLED': 'audio.realtime.enabled',
+    'PROVIDER': 'audio.realtime.provider',
+    'AUTH_TYPE': 'audio.realtime.auth_type',
     'OPENAI_API_BASE_URL': 'audio.realtime.openai.api_base_url',
     'OPENAI_API_KEY': 'audio.realtime.openai.api_key',
     'MODEL': 'audio.realtime.model',
     'VOICE': 'audio.realtime.voice',
     'TRANSCRIPTION_MODEL': 'audio.realtime.transcription_model',
+    'INPUT_PARAMS': 'audio.realtime.input_params',
     'REALTIME_CALL_PROMPT_TEMPLATE': 'audio.realtime.prompt_template',
 }
 
@@ -293,11 +296,14 @@ class STTConfigForm(BaseModel):
 
 class RealtimeConfigForm(BaseModel):
     ENABLED: bool = False
+    PROVIDER: Literal['openai', 'azure'] = 'openai'
+    AUTH_TYPE: Literal['api_key', 'microsoft_entra_id'] = 'api_key'
     OPENAI_API_BASE_URL: str = 'https://api.openai.com/v1'
     OPENAI_API_KEY: str = ''
     MODEL: str = Field(default='gpt-realtime-2.1-mini', min_length=1, max_length=200)
     VOICE: str = Field(default='marin', min_length=1, max_length=200)
     TRANSCRIPTION_MODEL: str = Field(default='gpt-transcribe', min_length=1, max_length=200)
+    INPUT_PARAMS: Optional[dict] = None
     REALTIME_CALL_PROMPT_TEMPLATE: Optional[str] = None
 
 
@@ -377,7 +383,7 @@ async def _raise_tts_error(exc: Exception, r=None) -> None:
     if isinstance(exc, HTTPException):
         raise exc
     code = r.status if r is not None and r.status >= 400 else 500
-    # LICENSE covers this Open WebUI error identifier.
+    # LICENSE covers this Open ANSWERAI error identifier.
     # Do not alter, remove, obscure, or replace it except as LICENSE permits:
     # https://docs.openwebui.com/license.
     detail = 'ANSWERAI: Server Connection Error'
@@ -964,7 +970,7 @@ async def _transcribe_openai(request, file_path, filename, languages, file_dir, 
                     detail = f'External: {e}'
             except Exception:
                 detail = f'External: {e}'
-        # LICENSE covers this Open WebUI error identifier.
+        # LICENSE covers this Open ANSWERAI error identifier.
         # Do not alter, remove, obscure, or replace it except as LICENSE permits:
         # https://docs.openwebui.com/license.
         raise Exception(detail if detail else 'ANSWERAI: Server Connection Error')
@@ -1018,7 +1024,7 @@ async def _transcribe_deepgram(request, file_path, languages, file_dir, id):
 
     except Exception as e:
         log.exception(e)
-        # LICENSE covers this Open WebUI error identifier.
+        # LICENSE covers this Open ANSWERAI error identifier.
         # Do not alter, remove, obscure, or replace it except as LICENSE permits:
         # https://docs.openwebui.com/license.
         detail = 'ANSWERAI: Server Connection Error'
@@ -1152,7 +1158,7 @@ async def _transcribe_azure(request, file_path, filename, file_dir, id):
                     detail = f'External: {res["error"].get("message", "")}'
         except Exception:
             detail = f'External: {e}'
-        # LICENSE covers this Open WebUI error identifier.
+        # LICENSE covers this Open ANSWERAI error identifier.
         # Do not alter, remove, obscure, or replace it except as LICENSE permits:
         # https://docs.openwebui.com/license.
         raise HTTPException(
@@ -1325,7 +1331,7 @@ async def _transcribe_mistral(request, file_path, filename, metadata, file_dir, 
                     detail = f'External: {await r.text()}'
         except Exception:
             detail = f'External: {e}'
-        # LICENSE covers this Open WebUI error identifier.
+        # LICENSE covers this Open ANSWERAI error identifier.
         # Do not alter, remove, obscure, or replace it except as LICENSE permits:
         # https://docs.openwebui.com/license.
         raise HTTPException(

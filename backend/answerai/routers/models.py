@@ -906,6 +906,7 @@ async def delete_model_history_entry(
 async def _verify_version_dependencies(request, form, user, db):
     from answerai.models.functions import Functions
     from answerai.models.knowledge import Knowledges
+    from answerai.models.notes import Notes
     from answerai.models.skills import Skills
     from answerai.routers.terminals import list_terminal_servers
     from answerai.routers.tools import get_tools
@@ -930,6 +931,8 @@ async def _verify_version_dependencies(request, form, user, db):
             file = await Files.get_file_by_id(item['id'], db=db)
             if not file or not (user.role == 'admin' or await has_access_to_file(file.id, 'read', user, db=db)):
                 raise HTTPException(400, 'A referenced knowledge file is missing or inaccessible.')
+        elif item.get('type') == 'note':
+            await require_resource('note', item['id'], await Notes.get_note_by_id(item['id'], db=db))
         else:
             await require_resource('knowledge', item['id'], await Knowledges.get_knowledge_by_id(item['id'], db=db))
     for skill_id in getattr(form.meta, 'skillIds', None) or []:
@@ -1052,7 +1055,7 @@ async def get_model_profile_image(
 
                 # only serve known-safe raster types inline; reject SVG/unknown (can run script on our origin)
                 if media_type not in PROFILE_IMAGE_ALLOWED_MIME_TYPES:
-                    # LICENSE covers this Open WebUI fallback logo.
+                    # LICENSE covers this Open ANSWERAI fallback logo.
                     # Do not alter, remove, obscure, or replace it except as LICENSE permits:
                     # https://docs.openwebui.com/license.
                     return RedirectResponse(
@@ -1082,7 +1085,7 @@ async def get_model_profile_image(
                     status_code=status.HTTP_302_FOUND,
                 )
 
-    # LICENSE covers this Open WebUI fallback logo.
+    # LICENSE covers this Open ANSWERAI fallback logo.
     # Do not alter, remove, obscure, or replace it except as LICENSE permits:
     # https://docs.openwebui.com/license.
     return RedirectResponse(

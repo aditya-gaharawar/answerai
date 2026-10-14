@@ -155,8 +155,7 @@
 
 		await tick();
 		const pageWrapper = sceneElement.querySelectorAll('.pdf-page-wrapper')[page - 1] as
-			| HTMLElement
-			| undefined;
+			HTMLElement | undefined;
 		pageWrapper?.scrollIntoView({ block: 'start' });
 		activePage = page;
 		onPageChange?.(page);
@@ -405,7 +404,7 @@
 		pageCount = 0;
 		pzInstance?.dispose();
 		cancelTextLayers();
-		pdfDoc?.destroy();
+		void pdfDoc?.loadingTask.destroy().catch(() => {});
 		pdfDoc = null;
 
 		try {
@@ -421,8 +420,12 @@
 				if (!res.ok) throw new Error(`HTTP ${res.status}`);
 				pdfData = await res.arrayBuffer();
 			}
-			pdfDoc = await pdfjs.getDocument({ data: pdfData }).promise;
-			if (token !== loadToken) return;
+			const loadedDocument = await pdfjs.getDocument({ data: pdfData }).promise;
+			if (token !== loadToken) {
+				await loadedDocument.loadingTask.destroy();
+				return;
+			}
+			pdfDoc = loadedDocument;
 			pageCount = pdfDoc.numPages;
 			activePage = clampDocumentTargetPage(targetPage, pageCount) ?? 1;
 			targetPage = clampDocumentTargetPage(targetPage, pageCount) ?? 1;
@@ -462,7 +465,7 @@
 		pzInstance?.dispose();
 		cancelTextLayers();
 		if (pdfDoc) {
-			pdfDoc.destroy();
+			void pdfDoc.loadingTask.destroy().catch(() => {});
 			pdfDoc = null;
 		}
 	});

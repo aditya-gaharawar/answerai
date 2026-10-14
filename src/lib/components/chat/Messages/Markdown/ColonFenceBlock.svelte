@@ -23,7 +23,8 @@
 	$: attributes = token.attributes ?? {};
 
 	$: label =
-		attributes.subject || fenceType.replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase());
+		attributes.subject ||
+		fenceType.replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase());
 	$: header = attributes.recipient ? `${label} · ${attributes.recipient}` : label;
 
 	let copied = false;
