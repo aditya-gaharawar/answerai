@@ -138,17 +138,20 @@ export const getOllamaUrls = async (token: string = '') => {
 	return res.OLLAMA_BASE_URLS;
 };
 
-export const getOllamaVersion = async (token: string, urlIdx?: number) => {
+export const getOllamaVersion = async (token: string, urlIdx?: number | null) => {
 	let error = null;
 
-	const res = await fetch(`${OLLAMA_API_BASE_URL}/api/version${urlIdx ? `/${urlIdx}` : ''}`, {
-		method: 'GET',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			...(token && { authorization: `Bearer ${token}` })
+	const res = await fetch(
+		`${OLLAMA_API_BASE_URL}/api/version${urlIdx != null ? `/${urlIdx}` : ''}`,
+		{
+			method: 'GET',
+			headers: {
+				Accept: 'application/json',
+				'Content-Type': 'application/json',
+				...(token && { authorization: `Bearer ${token}` })
+			}
 		}
-	})
+	)
 		.then(async (res) => {
 			if (!res.ok) throw await res.json();
 			return res.json();
@@ -352,7 +355,11 @@ export const unloadModel = async (token: string, tagName: string) => {
 	return res;
 };
 
-export const createModel = async (token: string, payload: object, urlIdx: string | null = null) => {
+export const createModel = async (
+	token: string,
+	payload: object,
+	urlIdx: number | string | null = null
+) => {
 	let error = null;
 
 	const res = await fetch(
@@ -378,7 +385,11 @@ export const createModel = async (token: string, payload: object, urlIdx: string
 	return res;
 };
 
-export const deleteModel = async (token: string, tagName: string, urlIdx: string | null = null) => {
+export const deleteModel = async (
+	token: string,
+	tagName: string,
+	urlIdx: number | string | null = null
+) => {
 	let error = null;
 
 	const res = await fetch(
@@ -455,7 +466,7 @@ export const pullModel = async (token: string, tagName: string, urlIdx: number |
 export const downloadModel = async (
 	token: string,
 	download_url: string,
-	urlIdx: string | null = null
+	urlIdx: number | string | null = null
 ) => {
 	let error = null;
 
@@ -488,7 +499,11 @@ export const downloadModel = async (
 	return res;
 };
 
-export const uploadModel = async (token: string, file: File, urlIdx: string | null = null) => {
+export const uploadModel = async (
+	token: string,
+	file: File,
+	urlIdx: number | string | null = null
+) => {
 	let error = null;
 
 	const formData = new FormData();

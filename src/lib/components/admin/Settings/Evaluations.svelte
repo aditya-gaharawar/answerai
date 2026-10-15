@@ -1,4 +1,5 @@
 <script lang="ts">
+	import type { EvaluationConfig, ArenaConfigModel } from '$lib/types/evaluations';
 	import { toast } from 'svelte-sonner';
 	import { models, settings, user, config } from '$lib/stores';
 	import { createEventDispatcher, onMount, getContext, tick } from 'svelte';
@@ -18,7 +19,10 @@
 
 	const i18n: any = getContext('i18n');
 
-	let evaluationConfig = null;
+	let evaluationConfig: EvaluationConfig = {
+		ENABLE_EVALUATION_ARENA_MODELS: false,
+		EVALUATION_ARENA_MODELS: []
+	};
 	let showAddModel = false;
 
 	const submitHandler = async (nextConfig = evaluationConfig) => {
@@ -42,14 +46,14 @@
 		return !!result;
 	};
 
-	const addModelHandler = async (model) => {
+	const addModelHandler = async (model: ArenaConfigModel) => {
 		return submitHandler({
 			...evaluationConfig,
 			EVALUATION_ARENA_MODELS: [...evaluationConfig.EVALUATION_ARENA_MODELS, model]
 		});
 	};
 
-	const editModelHandler = async (model, modelIdx) => {
+	const editModelHandler = async (model: ArenaConfigModel, modelIdx: number) => {
 		return submitHandler({
 			...evaluationConfig,
 			EVALUATION_ARENA_MODELS: evaluationConfig.EVALUATION_ARENA_MODELS.map((item, index) =>
@@ -58,7 +62,7 @@
 		});
 	};
 
-	const deleteModelHandler = async (modelIdx) => {
+	const deleteModelHandler = async (modelIdx: number) => {
 		evaluationConfig.EVALUATION_ARENA_MODELS = evaluationConfig.EVALUATION_ARENA_MODELS.filter(
 			(m, mIdx) => mIdx !== modelIdx
 		);
@@ -67,7 +71,7 @@
 		models.set(
 			await getModels(
 				localStorage.token,
-				$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
+				$config?.features?.enable_direct_connections ? ($settings?.directConnections ?? null) : null
 			)
 		);
 	};

@@ -1,4 +1,11 @@
 <script lang="ts">
+	import type {
+		ChannelRecord,
+		ChannelMessage,
+		ChannelEvent,
+		ChannelUser,
+		ChannelPinHandler
+	} from '$lib/types/channels';
 	import { toast } from 'svelte-sonner';
 
 	import { onDestroy, onMount, tick } from 'svelte';
@@ -28,22 +35,22 @@
 
 	export let id = '';
 
-	let currentId = null;
+	let currentId: string | null = null;
 
 	let scrollEnd = true;
 	let messagesContainerElement: HTMLDivElement | null = null;
-	let chatInputElement = null;
+	let chatInputElement: import('$lib/components/common/RichTextInput.svelte').default | null = null;
 
 	let top = false;
 
-	let channel: any = null;
-	let messages = null;
+	let channel: ChannelRecord | null = null;
+	let messages: ChannelMessage[] | null = null;
 
-	let replyToMessage = null;
-	let threadId: any = null;
+	let replyToMessage: ChannelMessage | null = null;
+	let threadId: string | null = null;
 
-	let typingUsers = [];
-	let typingUsersTimeout = {};
+	let typingUsers: Pick<ChannelUser, 'id' | 'name'>[] = [];
+	let typingUsersTimeout: Record<string, ReturnType<typeof setTimeout>> = {};
 
 	$: if (id) {
 		initHandler();
@@ -119,6 +126,7 @@
 		replyToMessage = null;
 
 		typingUsers = [];
+		for (const timer of Object.values(typingUsersTimeout)) clearTimeout(timer);
 		typingUsersTimeout = {};
 
 		channel = await getChannelById(localStorage.token, id).catch((error) => {
@@ -131,7 +139,7 @@
 			if (messages) {
 				scrollToBottom();
 
-				if (messages.length < 50) {
+				if ((messages ?? []).length < 50) {
 					top = true;
 				}
 			}
@@ -140,10 +148,10 @@
 		}
 	};
 
-	const channelEventHandler = async (event) => {
+	const channelEventHandler = async (event: ChannelEvent) => {
+		if (!messages || !channel) return;
 		if (event.channel_id === id) {
-			const type = event?.data?.type ?? null;
-			const data = event?.data?.data ?? null;
+			const { type, data } = event.data;
 
 			if (type === 'message') {
 				if ((data?.parent_id ?? null) === null) {
@@ -190,7 +198,7 @@
 				if (idx !== -1) {
 					messages[idx] = data;
 				}
-			} else if (type.includes('message:reaction')) {
+			} else if (type === 'message:reaction:add' || type === 'message:reaction:remove') {
 				const idx = messages.findIndex((message) => message.id === data.id);
 				if (idx !== -1) {
 					messages[idx] = data;
@@ -254,13 +262,15 @@
 			{
 				...message,
 				id: tempId,
+				channel_id,
+				reactions: [],
 				user_id: $user?.id,
 				user: $user,
 				reply_to_message: reply_to_message ?? null,
 				created_at: ts,
 				updated_at: ts
 			},
-			...messages
+			...(messages ?? [])
 		];
 
 		const res = await sendMessage(localStorage.token, channel_id, message).catch((error) => {
@@ -288,11 +298,11 @@
 		updateLastReadAt(id);
 	};
 
-	let mediaQuery;
+	let mediaQuery: MediaQueryList;
 	let largeScreen = false;
 	let threadPanelWidth = 420;
 
-	const handleMediaQuery = (e) => {
+	const handleMediaQuery = (e: MediaQueryList | MediaQueryListEvent) => {
 		largeScreen = e.matches;
 	};
 
@@ -310,6 +320,7 @@
 	});
 
 	onDestroy(() => {
+		for (const timer of Object.values(typingUsersTimeout)) clearTimeout(timer);
 		// last read at
 		updateLastReadAt(id);
 		_channelId.set(null);
@@ -325,7 +336,7 @@
 	{#if channel?.type === 'dm'}
 		<title
 			>{channel?.name.trim() ||
-				channel?.users.reduce((a, e, i, arr) => {
+				(channel?.users ?? []).reduce((a, e, i, arr) => {
 					if (e.id === $user?.id) {
 						return a;
 					}
@@ -367,7 +378,7 @@
 						id="messages-container"
 						bind:this={messagesContainerElement}
 						on:scroll={(e) => {
-							scrollEnd = Math.abs(messagesContainerElement.scrollTop) <= 50;
+							scrollEnd = Math.abs(messagesContainerElement?.scrollTop ?? 0) <= 50;
 						}}
 					>
 						{#key id}
@@ -376,12 +387,12 @@
 								{top}
 								bind:messages
 								{replyToMessage}
-								onReply={async (message) => {
+								onReply={async (message: ChannelMessage) => {
 									replyToMessage = message;
 									await tick();
 									chatInputElement?.focus();
 								}}
-								onThread={(id) => {
+								onThread={(id: string) => {
 									threadId = id;
 								}}
 								onPin={pinHandler}
@@ -389,10 +400,10 @@
 									const newMessages = await getChannelMessages(
 										localStorage.token,
 										id,
-										messages.length
+										(messages ?? []).length
 									);
 
-									messages = [...messages, ...newMessages];
+									messages = [...(messages ?? []), ...newMessages];
 
 									if (newMessages.length < 50) {
 										top = true;

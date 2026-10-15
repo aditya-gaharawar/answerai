@@ -44,7 +44,9 @@ export const createNewChannel = async (token: string = '', channel: ChannelForm)
 	return res;
 };
 
-export const getChannels = async (token: string = '') => {
+export const getChannels = async (
+	token: string = ''
+): Promise<import('$lib/stores').ChannelListItem[]> => {
 	let error = null;
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/channels/`, {

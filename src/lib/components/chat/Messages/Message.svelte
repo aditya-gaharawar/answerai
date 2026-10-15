@@ -13,10 +13,10 @@
 	import UserMessage from './UserMessage.svelte';
 
 	export let chatId;
-	export let selectedModels = [];
+	export let selectedModels: string[] = [];
 	export let idx = 0;
 
-	export let history;
+	export let history: import('$lib/utils/chatHistory').ChatHistory;
 	export let messageId;
 
 	export let user;
@@ -74,7 +74,7 @@
 				{messageId}
 				isFirstMessage={idx === 0}
 				siblings={history.messages[messageId].parentId !== null
-					? (history.messages[history.messages[messageId].parentId]?.childrenIds ?? [])
+					? (history.messages[history.messages[messageId].parentId ?? '']?.childrenIds ?? [])
 					: (Object.values(history.messages)
 							.filter((message) => message.parentId === null)
 							.map((message) => message.id) ?? [])}
@@ -89,14 +89,14 @@
 				{editCodeBlock}
 				{topPadding}
 			/>
-		{:else if (history.messages[history.messages[messageId].parentId]?.models?.length ?? 1) === 1}
+		{:else if (history.messages[history.messages[messageId].parentId ?? '']?.models?.length ?? 1) === 1}
 			<ResponseMessage
 				{chatId}
 				{history}
 				{messageId}
 				{selectedModels}
 				isLastMessage={messageId === history.currentId}
-				siblings={history.messages[history.messages[messageId].parentId]?.childrenIds ?? []}
+				siblings={history.messages[history.messages[messageId].parentId ?? '']?.childrenIds ?? []}
 				{setInputText}
 				{gotoMessage}
 				{showPreviousMessage}

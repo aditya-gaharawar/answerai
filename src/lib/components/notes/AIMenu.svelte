@@ -14,7 +14,7 @@
 	export let onEdit = () => {};
 	export let onChat = () => {};
 
-	export let onChange = () => {};
+	export let onChange: (open: boolean) => void = () => {};
 </script>
 
 <Dropdown

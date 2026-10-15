@@ -23,7 +23,9 @@
 	export let onSelect = (e) => {};
 
 	let selectedIdx = 0;
-	export let filteredItems = [];
+	export let filteredItems: (
+		import('$lib/types/resources').SkillRecord | import('$lib/apis/terminal').TerminalSkill
+	)[] = [];
 
 	let searchDebounceTimer: ReturnType<typeof setTimeout>;
 

@@ -7,20 +7,22 @@
 
 	const i18n = getContext('i18n');
 
-	export let suggestionPrompts = [];
+	export let suggestionPrompts: (import('$lib/utils/promptSuggestions').PromptSuggestion & {
+		id?: string;
+	})[] = [];
 	export let className = '';
 	export let inputValue = '';
-	export let onSelect = () => {};
+	export let onSelect: (selection: import('$lib/types/chat').PromptSelection) => void = () => {};
 
-	let sortedPrompts = [];
+	let sortedPrompts: typeof suggestionPrompts = [];
 
 	const fuseOptions = {
 		keys: ['content', 'title'],
 		threshold: 0.5
 	};
 
-	let fuse;
-	let filteredPrompts = [];
+	let fuse: Fuse<(typeof suggestionPrompts)[number]>;
+	let filteredPrompts: typeof suggestionPrompts = [];
 
 	// Initialize Fuse
 	$: fuse = new Fuse(sortedPrompts, fuseOptions);
@@ -30,7 +32,7 @@
 	$: if (fuse) getFilteredPrompts(inputValue);
 
 	// Compare objects so translated text refreshes even when IDs stay the same.
-	function arraysEqual(a, b) {
+	function arraysEqual(a: typeof suggestionPrompts, b: typeof suggestionPrompts) {
 		if (a.length !== b.length) return false;
 		for (let i = 0; i < a.length; i++) {
 			if (a[i] !== b[i]) {

@@ -30,12 +30,15 @@
 	let savedSnapshot = '';
 
 	let defaultCapabilities = {};
+	/** @type {string[]} */
 	let defaultFeatureIds = [];
 	let defaultParams = {};
 	let builtinTools = {};
+	/** @type {import('$lib/utils/promptSuggestions').PromptSuggestion[]} */
 	let promptSuggestions = [];
 	let useDefaultPromptSuggestions = false;
 	let promptSuggestionsI18n = {};
+	/** @type {{ code: string; name: string }[]} */
 	let languages = [];
 	let editingLocale = '';
 

@@ -33,7 +33,7 @@
 	}
 
 	let filesInputElement: HTMLInputElement;
-	let inputFiles;
+	let inputFiles: FileList | null;
 
 	const handleImageUpload = () => {
 		if (!inputFiles?.length) return;

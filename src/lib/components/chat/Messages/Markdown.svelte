@@ -15,8 +15,8 @@
 
 	marked.use(markedKatexExtension(options));
 	marked.use(markedExtension(options));
-	marked.use(citationExtension(options));
-	marked.use(footnoteExtension(options));
+	marked.use(citationExtension());
+	marked.use(footnoteExtension());
 	marked.use(colonFenceExtension(options));
 	marked.use(disableSingleTilde);
 	// Also set by RichTextInput, but messages can render before any input mounts.
@@ -66,7 +66,9 @@
 	export let onTaskClick = () => {};
 	export let onToolCallResolved = () => {};
 
+	/** @type {import('marked').Token[]} */
 	let tokens = [];
+	/** @type {ReturnType<typeof requestAnimationFrame> | null} */
 	let pendingUpdate = null;
 	let lastContent = '';
 	let lastParsedContent = '';

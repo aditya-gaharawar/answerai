@@ -20,26 +20,26 @@
 	import { v4 as uuidv4 } from 'uuid';
 	import ChevronRight from '$lib/components/icons/ChevronRight.svelte';
 
-	export let selectedItems = [];
+	export let selectedItems: import('$lib/apis').ModelKnowledgeReference[] = [];
 	export let disabled = false;
 	let showPicker = false;
 	let picker: KnowledgeSelector;
 	let valueElement: HTMLElement | null = null;
-	const i18n = getContext('i18n');
+	const i18n = getContext<typeof import('$lib/i18n').default>('i18n');
 
 	let loaded = false;
 
 	let filesInputElement: HTMLInputElement | null = null;
-	let inputFiles = null;
+	let inputFiles: FileList | null = null;
 
 	let showItemModal = false;
-	let selectedItemIdx = null;
+	let selectedItemIdx: number | null = null;
 
 	$: if (selectedItems == null) {
 		selectedItems = [];
 	}
 
-	const uploadFileHandler = async (file, fullContext: boolean = false) => {
+	const uploadFileHandler = async (file: File, fullContext: boolean = false) => {
 		if (disabled) return null;
 		if ($user?.role !== 'admin' && !($user?.permissions?.chat?.file_upload ?? true)) {
 			toast.error($i18n.t('You do not have permission to upload files.'));
@@ -47,7 +47,7 @@
 		}
 
 		const tempItemId = uuidv4();
-		const fileItem = {
+		const fileItem: import('$lib/apis').ModelKnowledgeReference = {
 			type: 'file',
 			file: '',
 			id: null,
@@ -112,10 +112,10 @@
 		}
 	};
 
-	const inputFilesHandler = async (inputFiles) => {
+	const inputFilesHandler = async (inputFiles: File[]) => {
 		console.log('Input files handler called with:', inputFiles);
 
-		inputFiles.forEach(async (file) => {
+		for (const file of inputFiles) {
 			console.log('Processing file:', {
 				name: file.name,
 				type: file.type,
@@ -136,15 +136,15 @@
 						maxSize: $config?.file?.max_size
 					})
 				);
-				return;
+				continue;
 			}
 
 			if (!file['type'].startsWith('image/')) {
-				uploadFileHandler(file);
+				await uploadFileHandler(file);
 			} else {
 				toast.error($i18n.t(`Unsupported file type.`));
 			}
-		});
+		}
 	};
 
 	onMount(async () => {
@@ -170,7 +170,7 @@
 			toast.error($i18n.t(`File not found.`));
 		}
 
-		filesInputElement.value = '';
+		if (filesInputElement) filesInputElement.value = '';
 	}}
 />
 
@@ -234,7 +234,7 @@
 				{#if selectedItems?.length > 0}
 					<div class="flex flex-col">
 						{#each selectedItems as file, fileIdx}
-							<Tooltip content={file.description || file.name || file.id}>
+							<Tooltip content={file.description || file.name || file.id || ''}>
 								<div
 									class="flex min-h-7 w-full items-center gap-2 rounded-xl px-2 py-1 text-xs font-normal text-gray-900 hover:bg-gray-50 dark:text-gray-100 dark:hover:bg-gray-800"
 								>
@@ -310,7 +310,7 @@
 					type="button"
 					{disabled}
 					class="hover:text-gray-900 dark:hover:text-gray-100"
-					on:click={() => filesInputElement.click()}>{$i18n.t('Upload Files')}</button
+					on:click={() => filesInputElement?.click()}>{$i18n.t('Upload Files')}</button
 				>
 			{/if}
 			<div class="ml-auto flex items-center gap-3">

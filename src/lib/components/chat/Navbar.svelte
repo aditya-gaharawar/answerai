@@ -53,7 +53,7 @@
 	export let deleteChatHandler: (id: string) => void;
 	export let moveChatHandler: (id: string, folderId: string) => void;
 
-	let closedBannerIds = [];
+	let closedBannerIds: string[] = [];
 
 	const getDismissedBannerIds = (): string[] => {
 		try {

@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
-	import { createEventDispatcher, onMount, getContext } from 'svelte';
+	import { createEventDispatcher, onMount, onDestroy, getContext } from 'svelte';
 
 	import { user, settings, config } from '$lib/stores';
 	import { getVoices as _getVoices } from '$lib/apis/audio';
@@ -14,7 +14,7 @@
 	import UserSettingSection from './UserSettingSection.svelte';
 	const dispatch = createEventDispatcher();
 
-	const i18n = getContext('i18n');
+	const i18n = getContext<typeof import('$lib/i18n').default>('i18n');
 
 	export let saveSettings: Function;
 
@@ -28,13 +28,13 @@
 	let STTLanguage = '';
 
 	let TTSEngine = '';
-	let TTSEngineConfig = {};
+	let TTSEngineConfig: { dtype?: string } = {};
 
-	let TTSModel = null;
-	let TTSModelProgress = null;
+	let TTSModel: import('kokoro-js').KokoroTTS | null = null;
+	let TTSModelProgress: import('@huggingface/transformers').ProgressInfo | null = null;
 	let TTSModelLoading = false;
 
-	let voices = [];
+	let voices: { id?: string; name: string; localService?: boolean }[] = [];
 	let voice = '';
 
 	// Audio speed control
@@ -43,12 +43,14 @@
 		'h-7 w-full rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 text-xs text-gray-700 outline-hidden transition-colors placeholder:text-gray-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:placeholder:text-gray-700 dark:focus:border-blue-500';
 
 	const getVoices = async () => {
+		const engine = TTSEngine;
 		if (TTSEngine === 'browser-kokoro') {
 			if (!TTSModel) {
 				await loadKokoro();
 			}
 
-			voices = Object.entries(TTSModel.voices).map(([key, value]) => {
+			if (destroyed || TTSEngine !== engine) return;
+			voices = Object.entries(TTSModel?.voices ?? {}).map(([key, value]) => {
 				return {
 					id: key,
 					name: value.name,
@@ -56,22 +58,14 @@
 				};
 			});
 		} else {
-			if ($config.audio.tts.engine === '') {
-				const getVoicesLoop = setInterval(async () => {
-					voices = await speechSynthesis.getVoices();
-
-					// do your loop
-					if (voices.length > 0) {
-						clearInterval(getVoicesLoop);
-					}
-				}, 100);
+			if ($config?.audio?.tts?.engine === '') {
+				voices = speechSynthesis.getVoices();
 			} else {
 				const res = await _getVoices(localStorage.token).catch((e) => {
 					toast.error(`${e}`);
 				});
 
-				if (res) {
-					console.log(res);
+				if (res && !destroyed && TTSEngine === engine) {
 					voices = res.voices;
 				}
 			}
@@ -88,6 +82,24 @@
 		saveSettings({ speechAutoSend: speechAutoSend });
 	};
 
+	let destroyed = false;
+	let loadVersion = 0;
+	let modelLoad: { dtype: string; promise: Promise<void> } | null = null;
+	const browserVoicesChanged = () => {
+		if (!destroyed && TTSEngine !== 'browser-kokoro' && !$config?.audio?.tts?.engine)
+			voices = speechSynthesis.getVoices();
+	};
+	onMount(() => {
+		speechSynthesis.addEventListener('voiceschanged', browserVoicesChanged);
+		return () => speechSynthesis.removeEventListener('voiceschanged', browserVoicesChanged);
+	});
+	onDestroy(() => {
+		destroyed = true;
+		loadVersion += 1;
+		void TTSModel?.model
+			.dispose()
+			.catch((error) => console.error('Speech model cleanup failed', error));
+	});
 	onMount(async () => {
 		playbackRate = $settings.audio?.tts?.playbackRate ?? 1;
 		conversationMode = $settings.conversationMode ?? false;
@@ -100,10 +112,10 @@
 		TTSEngine = $settings?.audio?.tts?.engine ?? '';
 		TTSEngineConfig = $settings?.audio?.tts?.engineConfig ?? {};
 
-		if ($settings?.audio?.tts?.defaultVoice === $config.audio.tts.voice) {
-			voice = $settings?.audio?.tts?.voice ?? $config.audio.tts.voice ?? '';
+		if ($settings?.audio?.tts?.defaultVoice === $config?.audio?.tts?.voice) {
+			voice = $settings?.audio?.tts?.voice ?? $config?.audio?.tts?.voice ?? '';
 		} else {
-			voice = $config.audio.tts.voice ?? '';
+			voice = $config?.audio?.tts?.voice ?? '';
 		}
 
 		nonLocalVoices = $settings.audio?.tts?.nonLocalVoices ?? false;
@@ -111,50 +123,82 @@
 		await getVoices();
 	});
 
-	$: if (TTSEngine && TTSEngineConfig) {
-		onTTSEngineChange();
+	$: {
+		TTSEngine;
+		TTSEngineConfig;
+		void onTTSEngineChange().catch((error) => {
+			if (!destroyed) toast.error(`${error}`);
+		});
 	}
 
 	const onTTSEngineChange = async () => {
 		if (TTSEngine === 'browser-kokoro') {
 			await loadKokoro();
+		} else {
+			loadVersion += 1;
+			modelLoad = null;
+			TTSModelLoading = false;
+			const model = TTSModel;
+			TTSModel = null;
+			await model?.model.dispose();
 		}
 	};
 
-	const loadKokoro = async () => {
-		if (TTSEngine === 'browser-kokoro') {
-			voices = [];
-
-			if (TTSEngineConfig?.dtype) {
-				TTSModel = null;
-				TTSModelProgress = null;
-				TTSModelLoading = true;
-
-				const model_id = 'onnx-community/Kokoro-82M-v1.0-ONNX';
-
+	const loadKokoro = (): Promise<void> => {
+		const dtype = TTSEngineConfig.dtype;
+		if (TTSEngine !== 'browser-kokoro' || !dtype) return Promise.resolve();
+		if (
+			dtype !== 'fp32' &&
+			dtype !== 'fp16' &&
+			dtype !== 'q8' &&
+			dtype !== 'q4' &&
+			dtype !== 'q4f16'
+		)
+			return Promise.resolve();
+		if (modelLoad?.dtype === dtype) return modelLoad.promise;
+		const version = ++loadVersion;
+		TTSModelLoading = true;
+		TTSModelProgress = null;
+		voices = [];
+		const promise = (async () => {
+			try {
 				const { KokoroTTS } = await import('kokoro-js');
-				TTSModel = await KokoroTTS.from_pretrained(model_id, {
-					dtype: TTSEngineConfig.dtype, // Options: "fp32", "fp16", "q8", "q4", "q4f16"
-					device: !!navigator?.gpu ? 'webgpu' : 'wasm', // Detect WebGPU
-					progress_callback: (e) => {
-						TTSModelProgress = e;
-						console.log(e);
+				if (destroyed || version !== loadVersion) return;
+				const model = await KokoroTTS.from_pretrained('onnx-community/Kokoro-82M-v1.0-ONNX', {
+					dtype,
+					device: 'gpu' in navigator ? 'webgpu' : 'wasm',
+					progress_callback: (progress) => {
+						if (!destroyed && version === loadVersion) TTSModelProgress = progress;
 					}
 				});
-
-				await getVoices();
-
-				// const rawAudio = await tts.generate(inputText, {
-				// 	// Use `tts.list_voices()` to list all available voices
-				// 	voice: voice
-				// });
-
-				// const blobUrl = URL.createObjectURL(await rawAudio.toBlob());
-				// const audio = new Audio(blobUrl);
-
-				// audio.play();
+				if (destroyed || version !== loadVersion || TTSEngine !== 'browser-kokoro') {
+					await model.model.dispose();
+					return;
+				}
+				const previousModel = TTSModel;
+				TTSModel = null;
+				await previousModel?.model.dispose();
+				if (destroyed || version !== loadVersion || TTSEngine !== 'browser-kokoro') {
+					await model.model.dispose();
+					return;
+				}
+				TTSModel = model;
+				voices = Object.entries(model.voices).map(([id, voice]) => ({
+					id,
+					name: voice.name,
+					localService: false
+				}));
+			} catch (error) {
+				if (!destroyed && version === loadVersion) {
+					modelLoad = null;
+					toast.error(`${error}`);
+				}
+			} finally {
+				if (!destroyed && version === loadVersion) TTSModelLoading = false;
 			}
-		}
+		})();
+		modelLoad = { dtype, promise };
+		return promise;
 	};
 </script>
 
@@ -174,7 +218,7 @@
 					playbackRate: playbackRate,
 					voice: voice !== '' ? voice : undefined,
 					defaultVoice: $config?.audio?.tts?.voice ?? '',
-					nonLocalVoices: $config.audio.tts.engine === '' ? nonLocalVoices : undefined
+					nonLocalVoices: $config?.audio?.tts?.engine === '' ? nonLocalVoices : undefined
 				}
 			}
 		});
@@ -187,7 +231,7 @@
 
 	<div class="flex-1 min-h-0 overflow-y-auto scrollbar-hover pr-1.5">
 		<UserSettingSection title={$i18n.t('settings.personal.audio.sections.sttSettings.title')} first>
-			{#if $config.audio.stt.engine !== 'web'}
+			{#if $config?.audio?.stt?.engine !== 'web'}
 				<UserSettingRow
 					label={$i18n.t('settings.personal.audio.speechToTextEngine.label')}
 					description={$i18n.t('settings.personal.audio.speechToTextEngine.description')}
@@ -346,7 +390,7 @@
 					</div>
 				</UserSettingSection>
 			{/if}
-		{:else if $config.audio.tts.engine === ''}
+		{:else if $config?.audio?.tts?.engine === ''}
 			<UserSettingSection title={$i18n.t('settings.personal.audio.sections.voice.title')}>
 				<UserSettingField
 					label={$i18n.t('settings.personal.audio.browserVoice.label')}
@@ -374,7 +418,7 @@
 					<Switch bind:state={nonLocalVoices} />
 				</UserSettingRow>
 			</UserSettingSection>
-		{:else if $config.audio.tts.engine !== ''}
+		{:else if $config?.audio?.tts?.engine !== ''}
 			<UserSettingSection title={$i18n.t('settings.personal.audio.sections.voice.title')}>
 				<UserSettingField
 					label={$i18n.t('settings.personal.audio.serviceVoice.label')}

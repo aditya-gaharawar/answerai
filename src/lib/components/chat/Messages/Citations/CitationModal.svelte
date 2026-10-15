@@ -1,4 +1,11 @@
 <script lang="ts">
+	import type { Citation, CitationOrigin, CitationMetadata } from '$lib/utils/citations';
+	type CitationDocument = {
+		source: CitationOrigin;
+		document: string;
+		metadata?: CitationMetadata;
+		distance?: number;
+	};
 	import { getContext, onMount, tick } from 'svelte';
 	import Modal from '$lib/components/common/Modal.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
@@ -17,11 +24,11 @@
 	let expandedDocs: Set<number> = new Set();
 
 	export let show = false;
-	export let citation;
+	export let citation: Citation | null = null;
 	export let showPercentage = false;
 	export let showRelevance = true;
 
-	let mergedDocuments = [];
+	let mergedDocuments: CitationDocument[] = [];
 
 	function calculatePercentage(distance: number) {
 		if (typeof distance !== 'number') return null;
@@ -41,13 +48,14 @@
 	}
 
 	$: if (citation) {
+		const currentCitation = citation;
 		expandedDocs = new Set();
 		mergedDocuments = (citation.document ?? []).map((c, i) => {
 			return {
-				source: citation.source,
+				source: currentCitation.source,
 				document: c,
-				metadata: citation.metadata?.[i],
-				distance: citation.distances?.[i]
+				metadata: currentCitation.metadata?.[i],
+				distance: currentCitation.distances?.[i]
 			};
 		});
 		if (mergedDocuments.every((doc) => doc.distance !== undefined)) {
@@ -65,7 +73,7 @@
 		}
 	};
 
-	const getTextFragmentUrl = (doc: any): string | null => {
+	const getTextFragmentUrl = (doc: CitationDocument): string | null => {
 		const { metadata, source, document: content } = doc ?? {};
 		const { file_id, page } = metadata ?? {};
 		const sourceUrl = source?.url;

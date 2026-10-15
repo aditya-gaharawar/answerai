@@ -1,9 +1,11 @@
 <script lang="ts">
+	import type { ValveSchema, ValveValues } from '$lib/types/valves';
+	import { serializeValveValues } from '$lib/utils/valveValues';
 	import { resolveLocalizedResource } from '$lib/utils/localizedContent';
 	import { toast } from 'svelte-sonner';
 
 	import { config, functions, models, settings, tools, user } from '$lib/stores';
-	import { createEventDispatcher, onMount, getContext, tick } from 'svelte';
+	import { createEventDispatcher, onMount, onDestroy, getContext, tick } from 'svelte';
 
 	import {
 		getUserValvesSpecById as getToolUserValvesSpecById,
@@ -24,7 +26,7 @@
 
 	const dispatch = createEventDispatcher();
 
-	const i18n = getContext('i18n');
+	const i18n = getContext<typeof import('$lib/i18n').default>('i18n');
 
 	export let show = false;
 
@@ -33,104 +35,112 @@
 
 	let loading = false;
 
-	let valvesSpec = null;
-	let valves = {};
+	let valvesSpec: ValveSchema | null = null;
+	let valves: ValveValues = {};
 
 	let debounceTimer: ReturnType<typeof setTimeout> | undefined;
 
-	const debounceSubmitHandler = async () => {
-		if (debounceTimer) {
-			clearTimeout(debounceTimer);
-		}
-
-		// Set a new timer
+	let loadVersion = 0;
+	let destroyed = false;
+	let editVersion = 0;
+	onDestroy(() => {
+		destroyed = true;
+		loadVersion += 1;
+		clearTimeout(debounceTimer);
+	});
+	const current = (version: number, resourceId: string, resourceTab: string) =>
+		!destroyed &&
+		show &&
+		version === loadVersion &&
+		selectedId === resourceId &&
+		tab === resourceTab;
+	const debounceSubmitHandler = () => {
+		clearTimeout(debounceTimer);
+		const resourceId = selectedId;
+		const resourceTab = tab;
+		const version = loadVersion;
+		const revision = ++editVersion;
+		const values = valvesSpec ? serializeValveValues(valves, valvesSpec) : null;
 		debounceTimer = setTimeout(() => {
-			submitHandler();
-		}, 500); // 0.5 second debounce
+			if (values && current(version, resourceId, resourceTab))
+				void saveValues(resourceId, resourceTab, values, version, revision);
+		}, 500);
 	};
-
-	const getUserValves = async () => {
+	const getUserValves = async (resourceId: string, resourceTab: string, visible: boolean) => {
+		const version = ++loadVersion;
+		clearTimeout(debounceTimer);
+		valves = {};
+		valvesSpec = null;
+		if (!resourceId || !visible) {
+			loading = false;
+			return;
+		}
 		loading = true;
-		if (tab === 'tools') {
-			valves = await getToolUserValvesById(localStorage.token, selectedId);
-			valvesSpec = await getToolUserValvesSpecById(localStorage.token, selectedId);
-		} else if (tab === 'functions') {
-			valves = await getFunctionUserValvesById(localStorage.token, selectedId);
-			valvesSpec = await getFunctionUserValvesSpecById(localStorage.token, selectedId);
-		}
-
-		if (valvesSpec) {
-			// Convert array to string
-			for (const property in valvesSpec.properties) {
-				if (valvesSpec.properties[property]?.type === 'array') {
-					if (valvesSpec.properties[property]?.input?.type === 'multiselect') {
-						continue;
-					}
-					if (valves[property] != null) {
-						valves[property] = (Array.isArray(valves[property]) ? valves[property] : []).join(',');
-					} else {
-						valves[property] = null;
-					}
+		try {
+			const [values, spec]: [ValveValues, ValveSchema | null] = await Promise.all(
+				resourceTab === 'tools'
+					? [
+							getToolUserValvesById(localStorage.token, resourceId),
+							getToolUserValvesSpecById(localStorage.token, resourceId)
+						]
+					: [
+							getFunctionUserValvesById(localStorage.token, resourceId),
+							getFunctionUserValvesSpecById(localStorage.token, resourceId)
+						]
+			);
+			if (!current(version, resourceId, resourceTab)) return;
+			valves = values ?? {};
+			valvesSpec = spec;
+			for (const property in spec?.properties ?? {}) {
+				if (
+					spec?.properties[property]?.type === 'array' &&
+					spec.properties[property]?.input?.type !== 'multiselect'
+				) {
+					const value = valves[property];
+					valves[property] = value == null ? null : (Array.isArray(value) ? value : []).join(',');
 				}
 			}
+		} catch (error) {
+			if (current(version, resourceId, resourceTab)) toast.error(`${error}`);
+		} finally {
+			if (current(version, resourceId, resourceTab)) loading = false;
 		}
-
-		loading = false;
 	};
-
-	const submitHandler = async () => {
-		if (valvesSpec) {
-			// Convert string to array
-			for (const property in valvesSpec.properties) {
-				if (valvesSpec.properties[property]?.type === 'array') {
-					if (typeof valves[property] === 'string') {
-						valves[property] = (valves[property] ?? '')
-							.split(',')
-							.map((v) => v.trim())
-							.filter((v) => v.length > 0);
-					} else if (valves[property] == null) {
-						valves[property] = null;
-					}
-				}
-			}
-
-			if (tab === 'tools') {
-				const res = await updateToolUserValvesById(localStorage.token, selectedId, valves).catch(
-					(error) => {
-						toast.error(`${error}`);
-						return null;
-					}
-				);
-
-				if (res) {
-					toast.success($i18n.t('Valves updated'));
-					valves = res;
-				}
-			} else if (tab === 'functions') {
-				const res = await updateFunctionUserValvesById(
-					localStorage.token,
-					selectedId,
-					valves
-				).catch((error) => {
-					toast.error(`${error}`);
-					return null;
-				});
-
-				if (res) {
-					toast.success($i18n.t('Valves updated'));
-					valves = res;
-				}
-			}
+	const saveValues = async (
+		resourceId: string,
+		resourceTab: string,
+		values: ValveValues,
+		version: number,
+		revision: number
+	) => {
+		try {
+			const res = await (
+				resourceTab === 'tools' ? updateToolUserValvesById : updateFunctionUserValvesById
+			)(localStorage.token, resourceId, values);
+			// Keep editable strings and edits made while the save was pending.
+			if (res && current(version, resourceId, resourceTab) && revision === editVersion)
+				toast.success($i18n.t('Valves updated'));
+		} catch (error) {
+			if (current(version, resourceId, resourceTab)) toast.error(`${error}`);
 		}
+	};
+	const submitHandler = async () => {
+		clearTimeout(debounceTimer);
+		if (!selectedId || !valvesSpec || loading) return;
+		await saveValues(
+			selectedId,
+			tab,
+			serializeValveValues(valves, valvesSpec),
+			loadVersion,
+			++editVersion
+		);
 	};
 
 	$: if (tab) {
 		selectedId = '';
 	}
 
-	$: if (selectedId) {
-		getUserValves();
-	}
+	$: getUserValves(selectedId, tab, show);
 
 	$: if (show) {
 		init();

@@ -265,7 +265,6 @@
 				user={$user}
 				readOnly={true}
 				history={chat.chat.history}
-				messages={chat.chat.messages}
 				autoScroll={true}
 				sendMessage={() => {}}
 				continueResponse={() => {}}

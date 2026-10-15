@@ -8,7 +8,7 @@
 	import XMark from '$lib/components/icons/XMark.svelte';
 
 	export let show = false;
-	export let selectedSkillIds = [];
+	export let selectedSkillIds: string[] = [];
 
 	let selectedSkills = [];
 

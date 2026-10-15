@@ -1,4 +1,4 @@
-import { Extension } from '@tiptap/core';
+import { Extension, type Editor, type Range } from '@tiptap/core';
 import Suggestion from '@tiptap/suggestion';
 
 export default Extension.create({
@@ -8,7 +8,15 @@ export default Extension.create({
 		return {
 			suggestion: {
 				char: '/',
-				command: ({ editor, range, props }) => {
+				command: ({
+					editor,
+					range,
+					props
+				}: {
+					editor: Editor;
+					range: Range;
+					props: { command: (context: { editor: Editor; range: Range }) => void };
+				}) => {
 					props.command({ editor, range });
 				}
 			}

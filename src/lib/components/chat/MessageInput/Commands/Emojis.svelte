@@ -11,7 +11,7 @@
 	export let onSelect = (e) => {};
 
 	let selectedIdx = 0;
-	export let filteredItems = [];
+	export let filteredItems: { name: string; shortCodes: string[] }[] = [];
 
 	// Build a flat list of { name, shortCodes } for searching
 	const allEmojis = Object.entries(emojiShortCodes).map(([key, value]) => ({

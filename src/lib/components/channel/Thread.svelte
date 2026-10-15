@@ -1,4 +1,11 @@
 <script lang="ts">
+	import type {
+		ChannelRecord,
+		ChannelMessage,
+		ChannelEvent,
+		ChannelUser,
+		ChannelPinHandler
+	} from '$lib/types/channels';
 	import { goto } from '$app/navigation';
 
 	import { socket, user } from '$lib/stores';
@@ -12,24 +19,24 @@
 	import { toast } from 'svelte-sonner';
 	import Spinner from '../common/Spinner.svelte';
 
-	const i18n = getContext('i18n');
+	const i18n = getContext<typeof import('$lib/i18n').default>('i18n');
 
-	export let threadId = null;
-	export let channel = null;
+	export let threadId: string | null = null;
+	export let channel: ChannelRecord | null = null;
 
 	export let onClose = () => {};
-	export let onPin = () => {};
+	export let onPin: ChannelPinHandler = () => {};
 
-	let messages = null;
+	let messages: ChannelMessage[] | null = null;
 	let top = false;
 
 	let messagesContainerElement: HTMLDivElement | null = null;
-	let chatInputElement = null;
+	let chatInputElement: import('$lib/components/common/RichTextInput.svelte').default | null = null;
 
-	let replyToMessage = null;
+	let replyToMessage: ChannelMessage | null = null;
 
-	let typingUsers = [];
-	let typingUsersTimeout = {};
+	let typingUsers: Pick<ChannelUser, 'id' | 'name'>[] = [];
+	let typingUsersTimeout: Record<string, ReturnType<typeof setTimeout>> = {};
 
 	$: if (threadId) {
 		initHandler();
@@ -46,12 +53,13 @@
 		top = false;
 
 		typingUsers = [];
+		for (const timer of Object.values(typingUsersTimeout)) clearTimeout(timer);
 		typingUsersTimeout = {};
 
-		if (channel) {
+		if (channel && threadId) {
 			messages = await getChannelThreadMessages(localStorage.token, channel.id, threadId);
 
-			if (messages.length < 50) {
+			if ((messages ?? []).length < 50) {
 				top = true;
 			}
 
@@ -62,11 +70,11 @@
 		}
 	};
 
-	const channelEventHandler = async (event) => {
+	const channelEventHandler = async (event: ChannelEvent) => {
+		if (!messages || !channel) return;
 		console.debug(event);
 		if (event.channel_id === channel.id) {
-			const type = event?.data?.type ?? null;
-			const data = event?.data?.data ?? null;
+			const { type, data } = event.data;
 
 			if (type === 'message') {
 				if ((data?.parent_id ?? null) === threadId) {
@@ -104,7 +112,7 @@
 				if (replyToMessage?.id === data.id) {
 					replyToMessage = null;
 				}
-			} else if (type.includes('message:reaction')) {
+			} else if (type === 'message:reaction:add' || type === 'message:reaction:remove') {
 				if (messages) {
 					const idx = messages.findIndex((message) => message.id === data.id);
 					if (idx !== -1) {
@@ -170,9 +178,10 @@
 	};
 
 	const onChange = async () => {
+		if (!channel) return;
 		$socket?.emit('events:channel', {
 			channel_id: channel.id,
-			message_id: threadId,
+			message_id: threadId ?? '',
 			data: {
 				type: 'typing',
 				data: {
@@ -187,6 +196,7 @@
 	});
 
 	onDestroy(() => {
+		for (const timer of Object.values(typingUsersTimeout)) clearTimeout(timer);
 		$socket?.off('events:channel', channelEventHandler);
 	});
 </script>
@@ -226,7 +236,7 @@
 						{replyToMessage}
 						thread={true}
 						{onPin}
-						onReply={async (message) => {
+						onReply={async (message: ChannelMessage) => {
 							replyToMessage = message;
 
 							await tick();
@@ -236,11 +246,11 @@
 							const newMessages = await getChannelThreadMessages(
 								localStorage.token,
 								channel.id,
-								threadId,
-								messages.length
+								threadId ?? '',
+								(messages ?? []).length
 							);
 
-							messages = [...messages, ...newMessages];
+							messages = [...(messages ?? []), ...newMessages];
 
 							if (newMessages.length < 50) {
 								top = true;

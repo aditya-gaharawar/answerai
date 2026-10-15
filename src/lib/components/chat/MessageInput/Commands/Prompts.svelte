@@ -11,10 +11,10 @@
 	export let onSelect = (e) => {};
 
 	let selectedPromptIdx = 0;
-	export let filteredItems = [];
+	export let filteredItems: import('$lib/types/resources').PromptRecord[] = [];
 	let searchDebounceTimer: ReturnType<typeof setTimeout>;
 
-	let items = [];
+	let items: import('$lib/types/resources').PromptRecord[] = [];
 
 	$: if (query !== undefined) {
 		clearTimeout(searchDebounceTimer);

@@ -1,7 +1,9 @@
 <script lang="ts">
+	import type { ValveSchema, ValveValues } from '$lib/types/valves';
+	import { serializeValveValues } from '$lib/utils/valveValues';
 	import { toast } from 'svelte-sonner';
 	import { createEventDispatcher } from 'svelte';
-	import { onMount, getContext } from 'svelte';
+	import { onMount, onDestroy, getContext } from 'svelte';
 	import { tools, functions } from '$lib/stores';
 	import { addUser } from '$lib/apis/auths';
 
@@ -46,36 +48,27 @@
 	let saving = false;
 	let loading = false;
 
-	let valvesSpec = null;
-	let valves = {};
+	let valvesSpec: ValveSchema | null = null;
+	let valves: ValveValues = {};
 
 	const submitHandler = async () => {
+		if (!id || loading || saving) return;
 		saving = true;
 
 		if (valvesSpec) {
-			// Convert string to array
-			for (const property in valvesSpec.properties) {
-				if (valvesSpec.properties[property]?.type === 'array') {
-					if (typeof valves[property] === 'string') {
-						valves[property] = (valves[property] ?? '')
-							.split(',')
-							.map((v) => v.trim())
-							.filter((v) => v.length > 0);
-					} else if (valves[property] == null) {
-						valves[property] = null;
-					}
-				}
-			}
+			const submittedValves = serializeValveValues(valves, valvesSpec);
 
 			let res = null;
 
 			if (userValves) {
 				if (type === 'tool') {
-					res = await updateToolUserValvesById(localStorage.token, id, valves).catch((error) => {
-						toast.error(`${error}`);
-					});
+					res = await updateToolUserValvesById(localStorage.token, id, submittedValves).catch(
+						(error) => {
+							toast.error(`${error}`);
+						}
+					);
 				} else if (type === 'function') {
-					res = await updateFunctionUserValvesById(localStorage.token, id, valves).catch(
+					res = await updateFunctionUserValvesById(localStorage.token, id, submittedValves).catch(
 						(error) => {
 							toast.error(`${error}`);
 						}
@@ -83,13 +76,17 @@
 				}
 			} else {
 				if (type === 'tool') {
-					res = await updateToolValvesById(localStorage.token, id, valves).catch((error) => {
-						toast.error(`${error}`);
-					});
+					res = await updateToolValvesById(localStorage.token, id, submittedValves).catch(
+						(error) => {
+							toast.error(`${error}`);
+						}
+					);
 				} else if (type === 'function') {
-					res = await updateFunctionValvesById(localStorage.token, id, valves).catch((error) => {
-						toast.error(`${error}`);
-					});
+					res = await updateFunctionValvesById(localStorage.token, id, submittedValves).catch(
+						(error) => {
+							toast.error(`${error}`);
+						}
+					);
 				}
 			}
 
@@ -102,61 +99,67 @@
 		saving = false;
 	};
 
-	const initHandler = async () => {
-		loading = true;
+	let loadVersion = 0;
+	let destroyed = false;
+	onDestroy(() => {
+		destroyed = true;
+		loadVersion += 1;
+	});
+	const initHandler = async (
+		resourceId: string | null,
+		resourceType: string,
+		userScope: boolean,
+		visible: boolean
+	) => {
+		const version = ++loadVersion;
 		valves = {};
 		valvesSpec = null;
-
-		try {
-			if (userValves) {
-				if (type === 'tool') {
-					valves = await getToolUserValvesById(localStorage.token, id);
-					valvesSpec = await getToolUserValvesSpecById(localStorage.token, id);
-				} else if (type === 'function') {
-					valves = await getFunctionUserValvesById(localStorage.token, id);
-					valvesSpec = await getFunctionUserValvesSpecById(localStorage.token, id);
-				}
-			} else {
-				if (type === 'tool') {
-					valves = await getToolValvesById(localStorage.token, id);
-					valvesSpec = await getToolValvesSpecById(localStorage.token, id);
-				} else if (type === 'function') {
-					valves = await getFunctionValvesById(localStorage.token, id);
-					valvesSpec = await getFunctionValvesSpecById(localStorage.token, id);
-				}
-			}
-
-			if (!valves) {
-				valves = {};
-			}
-
-			if (valvesSpec) {
-				for (const property in valvesSpec.properties) {
-					if (valvesSpec.properties[property]?.type === 'array') {
-						if (valvesSpec.properties[property]?.input?.type === 'multiselect') {
-							continue;
-						}
-						if (valves[property] != null) {
-							valves[property] = (Array.isArray(valves[property]) ? valves[property] : []).join(
-								','
-							);
-						} else {
-							valves[property] = null;
-						}
-					}
-				}
-			}
-
+		if (!resourceId || !visible) {
 			loading = false;
-		} catch (e) {
-			toast.error(`Error fetching valves`);
-			show = false;
+			return;
+		}
+		loading = true;
+		try {
+			const getValues = userScope
+				? resourceType === 'tool'
+					? getToolUserValvesById
+					: getFunctionUserValvesById
+				: resourceType === 'tool'
+					? getToolValvesById
+					: getFunctionValvesById;
+			const getSpec = userScope
+				? resourceType === 'tool'
+					? getToolUserValvesSpecById
+					: getFunctionUserValvesSpecById
+				: resourceType === 'tool'
+					? getToolValvesSpecById
+					: getFunctionValvesSpecById;
+			const [values, spec]: [ValveValues, ValveSchema | null] = await Promise.all([
+				getValues(localStorage.token, resourceId),
+				getSpec(localStorage.token, resourceId)
+			]);
+			if (destroyed || version !== loadVersion) return;
+			valves = values ?? {};
+			valvesSpec = spec;
+			for (const property in spec?.properties ?? {}) {
+				if (
+					spec?.properties[property]?.type === 'array' &&
+					spec.properties[property]?.input?.type !== 'multiselect'
+				) {
+					const value = valves[property];
+					valves[property] = value == null ? null : (Array.isArray(value) ? value : []).join(',');
+				}
+			}
+		} catch (error) {
+			if (!destroyed && version === loadVersion) {
+				toast.error('Error fetching valves');
+				show = false;
+			}
+		} finally {
+			if (!destroyed && version === loadVersion) loading = false;
 		}
 	};
-
-	$: if (show) {
-		initHandler();
-	}
+	$: initHandler(id, type, userValves, show);
 </script>
 
 <Modal size="sm" bind:show>

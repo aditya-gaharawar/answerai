@@ -39,15 +39,15 @@
 
 	let page = 1;
 
-	let users = null;
-	let total = null;
+	let users: import('$lib/types/resources').UserRecord[] = [];
+	let total: number | null = null;
 
 	let query = '';
 	let searchDebounceTimer: ReturnType<typeof setTimeout>;
 	let orderBy = 'created_at'; // default sort key
 	let direction = 'asc'; // default sort order
 
-	let selectedUser = null;
+	let selectedUser: import('$lib/types/resources').UserRecord | null = null;
 
 	let showDeleteConfirmDialog = false;
 	let showAddUserModal = false;
@@ -495,13 +495,13 @@
 		ⓘ {$i18n.t("Click on the user role button to change a user's role.")}
 	</div>
 
-	{#if total > 30}
+	{#if total !== null && total > 30}
 		<Pagination bind:page count={total} perPage={30} />
 	{/if}
 {/if}
 
 {#if !$config?.license_metadata}
-	{#if total > 50}
+	{#if total !== null && total > 50}
 		<!-- LICENSE covers the Open WebUI branding narrative here.
 		Do not alter, remove, obscure, or replace it except as LICENSE permits:
 		https://docs.openwebui.com/license. -->

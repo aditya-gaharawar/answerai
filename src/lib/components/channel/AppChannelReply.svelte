@@ -14,7 +14,7 @@
 		embeds?: Embed[];
 		actions?: { action_id?: string; url?: string; label: string }[];
 	};
-	export let source: { id: string; user?: { name?: string } } | null = null;
+	export let source: { id: string; user?: { name?: string } | null } | null = null;
 	const dispatch = createEventDispatcher();
 	let busy = false,
 		error = '';

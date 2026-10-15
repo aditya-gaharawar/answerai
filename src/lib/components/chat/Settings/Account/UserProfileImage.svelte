@@ -9,7 +9,7 @@
 
 	import { WEBUI_BASE_URL } from '$lib/constants';
 
-	export let profileImageUrl;
+	export let profileImageUrl: string;
 	export let user = null;
 
 	export let imageClassName = 'size-14 md:size-18';

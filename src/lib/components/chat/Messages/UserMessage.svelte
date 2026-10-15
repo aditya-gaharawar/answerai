@@ -53,7 +53,7 @@
 
 	let edit = false;
 	let editedContent = '';
-	let editedFiles = [];
+	let editedFiles: NonNullable<import('$lib/utils/chatHistory').HistoryNode['files']> = [];
 
 	let messageEditTextAreaElement: HTMLTextAreaElement;
 	let editScrollContainer: HTMLDivElement;
@@ -81,7 +81,7 @@
 			}
 		}
 	}
-	const copyToClipboard = async (text) => {
+	const copyToClipboard = async (text: string) => {
 		const res = await _copyToClipboard(text);
 		if (res) {
 			toast.success($i18n.t('Copying to clipboard was successful!'));
@@ -102,7 +102,7 @@
 			messageEditTextAreaElement.style.height = '';
 			messageEditTextAreaElement.style.height = `${messageEditTextAreaElement.scrollHeight}px`;
 
-			if (messagesContainer) messagesContainer.scrollTop = savedScrollTop;
+			if (messagesContainer) messagesContainer.scrollTop = savedScrollTop ?? 0;
 			messageEditTextAreaElement?.focus({ preventScroll: true });
 		}
 	};
@@ -308,11 +308,11 @@
 								const savedScrollTop = messagesContainer?.scrollTop;
 								const savedInnerScroll = editScrollContainer?.scrollTop;
 
-								e.target.style.height = '';
-								e.target.style.height = `${e.target.scrollHeight}px`;
+								e.currentTarget.style.height = '';
+								e.currentTarget.style.height = `${e.currentTarget.scrollHeight}px`;
 
-								if (messagesContainer) messagesContainer.scrollTop = savedScrollTop;
-								if (editScrollContainer) editScrollContainer.scrollTop = savedInnerScroll;
+								if (messagesContainer) messagesContainer.scrollTop = savedScrollTop ?? 0;
+								if (editScrollContainer) editScrollContainer.scrollTop = savedInnerScroll ?? 0;
 							}}
 							on:keydown={(e) => {
 								if (e.key === 'Escape') {
@@ -503,15 +503,15 @@
 											min="1"
 											max={siblings.length}
 											on:focus={(e) => {
-												e.target.select();
+												e.currentTarget.select();
 											}}
 											on:blur={(e) => {
-												gotoMessage(message, e.target.value - 1);
+												gotoMessage(message, e.currentTarget.value - 1);
 												messageIndexEdit = false;
 											}}
 											on:keydown={(e) => {
 												if (e.key === 'Enter') {
-													gotoMessage(message, e.target.value - 1);
+													gotoMessage(message, e.currentTarget.value - 1);
 													messageIndexEdit = false;
 												}
 											}}
@@ -527,7 +527,7 @@
 
 											await tick();
 											const input = document.getElementById(`message-index-input-${message.id}`);
-											if (input) {
+											if (input instanceof HTMLInputElement) {
 												input.focus();
 												input.select();
 											}
@@ -692,15 +692,15 @@
 											min="1"
 											max={siblings.length}
 											on:focus={(e) => {
-												e.target.select();
+												e.currentTarget.select();
 											}}
 											on:blur={(e) => {
-												gotoMessage(message, e.target.value - 1);
+												gotoMessage(message, e.currentTarget.value - 1);
 												messageIndexEdit = false;
 											}}
 											on:keydown={(e) => {
 												if (e.key === 'Enter') {
-													gotoMessage(message, e.target.value - 1);
+													gotoMessage(message, e.currentTarget.value - 1);
 													messageIndexEdit = false;
 												}
 											}}
@@ -716,7 +716,7 @@
 
 											await tick();
 											const input = document.getElementById(`message-index-input-${message.id}`);
-											if (input) {
+											if (input instanceof HTMLInputElement) {
 												input.focus();
 												input.select();
 											}

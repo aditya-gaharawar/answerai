@@ -6,7 +6,7 @@
 	import TagItem from './TagItem.svelte';
 	const dispatch = createEventDispatcher();
 
-	export let tags = [];
+	export let tags: import('$lib/utils/tags').Tag[] = [];
 	export let disabled = false;
 </script>
 

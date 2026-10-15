@@ -24,7 +24,7 @@
 	export let onSelect = (e) => {};
 
 	let selectedIdx = 0;
-	let items = [];
+	let items: import('$lib/apis').ModelKnowledgeReference[] = [];
 	let searchDebounceTimer: ReturnType<typeof setTimeout>;
 
 	export let filteredItems = [];
@@ -64,8 +64,8 @@
 		}
 	};
 
-	let knowledgeItems = [];
-	let fileItems = [];
+	let knowledgeItems: import('$lib/types/resources').KnowledgeRecord[] = [];
+	let fileItems: import('$lib/types/resources').FileRecord[] = [];
 
 	$: items = [...folderItems, ...knowledgeItems, ...fileItems];
 

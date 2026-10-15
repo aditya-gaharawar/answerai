@@ -1,4 +1,20 @@
 <script lang="ts">
+	import type { AccessGrant } from '$lib/apis';
+	type PromptRecord = {
+		id: string;
+		command: string;
+		name: string;
+		title?: string;
+		content: string;
+		tags?: string[] | null;
+		access_grants?: AccessGrant[];
+		user_id?: string;
+		user?: import('$lib/types/plugins').PluginOwner | null;
+		updated_at: number;
+		created_at: number;
+		is_active?: boolean;
+		write_access?: boolean;
+	};
 	import WorkspaceAccessModal from './common/WorkspaceAccessModal.svelte';
 	let accessModal: WorkspaceAccessModal;
 	import dayjs from 'dayjs';
@@ -53,7 +69,7 @@
 		command: string;
 		content: string;
 		tags: string[];
-		access_grants: any[];
+		access_grants: AccessGrant[];
 		commit_message?: string;
 		is_production?: boolean;
 	};
@@ -67,20 +83,20 @@
 	let promptsImportInputElement: HTMLInputElement;
 	let loaded = false;
 
-	let importFiles = null;
+	let importFiles: FileList | null = null;
 	let query = '';
 	let searchDebounceTimer: ReturnType<typeof setTimeout>;
 	let searchController: AbortController;
 
-	let prompts = null;
-	let tags = [];
-	let total = null;
+	let prompts: PromptRecord[] = [];
+	let tags: string[] = [];
+	let total: number | null = null;
 	let loading = false;
 
 	let showDeleteConfirm = false;
 	let showCreateModal = false;
 	let createPrompt: PromptDraft | null = null;
-	let deletePrompt = null;
+	let deletePrompt: PromptRecord | null = null;
 
 	let tagsContainerElement: HTMLDivElement;
 	let viewOption = '';
@@ -163,7 +179,7 @@
 		}
 	};
 
-	const openPrompt = (prompt) => {
+	const openPrompt = (prompt: PromptRecord) => {
 		goto(`/workspace/prompts/${prompt.id}`);
 	};
 
@@ -216,7 +232,7 @@
 		}
 	};
 
-	const shareHandler = async (prompt) => {
+	const shareHandler = async (prompt: PromptRecord) => {
 		// LICENSE covers this Open WebUI Community wordmark.
 		// Do not alter, remove, obscure, or replace it except as LICENSE permits:
 		// https://docs.openwebui.com/license.
@@ -224,13 +240,14 @@
 
 		const url = 'https://answerai.in';
 
-		const tab = await window.open(`${url}/prompts/create`, '_blank');
+		const tab = window.open(`${url}/prompts/create`, '_blank');
+		if (!tab) return;
 		window.addEventListener(
 			'message',
 			(event) => {
-				if (event.origin !== url) return;
+				if (event.origin !== url || event.source !== tab) return;
 				if (event.data === 'loaded') {
-					tab.postMessage(JSON.stringify(prompt), '*');
+					tab.postMessage(JSON.stringify(prompt), url);
 				}
 			},
 			false
@@ -271,7 +288,7 @@
 		return res;
 	};
 
-	const cloneHandler = async (prompt) => {
+	const cloneHandler = async (prompt: PromptRecord) => {
 		const clonedPrompt = { ...prompt };
 
 		clonedPrompt.name = `${clonedPrompt.name} (Clone)`;
@@ -283,14 +300,14 @@
 		openCreateModal(toPromptDraft(clonedPrompt));
 	};
 
-	const exportHandler = async (prompt) => {
+	const exportHandler = async (prompt: PromptRecord) => {
 		let blob = new Blob([JSON.stringify([prompt])], {
 			type: 'application/json'
 		});
 		saveAs(blob, `prompt-export-${Date.now()}.json`);
 	};
 
-	const copyHandler = async (prompt) => {
+	const copyHandler = async (prompt: PromptRecord) => {
 		const res = await copyToClipboard(prompt.content);
 		if (res) {
 			copiedId = prompt.command;
@@ -300,7 +317,8 @@
 		}
 	};
 
-	const deleteHandler = async (prompt) => {
+	const deleteHandler = async (prompt: PromptRecord | null) => {
+		if (!prompt) return;
 		const command = prompt.command;
 
 		const res = await deletePromptById(localStorage.token, prompt.id).catch((err) => {
@@ -316,7 +334,7 @@
 		getPromptList();
 	};
 
-	onMount(async () => {
+	onMount(() => {
 		viewOption = localStorage?.workspaceViewOption || '';
 		loaded = true;
 
@@ -397,7 +415,8 @@
 		}}
 	>
 		<div class=" text-sm text-gray-500 truncate">
-			{$i18n.t('This will delete')} <span class="  font-normal">{deletePrompt.command}</span>.
+			{$i18n.t('This will delete')}
+			<span class="  font-normal">{deletePrompt?.command ?? ''}</span>.
 		</div>
 	</DeleteConfirmDialog>
 
@@ -426,36 +445,36 @@
 		type="file"
 		accept=".json"
 		hidden
-		on:change={() => {
-			console.log(importFiles);
-			if (!importFiles || importFiles.length === 0) return;
-
-			const reader = new FileReader();
-			reader.onload = async (event) => {
-				const savedPrompts = JSON.parse(event.target.result);
-				console.log(savedPrompts);
-
-				try {
-					for (const prompt of savedPrompts) {
-						await createNewPrompt(localStorage.token, {
-							command: prompt.command,
-							name: prompt.name,
-							content: prompt.content
-						}).catch((error) => {
-							toast.error(typeof error === 'string' ? error : JSON.stringify(error));
-							return null;
-						});
-					}
-
-					page = 1;
-					await getPromptList();
-				} finally {
-					importFiles = null;
-					promptsImportInputElement.value = '';
-				}
-			};
-
-			reader.readAsText(importFiles[0]);
+		on:change={async () => {
+			const file = importFiles?.[0];
+			if (!file) return;
+			try {
+				const saved: unknown = JSON.parse(await file.text());
+				if (
+					!Array.isArray(saved) ||
+					saved.some(
+						(item) =>
+							!item ||
+							typeof item.command !== 'string' ||
+							typeof item.name !== 'string' ||
+							typeof item.content !== 'string'
+					)
+				)
+					throw new Error($i18n.t('Invalid JSON file'));
+				for (const prompt of saved)
+					await createNewPrompt(localStorage.token, {
+						command: prompt.command,
+						name: prompt.name,
+						content: prompt.content
+					});
+				page = 1;
+				await getPromptList();
+			} catch (error) {
+				toast.error(`${error}`);
+			} finally {
+				importFiles = null;
+				promptsImportInputElement.value = '';
+			}
 		}}
 	/>
 
@@ -761,7 +780,7 @@
 				</div>
 			</div>
 
-			{#if total > 30}
+			{#if total !== null && total > 30}
 				<div class="flex justify-center mt-4 mb-2">
 					<Pagination bind:page count={total} perPage={30} />
 				</div>

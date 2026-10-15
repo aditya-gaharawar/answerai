@@ -1,4 +1,12 @@
 <script lang="ts">
+	import type { LeaderboardEntry } from '$lib/types/evaluations';
+	type RankedModel = {
+		id: string;
+		name: string;
+		rating: number | string;
+		stats: { count: number; won: string; lost: string };
+		top_tags: NonNullable<LeaderboardEntry['top_tags']>;
+	};
 	import { getContext } from 'svelte';
 	import { adminLeaderboardCount, models } from '$lib/stores';
 	import { getLeaderboard } from '$lib/apis/evaluations';
@@ -13,7 +21,7 @@
 
 	const i18n: any = getContext('i18n');
 
-	let rankedModels = [];
+	let rankedModels: RankedModel[] = [];
 	let query = '';
 	let loading = true;
 	let debounceTimer: ReturnType<typeof setTimeout>;
@@ -21,7 +29,7 @@
 	let direction: 'asc' | 'desc' = 'desc';
 
 	let showModal = false;
-	let selectedModel = null;
+	let selectedModel: RankedModel | null = null;
 
 	const toggleSort = (key: string) => {
 		if (orderBy === key) {
@@ -32,7 +40,7 @@
 		}
 	};
 
-	const openModal = (model) => {
+	const openModal = (model: RankedModel) => {
 		selectedModel = model;
 		showModal = true;
 	};
@@ -45,7 +53,10 @@
 	const loadLeaderboard = async (searchQuery = '') => {
 		loading = true;
 		try {
-			const result = await getLeaderboard(localStorage.token, searchQuery);
+			const result: { entries: LeaderboardEntry[] } = await getLeaderboard(
+				localStorage.token,
+				searchQuery
+			);
 			const statsMap = new Map((result?.entries ?? []).map((e) => [e.model_id, e]));
 			const modelMap = new Map(($models ?? []).map((m) => [m.id, m]));
 
@@ -82,7 +93,7 @@
 			rankedModels = [...activeModels, ...evaluatedModels].sort((a, b) => {
 				if (a.rating === '-') return 1;
 				if (b.rating === '-') return -1;
-				return b.rating - a.rating;
+				return Number(b.rating) - Number(a.rating);
 			});
 			adminLeaderboardCount.set(rankedModels.length);
 		} catch (err) {
@@ -102,7 +113,7 @@
 	}
 
 	$: sortedModels = [...rankedModels].sort((a, b) => {
-		const getValue = (m, key) => {
+		const getValue = (m: RankedModel, key: string) => {
 			if (key === 'name') return m.name ?? m.id ?? '';
 			if (key === 'rating') return m.rating === '-' ? -Infinity : m.rating;
 			if (key === 'won' || key === 'lost') {
@@ -214,10 +225,13 @@
 										alt={model.name}
 										class="size-5 rounded-full object-cover shrink-0"
 										on:error={(e) => {
+											const answeraiEventTarget = e.currentTarget;
+											if (!(answeraiEventTarget instanceof HTMLImageElement)) return;
+
 											// LICENSE covers this Open WebUI fallback logo.
 											// Do not alter, remove, obscure, or replace it except as LICENSE permits:
 											// https://docs.openwebui.com/license.
-											e.target.src = '/favicon.png';
+											answeraiEventTarget.src = '/favicon.png';
 										}}
 									/>
 									<Tooltip content={`${model.name} (${model.id})`} placement="top-start">

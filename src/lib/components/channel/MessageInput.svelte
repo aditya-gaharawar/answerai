@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { captureScreenFrame } from '$lib/utils/screenCapture';
+	import { readDataUrl } from '$lib/utils/readDataUrl';
 	import { chatDirection } from '$lib/stores';
 	import { toast } from 'svelte-sonner';
 	import { v4 as uuidv4 } from 'uuid';
@@ -68,12 +70,14 @@
 	export let channel: any = null;
 	export let messages: any[] | null = [];
 
-	export let typingUsers = [];
+	export let typingUsers: { id: string; name: string }[] = [];
 	export let inputLoading = false;
 
-	export let onSubmit: Function = (e) => {};
-	export let onChange: Function = (e) => {};
-	export let onStop: Function = (e) => {};
+	export let onSubmit: (
+		submission: import('$lib/types/channels').ChannelSubmission
+	) => unknown = () => {};
+	export let onChange: () => void = () => {};
+	export let onStop: () => void = () => {};
 
 	export let scrollEnd = true;
 	export let scrollToBottom: Function = () => {};
@@ -102,7 +106,7 @@
 	$: messageQueue = $channelRequestQueues[queueKey] ?? [];
 
 	let filesInputElement: HTMLInputElement;
-	let inputFiles;
+	let inputFiles: FileList | null = null;
 
 	let showInputVariablesModal = false;
 	let inputVariablesModalCallback: (variableValues: Record<string, any>) => void;
@@ -323,7 +327,7 @@
 			chatInput.focus();
 			chatInput.dispatchEvent(new Event('input'));
 
-			const words = extractCurlyBraceWords(prompt);
+			const words = extractCurlyBraceWords(content);
 
 			if (words.length > 0) {
 				const word = words.at(0);
@@ -338,48 +342,24 @@
 
 	export let showCommands = false;
 	$: showCommands = ['/'].includes(command?.charAt(0));
-	let suggestions = null;
+	let suggestions: import('$lib/types/editor').EditorSuggestion[] | null = null;
 
 	const screenCaptureHandler = async () => {
 		try {
-			// Request screen media
-			const mediaStream = await navigator.mediaDevices.getDisplayMedia({
-				video: { cursor: 'never' },
-				audio: false
-			});
-			// Once the user selects a screen, temporarily create a video element
-			const video = document.createElement('video');
-			video.srcObject = mediaStream;
-			// Ensure the video loads without affecting user experience or tab switching
-			await video.play();
-			// Set up the canvas to match the video dimensions
-			const canvas = document.createElement('canvas');
-			canvas.width = video.videoWidth;
-			canvas.height = video.videoHeight;
-			// Grab a single frame from the video stream using the canvas
-			const context = canvas.getContext('2d');
-			context.drawImage(video, 0, 0, canvas.width, canvas.height);
-			// Stop all video tracks (stop screen sharing) after capturing the image
-			mediaStream.getTracks().forEach((track) => track.stop());
-
-			// bring back focus to this current tab, so that the user can see the screen capture
-			window.focus();
-
-			// Convert the canvas to a Base64 image URL
-			const imageUrl = canvas.toDataURL('image/png');
+			const imageUrl = await captureScreenFrame(() => isDestroyed);
+			if (!imageUrl) return;
 			const blob = await (await fetch(imageUrl)).blob();
-			const file = new File([blob], `screen-capture-${Date.now()}.png`, { type: 'image/png' });
-			inputFilesHandler([file]);
-			// Clean memory: Clear video srcObject
-			video.srcObject = null;
+			if (isDestroyed) return;
+			await inputFilesHandler([
+				new File([blob], `screen-capture-${Date.now()}.png`, { type: 'image/png' })
+			]);
 		} catch (error) {
-			// Handle any errors (e.g., user cancels screen sharing)
 			console.error('Error capturing screen:', error);
 		}
 	};
 
-	const inputFilesHandler = async (inputFiles) => {
-		inputFiles.forEach(async (file) => {
+	const inputFilesHandler = async (inputFiles: File[]) => {
+		for (const file of inputFiles) {
 			console.info('Processing file:', {
 				name: file.name,
 				type: file.type,
@@ -400,12 +380,12 @@
 						maxSize: $config?.file?.max_size
 					})
 				);
-				return;
+				continue;
 			}
 
 			const image = file.type.startsWith('image/') || isHeicImage(file);
-			uploadFileHandler(file, !image, image);
-		});
+			await uploadFileHandler(file, !image, image);
+		}
 	};
 
 	const prepareImageFileHandler = async (file: File) => {
@@ -446,12 +426,7 @@
 			return imageUrl;
 		};
 		const imageFile = isHeicImage(file) ? await convertHeicToJpeg(file) : file;
-		const imageUrl = await new Promise<string>((resolve, reject) => {
-			const reader = new FileReader();
-			reader.onload = () => resolve(reader.result as string);
-			reader.onerror = () => reject(reader.error);
-			reader.readAsDataURL(imageFile);
-		});
+		const imageUrl = await readDataUrl(imageFile);
 		const compressed = await compressImageHandler(imageUrl, $settings, $config);
 		const blob = await (await fetch(compressed as string)).blob();
 		return new File([blob], imageFile.name, { type: imageFile.type });
@@ -903,11 +878,11 @@
 							}
 						}}
 						onConfirm={async (data) => {
-							const { text, filename } = data;
+							const { text } = data;
 							recording = false;
 
 							await tick();
-							insertTextAtCursor(text);
+							if (text) insertTextAtCursor(text);
 
 							await tick();
 
@@ -1061,7 +1036,7 @@
 												!(
 													'ontouchstart' in window ||
 													navigator.maxTouchPoints > 0 ||
-													navigator.msMaxTouchPoints > 0
+													navigator.maxTouchPoints > 0
 												)}
 											largeTextAsFile={$settings?.largeTextAsFile ?? false}
 											floatingMenuPlacement={'top-start'}
@@ -1072,8 +1047,8 @@
 												content = md;
 												command = getCommand();
 											}}
-											on:keydown={async (e) => {
-												e = e.detail.event;
+											on:keydown={async (event) => {
+												const e = event.detail.event;
 												const isCtrlPressed = e.ctrlKey || e.metaKey; // metaKey is for Cmd key on Mac
 
 												const suggestionsContainerElement =
@@ -1109,7 +1084,7 @@
 														!(
 															'ontouchstart' in window ||
 															navigator.maxTouchPoints > 0 ||
-															navigator.msMaxTouchPoints > 0
+															navigator.maxTouchPoints > 0
 														)
 													) {
 														// Uses keyCode '13' for Enter key for chinese/japanese keyboards
@@ -1132,8 +1107,8 @@
 													replyToMessage = null;
 												}
 											}}
-											on:paste={async (e) => {
-												e = e.detail.event;
+											on:paste={async (event) => {
+												const e = event.detail.event;
 												console.log(e);
 
 												const clipboardData = e.clipboardData || window.clipboardData;

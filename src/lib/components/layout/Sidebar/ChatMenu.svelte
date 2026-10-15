@@ -48,7 +48,7 @@
 	let show = false;
 	let pinned = false;
 
-	let chat = null;
+	let chat: import('$lib/types/chat').ChatRecord | null = null;
 	let showFullMessages = false;
 
 	export let onPinChange: () => void = () => {};
@@ -62,7 +62,7 @@
 		pinned = await getChatPinnedStatusById(localStorage.token, chatId);
 	};
 
-	const getChatAsText = async (chat) => {
+	const getChatAsText = async (chat: import('$lib/types/chat').ChatRecord) => {
 		const history = chat.chat.history;
 		const messages = createMessagesList(history, history.currentId);
 		const chatText = messages.reduce((a, message, i, arr) => {
@@ -110,6 +110,7 @@
 
 					// Clone and style
 					const clonedElement = containerElement.cloneNode(true);
+					if (!(clonedElement instanceof HTMLElement)) return;
 					clonedElement.classList.add('text-black');
 					clonedElement.classList.add('dark:text-white');
 					clonedElement.style.width = `${virtualWidth}px`;
@@ -278,7 +279,6 @@
 				user={$user}
 				readOnly={true}
 				history={chat.chat.history}
-				messages={chat.chat.messages}
 				autoScroll={true}
 				sendMessage={() => {}}
 				continueResponse={() => {}}

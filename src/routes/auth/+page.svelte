@@ -441,7 +441,7 @@
 												name="password"
 												screenReader={true}
 												required
-												aria-required="true"
+												ariaRequired="true"
 											/>
 										</div>
 

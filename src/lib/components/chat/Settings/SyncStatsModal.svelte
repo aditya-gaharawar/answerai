@@ -16,7 +16,7 @@
 	const i18n = getContext('i18n');
 
 	export let show = false;
-	export let eventData = null;
+	export let eventData: import('$lib/types/socket').SyncStatsEvent | null = null;
 
 	// Listen for verify:chat messages from opener
 	const handleMessage = async (event: MessageEvent) => {

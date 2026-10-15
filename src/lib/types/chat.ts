@@ -48,3 +48,13 @@ export type ChatReadState = {
 };
 
 export type PromptSelection = { type: 'prompt'; data: string };
+
+export interface ChatRecord extends ChatSummary {
+	chat: {
+		title: string;
+		history: import('$lib/utils/chatHistory').ChatHistory;
+		messages?: import('$lib/utils/chatHistory').HistoryNode[];
+		models?: string[];
+		[key: string]: unknown;
+	};
+}

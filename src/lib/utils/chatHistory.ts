@@ -1,6 +1,12 @@
 import { v4 as uuidv4 } from 'uuid';
 
 export interface HistoryNode {
+	sources?: unknown[];
+	arena?: boolean;
+	statusHistory?: import('$lib/types/messages').MessageStatus[];
+	user_id?: string;
+	user?: import('$lib/types/plugins').PluginOwner | null;
+	favorite?: boolean;
 	id: string;
 	parentId: string | null;
 	childrenIds: string[];

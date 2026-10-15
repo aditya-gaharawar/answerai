@@ -22,7 +22,7 @@
 	export let saveSettings: Function;
 
 	// Chats
-	let importFiles;
+	let importFiles: FileList | null;
 
 	let showArchiveConfirmDialog = false;
 	let showDeleteConfirmDialog = false;

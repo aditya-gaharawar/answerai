@@ -26,7 +26,7 @@
 	let isSaving = false;
 
 	let showDeleteConfirmDialog = false;
-	let selectedWebhookId = null;
+	let selectedWebhookId: string | null = null;
 
 	// Track pending changes from child components
 	let pendingChanges: { [webhookId: string]: { name: string; profile_image_url: string } } = {};

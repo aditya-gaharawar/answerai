@@ -453,12 +453,20 @@
 								role: role === 'user' ? $i18n.t('a user') : $i18n.t('an assistant')
 							})}
 							on:input={(e) => {
-								e.target.style.height = '';
-								e.target.style.height = Math.min(e.target.scrollHeight, 150) + 'px';
+								const answeraiEventTarget = e.currentTarget;
+								if (!(answeraiEventTarget instanceof HTMLTextAreaElement)) return;
+
+								answeraiEventTarget.style.height = '';
+								answeraiEventTarget.style.height =
+									Math.min(answeraiEventTarget.scrollHeight, 150) + 'px';
 							}}
 							on:focus={(e) => {
-								e.target.style.height = '';
-								e.target.style.height = Math.min(e.target.scrollHeight, 150) + 'px';
+								const answeraiEventTarget = e.currentTarget;
+								if (!(answeraiEventTarget instanceof HTMLTextAreaElement)) return;
+
+								answeraiEventTarget.style.height = '';
+								answeraiEventTarget.style.height =
+									Math.min(answeraiEventTarget.scrollHeight, 150) + 'px';
 							}}
 							rows="2"
 						/>

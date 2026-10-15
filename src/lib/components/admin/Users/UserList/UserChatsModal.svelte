@@ -19,7 +19,7 @@
 	export let show = false;
 	export let user;
 
-	let chatList = null;
+	let chatList: import('$lib/types/chat').ChatSummary[] | null = null;
 	let page = 1;
 
 	let query = '';

@@ -8,13 +8,17 @@
 	import AddConnectionModal from '$lib/components/AddConnectionModal.svelte';
 
 	export let onDelete = () => {};
-	export let onSubmit = () => {};
+	export let onSubmit: (connection: {
+		url: string;
+		key: string;
+		config: import('$lib/types/connections').OpenAIConnectionOptions;
+	}) => void = () => {};
 
 	export let pipeline = false;
 
 	export let url = '';
 	export let key = '';
-	export let config = {};
+	export let config: import('$lib/types/connections').OpenAIConnectionOptions = {};
 
 	let showConfigModal = false;
 </script>
@@ -32,7 +36,11 @@
 		onDelete();
 		showConfigModal = false;
 	}}
-	onSubmit={(connection) => {
+	onSubmit={(connection: {
+		url: string;
+		key: string;
+		config: import('$lib/types/connections').OpenAIConnectionOptions;
+	}) => {
 		url = connection.url;
 		key = connection.key;
 		config = connection.config;

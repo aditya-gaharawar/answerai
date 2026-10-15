@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { groupCitations, type Citation } from '$lib/utils/citations';
 	import { getContext } from 'svelte';
 	import { embed, showControls, showEmbeds } from '$lib/stores';
 	import { isValidHttpUrl } from '$lib/utils';
@@ -10,21 +11,21 @@
 	export let id = '';
 	export let chatId = '';
 
-	export let sources = [];
+	export let sources: unknown[] = [];
 	export let readOnly = false;
 
-	let citations = [];
+	let citations: Citation[] = [];
 	let showPercentage = false;
 	let showRelevance = true;
 
-	let citationModal = null;
+	let citationModal: CitationModal | null = null;
 
 	let showCitations = false;
 	let showCitationModal = false;
 
-	let selectedCitation: any = null;
+	let selectedCitation: Citation | null = null;
 
-	export const showSourceModal = (sourceId) => {
+	export const showSourceModal = (sourceId: string | number) => {
 		let index;
 		let suffix = null;
 
@@ -76,8 +77,10 @@
 		}
 	};
 
-	function calculateShowRelevance(sources: any[]) {
-		const distances = sources.flatMap((citation) => citation.distances ?? []);
+	function calculateShowRelevance(sources: Citation[]) {
+		const distances = sources
+			.flatMap((citation) => citation.distances ?? [])
+			.filter((distance): distance is number => typeof distance === 'number');
 		const inRange = distances.filter((d) => d !== undefined && d >= -1 && d <= 1).length;
 		const outOfRange = distances.filter((d) => d !== undefined && (d < -1 || d > 1)).length;
 
@@ -100,53 +103,15 @@
 		return true;
 	}
 
-	function shouldShowPercentage(sources: any[]) {
-		const distances = sources.flatMap((citation) => citation.distances ?? []);
+	function shouldShowPercentage(sources: Citation[]) {
+		const distances = sources
+			.flatMap((citation) => citation.distances ?? [])
+			.filter((distance): distance is number => typeof distance === 'number');
 		return distances.every((d) => d !== undefined && d >= -1 && d <= 1);
 	}
 
 	$: {
-		citations = sources.reduce((acc, source) => {
-			if (Object.keys(source).length === 0) {
-				return acc;
-			}
-
-			source?.document?.forEach((document, index) => {
-				const metadata = source?.metadata?.[index];
-				const distance = source?.distances?.[index];
-
-				// Within the same citation there could be multiple documents
-				const id = metadata?.source ?? source?.source?.id ?? 'N/A';
-				let _source = source?.source;
-
-				if (metadata?.name) {
-					_source = { ..._source, name: metadata.name };
-				}
-
-				if (id.startsWith('http://') || id.startsWith('https://')) {
-					_source = { ..._source, name: metadata?.external ? _source.name : id, url: id };
-				}
-
-				const existingSource = acc.find((item) => item.id === id);
-
-				if (existingSource) {
-					existingSource.document.push(document);
-					existingSource.metadata.push(metadata);
-					if (distance !== undefined) existingSource.distances.push(distance);
-				} else {
-					acc.push({
-						id: id,
-						source: _source,
-						document: [document],
-						metadata: metadata ? [metadata] : [],
-						distances: distance !== undefined ? [distance] : []
-					});
-				}
-			});
-
-			return acc;
-		}, []);
-		console.log('citations', citations);
+		citations = groupCitations(sources);
 
 		showRelevance = calculateShowRelevance(citations);
 		showPercentage = shouldShowPercentage(citations);
@@ -189,10 +154,13 @@
 							alt="favicon"
 							class="size-4 rounded-full shrink-0 border border-white dark:border-gray-850 bg-white dark:bg-gray-900"
 							on:error={(e) => {
+								const answeraiEventTarget = e.currentTarget;
+								if (!(answeraiEventTarget instanceof HTMLImageElement)) return;
+
 								// LICENSE covers this Open ANSWERAI fallback logo.
 								// Do not alter, remove, obscure, or replace it except as LICENSE permits:
 								// https://docs.openwebui.com/license.
-								e.target.src = '/favicon.png';
+								answeraiEventTarget.src = '/favicon.png';
 							}}
 						/>
 					{/each}

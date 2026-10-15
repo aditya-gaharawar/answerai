@@ -13,8 +13,12 @@
 	import { settings } from '$lib/stores';
 
 	export let show = false;
-	export let size = null;
-	export let onSave = () => {};
+	export let size: { width?: number | string; height?: number | string } = {};
+	$: if (!size) size = {};
+	export let onSave: (size: {
+		width?: number | string;
+		height?: number | string;
+	}) => void = () => {};
 
 	const submitHandler = async () => {
 		onSave(size);

@@ -18,6 +18,7 @@ export interface FolderRecord {
 	meta?: { icon?: string; [key: string]: unknown } | null;
 	access_grants?: AccessGrant[];
 	permission?: string;
+	write_access?: boolean;
 	owner_name?: string | null;
 	unread_count?: number;
 	childrenIds?: string[];

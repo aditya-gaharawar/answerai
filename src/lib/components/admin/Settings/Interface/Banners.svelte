@@ -9,7 +9,7 @@
 	import SettingsSelect from '$lib/components/common/SettingsSelect.svelte';
 	const i18n = getContext('i18n');
 
-	export let banners = [];
+	export let banners: import('$lib/types').Banner[] = [];
 	export let locale = '';
 
 	const positionChangeHandler = (bannerListElement: HTMLElement) => {

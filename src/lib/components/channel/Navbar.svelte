@@ -1,4 +1,11 @@
 <script lang="ts">
+	import type {
+		ChannelRecord,
+		ChannelMessage,
+		ChannelEvent,
+		ChannelUser,
+		ChannelPinHandler
+	} from '$lib/types/channels';
 	import { getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
 
@@ -21,7 +28,7 @@
 	import PinnedMessagesModal from './PinnedMessagesModal.svelte';
 	import ChannelMenu from './ChannelMenu.svelte';
 
-	const i18n: any = getContext('i18n');
+	const i18n: any = getContext<typeof import('$lib/i18n').default>('i18n');
 
 	let showChannelPinnedMessagesModal = false;
 	let showChannelInfoModal = false;
@@ -45,9 +52,9 @@
 		return hasPublicReadGrant(channel?.access_grants);
 	};
 
-	export let channel;
+	export let channel: ChannelRecord | null = null;
 
-	export let onPin = (messageId, pinned) => {};
+	export let onPin: ChannelPinHandler = () => {};
 	export let onUpdate = () => {};
 </script>
 
@@ -95,7 +102,7 @@
 					<div class="flex min-w-0 items-center gap-1.5">
 						{#if channel?.type === 'dm'}
 							{#if channel?.users}
-								{@const channelMembers = channel.users.filter((u) => u.id !== $user?.id)}
+								{@const channelMembers = (channel.users ?? []).filter((u) => u.id !== $user?.id)}
 								<div class="flex shrink-0 relative">
 									{#each channelMembers.slice(0, 2) as u, index}
 										<img

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import type { ToolConnection } from '$lib/types/connections';
 	import { getContext, tick } from 'svelte';
 	const i18n = getContext('i18n');
 
@@ -10,9 +11,9 @@
 	import WrenchAlt from '$lib/components/icons/WrenchAlt.svelte';
 
 	export let onDelete = () => {};
-	export let onSubmit = () => {};
+	export let onSubmit: (connection: ToolConnection) => void = () => {};
 
-	export let connection = null;
+	export let connection: ToolConnection | null = null;
 	export let direct = false;
 
 	let showConfigModal = false;
@@ -27,7 +28,7 @@
 		onDelete();
 		showConfigModal = false;
 	}}
-	onSubmit={(c) => {
+	onSubmit={(c: ToolConnection) => {
 		connection = c;
 		onSubmit(c);
 	}}
@@ -84,6 +85,7 @@
 			<Switch
 				state={connection?.config?.enable ?? true}
 				on:change={() => {
+					if (!connection) return;
 					if (!connection.config) connection.config = {};
 					connection.config.enable = !(connection?.config?.enable ?? true);
 					onSubmit(connection);

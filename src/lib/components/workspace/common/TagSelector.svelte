@@ -18,7 +18,7 @@
 		'flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] capitalize hover:bg-gray-50/40 hover:text-gray-900 dark:hover:bg-gray-800/40 dark:hover:text-gray-100';
 	export let contentClass = 'min-w-[10.625rem]';
 
-	export let items = [];
+	export let items: { value: string; label: string }[] = [];
 </script>
 
 <Select

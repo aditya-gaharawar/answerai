@@ -73,6 +73,7 @@
 	import { getOutputText, replaceOutputMessageText, type OutputItem } from './structuredOutput';
 
 	interface MessageType extends HistoryNode {
+		code_executions?: import('$lib/types/messages').CodeExecution[];
 		user_id?: string;
 		id: string;
 		model: string;

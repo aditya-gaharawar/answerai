@@ -94,11 +94,11 @@
 	let searchDebounceTimer: ReturnType<typeof setTimeout>;
 	let searchController: AbortController;
 
-	let selectedSkill = null;
+	let selectedSkill: import('$lib/types/resources').SkillRecord | null = null;
 	let showDeleteConfirm = false;
 
-	let filteredItems = null;
-	let total = null;
+	let filteredItems: import('$lib/types/resources').SkillRecord[] = [];
+	let total: number | null = null;
 	let loading = false;
 
 	let tagsContainerElement: HTMLDivElement;
@@ -238,7 +238,7 @@
 		}
 	};
 
-	const openSkill = (skill) => {
+	const openSkill = (skill: import('$lib/types/resources').SkillRecord) => {
 		goto(`/workspace/skills/edit?id=${encodeURIComponent(skill.id)}`);
 	};
 
@@ -246,7 +246,7 @@
 		return target instanceof Element && !!target.closest('button, a, input, [role="menu"]');
 	};
 
-	const cloneHandler = async (skill) => {
+	const cloneHandler = async (skill: import('$lib/types/resources').SkillRecord) => {
 		try {
 			const suffix = uuidv4().slice(0, 7);
 			const result = await cloneSkill(
@@ -272,7 +272,8 @@
 		}
 	};
 
-	const deleteHandler = async (skill) => {
+	const deleteHandler = async (skill: import('$lib/types/resources').SkillRecord | null) => {
+		if (!skill) return;
 		const res = await deleteSkillById(localStorage.token, skill.id).catch((error) => {
 			toast.error(`${error}`);
 			return null;
@@ -657,7 +658,7 @@
 				</div>
 			</div>
 
-			{#if total > 30}
+			{#if total !== null && total > 30}
 				<div class="flex justify-center mt-4 mb-2">
 					<Pagination bind:page count={total} perPage={30} />
 				</div>

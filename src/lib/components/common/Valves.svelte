@@ -1,11 +1,13 @@
-<script>
+<script lang="ts">
+	import type { ValveSchema, ValveValues } from '$lib/types/valves';
+	import { valveText, valveStrings, valveCoordinates } from '$lib/utils/valveValues';
 	import { getContext, createEventDispatcher } from 'svelte';
 	import DOMPurify from 'dompurify';
 	import { marked } from 'marked';
 	import { localizeValvesSchema, resolveLocalizedString } from '$lib/utils/localizedContent';
 
 	const dispatch = createEventDispatcher();
-	const i18n = getContext('i18n');
+	const i18n = getContext<typeof import('$lib/i18n').default>('i18n');
 
 	import Switch from './Switch.svelte';
 	import SensitiveInput from './SensitiveInput.svelte';
@@ -13,9 +15,9 @@
 	import MultiSelect from './MultiSelect.svelte';
 	import MapSelector from './Valves/MapSelector.svelte';
 
-	export let valvesSpec = null;
-	export let valves = {};
-	export let meta = {};
+	export let valvesSpec: ValveSchema | null = null;
+	export let valves: ValveValues = {};
+	export let meta: import('$lib/types/plugins').PluginMeta = {};
 	export let userValves = false;
 	$: prefix = userValves ? 'user_valves' : 'valves';
 	$: displaySpec = localizeValvesSchema(valvesSpec, $i18n.language, meta, prefix);
@@ -79,13 +81,19 @@
 						{#if displaySpec.properties[property]?.enum ?? null}
 							<select
 								class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-hidden border border-gray-100/30 dark:border-gray-850/30"
-								bind:value={valves[property]}
-								on:change={() => {
+								value={displaySpec.properties[property].enum.findIndex((option: unknown) =>
+									Object.is(option, valves[property])
+								)}
+								on:change={(event) => {
+									const options = displaySpec.properties[property].enum;
+									const index = event.currentTarget.selectedIndex;
+									if (index < 0 || index >= options.length) return;
+									valves[property] = options[index];
 									dispatch('change');
 								}}
 							>
-								{#each displaySpec.properties[property].enum as option}
-									<option value={option} selected={option === valves[property]}>
+								{#each displaySpec.properties[property].enum as option, index}
+									<option value={index}>
 										{resolveLocalizedString(
 											String(option),
 											meta?.i18n,
@@ -103,7 +111,10 @@
 
 								<div class=" pr-2">
 									<Switch
-										bind:state={valves[property]}
+										bind:state={
+											() => valves[property] === true,
+											(value: boolean) => (valves[property] = value)
+										}
 										on:change={() => {
 											dispatch('change');
 										}}
@@ -113,7 +124,10 @@
 						{:else if displaySpec.properties[property]?.input?.type === 'multiselect' && displaySpec.properties[property]?.input?.options}
 							<MultiSelect
 								className="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-hidden border border-gray-100/30 dark:border-gray-850/30"
-								bind:value={valves[property]}
+								bind:value={
+									() => valveStrings(valves[property]),
+									(value: string[]) => (valves[property] = value)
+								}
 								options={displaySpec.properties[property].input.options}
 								placeholder={$i18n.t('Select options')}
 								on:change={() => {
@@ -125,7 +139,9 @@
 								class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-hidden border border-gray-100/30 dark:border-gray-850/30"
 								type="text"
 								placeholder={displaySpec.properties[property].title}
-								bind:value={valves[property]}
+								bind:value={
+									() => valveText(valves[property]), (value: string) => (valves[property] = value)
+								}
 								autocomplete="off"
 								required
 								on:change={() => {
@@ -140,7 +156,10 @@
 									<SensitiveInput
 										id="valve-{property}"
 										placeholder={displaySpec.properties[property]?.description ?? ''}
-										bind:value={valves[property]}
+										bind:value={
+											() => valveText(valves[property]),
+											(value: string) => (valves[property] = value)
+										}
 										required={(displaySpec?.required ?? []).includes(property)}
 										on:change={() => {
 											dispatch('change');
@@ -150,7 +169,9 @@
 							{:else if displaySpec.properties[property]?.input?.type === 'select' && displaySpec.properties[property]?.input?.options}
 								<NativeSelect
 									className="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-hidden border border-gray-100/30 dark:border-gray-850/30"
-									bind:value={valves[property]}
+									bind:value={
+										() => valveText(valves[property]), (value: string) => (valves[property] = value)
+									}
 									options={displaySpec.properties[property].input.options}
 									placeholder={displaySpec.properties[property]?.description ??
 										$i18n.t('Select an option')}
@@ -164,10 +185,13 @@
 										<input
 											type="color"
 											class="size-6 rounded cursor-pointer border border-gray-200 dark:border-gray-700"
-											value={valves[property] ?? '#000000'}
+											value={valveText(valves[property]) || '#000000'}
 											on:input={(e) => {
+												const answeraiEventTarget = e.currentTarget;
+												if (!(answeraiEventTarget instanceof HTMLInputElement)) return;
+
 												// Convert the color value to uppercase immediately
-												valves[property] = e.target.value.toUpperCase();
+												valves[property] = answeraiEventTarget.value.toUpperCase();
 												dispatch('change');
 											}}
 										/>
@@ -177,7 +201,10 @@
 										type="text"
 										class="flex-1 rounded-lg py-2 text-sm dark:text-gray-300 dark:bg-gray-850 outline-hidden border border-gray-100/30 dark:border-gray-850/30"
 										placeholder={$i18n.t('Enter hex color (e.g. #FF0000)')}
-										bind:value={valves[property]}
+										bind:value={
+											() => valveText(valves[property]),
+											(value: string) => (valves[property] = value)
+										}
 										autocomplete="off"
 										disabled
 										on:change={() => {
@@ -189,9 +216,7 @@
 								<!-- EXPERIMENTAL INPUT TYPE, DO NOT USE IN PRODUCTION -->
 								<div class="flex flex-col items-center gap-1">
 									<MapSelector
-										setViewLocation={((valves[property] ?? '').includes(',') ?? false)
-											? valves[property].split(',')
-											: null}
+										setViewLocation={valveCoordinates(valves[property])}
 										onClick={(value) => {
 											valves[property] = value;
 											dispatch('change');
@@ -203,7 +228,10 @@
 											type="text"
 											class=" w-full rounded-lg py-1 text-left text-sm dark:text-gray-300 dark:bg-gray-850 outline-hidden border border-gray-100/30 dark:border-gray-850/30"
 											placeholder={$i18n.t('Enter coordinates (e.g. 51.505, -0.09)')}
-											bind:value={valves[property]}
+											bind:value={
+												() => valveText(valves[property]),
+												(value: string) => (valves[property] = value)
+											}
 											autocomplete="off"
 											on:change={() => {
 												dispatch('change');
@@ -216,7 +244,9 @@
 							<textarea
 								class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-hidden border border-gray-100/30 dark:border-gray-850/30"
 								placeholder={displaySpec.properties[property].title}
-								bind:value={valves[property]}
+								bind:value={
+									() => valveText(valves[property]), (value: string) => (valves[property] = value)
+								}
 								autocomplete="off"
 								required
 								on:change={() => {

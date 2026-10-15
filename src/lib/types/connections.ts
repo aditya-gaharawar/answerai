@@ -25,3 +25,13 @@ export type ToolServerData = {
 	system_prompt?: string;
 	error?: unknown;
 };
+
+export type ModelConnection = {
+	url: string;
+	key: string;
+	config: OpenAIConnectionOptions & { key?: string };
+};
+export type ToolConnection = import('$lib/stores').ServerConnection & {
+	type?: string;
+	info?: { id?: string; name?: string; description?: string };
+};

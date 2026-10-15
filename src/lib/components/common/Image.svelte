@@ -8,6 +8,7 @@
 	import Photo from '$lib/components/icons/Photo.svelte';
 	import { getContext } from 'svelte';
 
+	export let id: string | undefined = undefined;
 	export let src = '';
 	export let alt = '';
 	export let allowExternal = false;
@@ -71,6 +72,7 @@
 			type="button"
 		>
 			<img
+				{id}
 				src={_src}
 				{alt}
 				class={imageClassName}

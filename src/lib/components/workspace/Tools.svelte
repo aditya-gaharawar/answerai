@@ -1,4 +1,5 @@
 <script lang="ts">
+	import type { ToolSummary } from '$lib/types/plugins';
 	import WorkspaceAccessModal from './common/WorkspaceAccessModal.svelte';
 	let accessModal: WorkspaceAccessModal;
 	import { resolveLocalizedResource } from '$lib/utils/localizedContent';
@@ -57,7 +58,7 @@
 	let loaded = false;
 
 	let toolsImportInputElement: HTMLInputElement;
-	let importFiles;
+	let importFiles: FileList | null = null;
 
 	let showConfirm = false;
 	let query = '';
@@ -65,12 +66,12 @@
 
 	let showManifestModal = false;
 	let showValvesModal = false;
-	let selectedTool = null;
+	let selectedTool: ToolSummary | null = null;
 
 	let showDeleteConfirm = false;
 
-	let tools = [];
-	let filteredItems = [];
+	let tools: ToolSummary[] = [];
+	let filteredItems: ToolSummary[] = [];
 
 	let tagsContainerElement: HTMLDivElement;
 	let viewOption = '';
@@ -176,7 +177,7 @@
 		}
 	};
 
-	const openTool = (tool) => {
+	const openTool = (tool: ToolSummary) => {
 		goto(`/workspace/tools/edit?id=${encodeURIComponent(tool.id)}`);
 	};
 
@@ -184,7 +185,7 @@
 		return target instanceof Element && !!target.closest('button, a, input, [role="menu"]');
 	};
 
-	const shareHandler = async (tool) => {
+	const shareHandler = async (tool: ToolSummary) => {
 		const item = await getToolById(localStorage.token, tool.id).catch((error) => {
 			toast.error(`${error}`);
 			return null;
@@ -197,12 +198,13 @@
 
 		const url = 'https://answerai.in';
 
-		const tab = await window.open(`${url}/tools/create`, '_blank');
+		const tab = window.open(`${url}/tools/create`, '_blank');
+		if (!tab || !item) return;
 
-		const messageHandler = (event) => {
-			if (event.origin !== url) return;
+		const messageHandler = (event: MessageEvent) => {
+			if (event.origin !== url || event.source !== tab) return;
 			if (event.data === 'loaded') {
-				tab.postMessage(JSON.stringify(item), '*');
+				tab.postMessage(JSON.stringify(item), url);
 				window.removeEventListener('message', messageHandler);
 			}
 		};
@@ -211,7 +213,7 @@
 		console.log(item);
 	};
 
-	const cloneHandler = async (tool) => {
+	const cloneHandler = async (tool: ToolSummary) => {
 		const _tool = await getToolById(localStorage.token, tool.id).catch((error) => {
 			toast.error(`${error}`);
 			return null;
@@ -227,7 +229,7 @@
 		}
 	};
 
-	const exportHandler = async (tool) => {
+	const exportHandler = async (tool: ToolSummary) => {
 		const _tool = await getToolById(localStorage.token, tool.id).catch((error) => {
 			toast.error(`${error}`);
 			return null;
@@ -241,7 +243,8 @@
 		}
 	};
 
-	const deleteHandler = async (tool) => {
+	const deleteHandler = async (tool: ToolSummary | null) => {
+		if (!tool) return;
 		const res = await deleteToolById(localStorage.token, tool.id).catch((error) => {
 			toast.error(`${error}`);
 			return null;
@@ -258,18 +261,21 @@
 		_tools.set(await getTools(localStorage.token));
 	};
 
-	onMount(async () => {
-		viewOption = localStorage?.workspaceViewOption || '';
-		await init();
-		loaded = true;
+	onMount(() => {
+		let disposed = false;
+		void (async () => {
+			viewOption = localStorage?.workspaceViewOption || '';
+			await init();
+			if (!disposed) loaded = true;
+		})().catch((error) => toast.error(`${error}`));
 
-		const onKeyDown = (event) => {
+		const onKeyDown = (event: KeyboardEvent) => {
 			if (event.key === 'Shift') {
 				shiftKey = true;
 			}
 		};
 
-		const onKeyUp = (event) => {
+		const onKeyUp = (event: KeyboardEvent) => {
 			if (event.key === 'Shift') {
 				shiftKey = false;
 			}
@@ -284,6 +290,7 @@
 		window.addEventListener('blur', onBlur);
 
 		return () => {
+			disposed = true;
 			clearTimeout(searchDebounceTimer);
 			window.removeEventListener('keydown', onKeyDown);
 			window.removeEventListener('keyup', onKeyUp);
@@ -315,7 +322,7 @@
 		});
 		goto('/workspace/tools/create');
 	}}
-	loadUrlHandler={async (url) => {
+	loadUrlHandler={async (url: string) => {
 		return await loadToolByUrl(localStorage.token, url);
 	}}
 	successMessage={$i18n.t('Tool imported successfully')}
@@ -469,14 +476,14 @@
 											{/if}
 
 											<Tooltip
-												content={dayjs(tool.updated_at * 1000)
+												content={dayjs((tool.updated_at ?? 0) * 1000)
 													.locale($i18n.language)
 													.format('LLLL')}
 											>
 												<div
 													class="shrink-0 truncate text-[0.6875rem] leading-5 text-gray-400 dark:text-gray-600"
 												>
-													{dayjs(tool.updated_at * 1000)
+													{dayjs((tool.updated_at ?? 0) * 1000)
 														.locale($i18n.language)
 														.fromNow()}
 												</div>
@@ -676,26 +683,25 @@
 
 	<ConfirmDialog
 		bind:show={showConfirm}
-		on:confirm={() => {
-			const reader = new FileReader();
-			reader.onload = async (event) => {
-				const _tools = JSON.parse(event.target.result);
-				console.log(_tools);
-
-				for (const tool of _tools) {
-					const res = await createNewTool(localStorage.token, tool).catch((error) => {
-						toast.error(`${error}`);
-						return null;
-					});
-				}
-
+		on:confirm={async () => {
+			const file = importFiles?.[0];
+			if (!file) return;
+			try {
+				const parsed: unknown = JSON.parse(await file.text());
+				if (
+					!Array.isArray(parsed) ||
+					parsed.some((item) => !item || typeof item !== 'object' || Array.isArray(item))
+				)
+					throw new Error($i18n.t('Invalid JSON file'));
+				for (const tool of parsed) await createNewTool(localStorage.token, tool);
 				toast.success($i18n.t('Tool imported successfully'));
-				await init();
+			} catch (error) {
+				toast.error(`${error}`);
+			} finally {
 				importFiles = null;
 				toolsImportInputElement.value = '';
-			};
-
-			reader.readAsText(importFiles[0]);
+				await init();
+			}
 		}}
 	>
 		<div class="text-sm text-gray-500">

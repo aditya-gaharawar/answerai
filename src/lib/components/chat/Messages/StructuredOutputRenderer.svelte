@@ -20,7 +20,7 @@
 	export let messageId = '';
 	export let output: OutputItem[] = [];
 	export let done = true;
-	export let model = null;
+	export let model: import('$lib/stores').Model | null | undefined = null;
 	export let save = false;
 	export let preview = false;
 	export let compactPreview = false;

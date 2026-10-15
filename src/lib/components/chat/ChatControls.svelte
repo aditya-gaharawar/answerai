@@ -31,12 +31,12 @@
 	const i18n = getContext('i18n');
 
 	export let history;
-	export let models = [];
+	export let models: import('$lib/stores').Model[] = [];
 
 	export let chatId: string | null = null;
 	export let chatUser: (Partial<import('$lib/stores').SessionUser> & { id: string }) | null = null;
 
-	export let chatFiles = [];
+	export let chatFiles: import('$lib/types/notes').NoteAttachment[] = [];
 	export let params = {};
 
 	export let bridge: import('$lib/utils/realtime').RealtimeCall;
@@ -45,7 +45,7 @@
 	export let submitPrompt: Function;
 	export let stopResponse: Function;
 	export let showMessage: Function;
-	export let files;
+	export let files: import('$lib/types/notes').NoteAttachment[];
 	export let modelId;
 
 	export let codeInterpreterEnabled = false;
@@ -222,7 +222,7 @@
 				{:else if $showEmbeds}
 					<Embeds />
 				{:else if $showArtifacts}
-					<Artifacts {history} />
+					<Artifacts />
 				{:else}
 					<!-- Controls + Files tabs -->
 					<div class="flex flex-col h-full min-h-0">
@@ -347,7 +347,7 @@
 				{:else if $showEmbeds}
 					<Embeds overlay={dragged} />
 				{:else if $showArtifacts}
-					<Artifacts {history} overlay={dragged} />
+					<Artifacts overlay={dragged} />
 				{:else}
 					<!-- Controls + Files tabs -->
 					<div class="flex flex-col h-full min-h-0">

@@ -7,7 +7,13 @@
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 
 	export let show = false;
-	export let model = null;
+	export let model: {
+		id: string;
+		name: string;
+		rating: string | number;
+		stats: { count: number; won: string; lost: string };
+		top_tags: NonNullable<import('$lib/types/evaluations').LeaderboardEntry['top_tags']>;
+	} | null = null;
 	export let onClose: () => void = () => {};
 
 	const i18n: any = getContext('i18n');

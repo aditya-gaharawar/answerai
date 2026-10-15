@@ -1,4 +1,5 @@
 <script lang="ts">
+	import type { ModelConnection } from '$lib/types/connections';
 	import { getContext, tick } from 'svelte';
 	const i18n = getContext('i18n');
 
@@ -13,11 +14,11 @@
 	import Download from '$lib/components/icons/Download.svelte';
 
 	export let onDelete = () => {};
-	export let onSubmit = () => {};
+	export let onSubmit: (connection: ModelConnection) => void = () => {};
 
 	export let url = '';
 	export let idx = 0;
-	export let config = {};
+	export let config: ModelConnection['config'] = {};
 
 	let showManageModal = false;
 	let showConfigModal = false;
@@ -36,7 +37,7 @@
 		onDelete();
 		showConfigModal = false;
 	}}
-	onSubmit={(connection) => {
+	onSubmit={(connection: ModelConnection) => {
 		url = connection.url;
 		config = { ...connection.config, key: connection.key };
 		onSubmit(connection);

@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { feedbackMessages } from '$lib/utils/feedbackMessages';
+	import type { FeedbackRecord } from '$lib/types/evaluations';
 	import Modal from '$lib/components/common/Modal.svelte';
 	import { getContext } from 'svelte';
 	const i18n: any = getContext('i18n');
@@ -8,13 +10,13 @@
 	import Spinner from '$lib/components/common/Spinner.svelte';
 
 	export let show = false;
-	export let selectedFeedback = null;
+	export let selectedFeedback: FeedbackRecord | null = null;
 
 	export let onClose: () => void = () => {};
 
 	let loaded = false;
 
-	let feedbackData = null;
+	let feedbackData: FeedbackRecord | null = null;
 
 	const close = () => {
 		show = false;
@@ -73,27 +75,17 @@
 						</div>
 
 						{#if feedbackData}
-							{@const messageId = feedbackData?.meta?.message_id}
-							{@const messages = feedbackData?.snapshot?.chat?.chat?.history.messages}
-
-							{#if messages[messages[messageId]?.parentId]}
-								<div class="flex flex-col w-full mb-2">
-									<div class="mb-1 text-xs text-gray-500">{$i18n.t('Prompt')}</div>
-
-									<div class="flex-1 text-xs whitespace-pre-line break-words">
-										<span>{messages[messages[messageId]?.parentId]?.content || '-'}</span>
-									</div>
+							{@const selected = feedbackMessages(feedbackData)}
+							{#if selected.prompt}
+								<div class="mb-2 text-xs whitespace-pre-line break-words">
+									<div class="text-gray-500">{$i18n.t('Prompt')}</div>
+									{selected.prompt}
 								</div>
 							{/if}
-
-							{#if messages[messageId]}
-								<div class="flex flex-col w-full mb-2">
-									<div class="mb-1 text-xs text-gray-500">{$i18n.t('Response')}</div>
-									<div
-										class="flex-1 text-xs whitespace-pre-line break-words max-h-32 overflow-y-auto"
-									>
-										<span>{messages[messageId]?.content || '-'}</span>
-									</div>
+							{#if selected.response}
+								<div class="mb-2 text-xs whitespace-pre-line break-words">
+									<div class="text-gray-500">{$i18n.t('Response')}</div>
+									<div class="max-h-32 overflow-y-auto">{selected.response}</div>
 								</div>
 							{/if}
 						{/if}

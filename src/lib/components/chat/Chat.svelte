@@ -690,7 +690,7 @@
 					: [],
 				allowOther: pendingAskUser.args?.allow_other !== false,
 				timeoutMs: null,
-				onConfirm: (value) => {
+				onConfirm: (value: { answers?: Record<string, string | string[]> }) => {
 					void answerPendingAskUser(
 						pendingAskUser.message.id,
 						pendingAskUser.call.call_id || pendingAskUser.call.id,
@@ -1351,7 +1351,7 @@
 		return promise;
 	};
 
-	const syncChatRoom = (socket: typeof $socket, id: string, temporary: boolean) => {
+	const syncChatRoom = (socket: typeof $socket, id: string, temporary: boolean | null) => {
 		const next = socket && id && !temporary && !isTemporaryChatId(id) ? id : '';
 		if (next === joinedChatId) return;
 		clearTyping();
@@ -1745,18 +1745,18 @@
 		if (type === 'input:prompt:submit') {
 			console.debug(event.data.text);
 
-			if (event.data.text !== '') {
+			if (typeof event.data.text === 'string' && event.data.text !== '') {
 				if (isSameOrigin) {
 					await tick();
-					submitHandler(event.data.text);
+					submitHandler(event.data.text ?? '');
 				} else {
 					eventConfirmationInput = false;
 					eventConfirmationTitle = $i18n.t('Confirm Prompt from Embed');
-					eventConfirmationMessage = event.data.text;
+					eventConfirmationMessage = event.data.text ?? '';
 					eventCallback = async (confirmed: boolean) => {
 						if (confirmed) {
 							await tick();
-							submitHandler(event.data.text);
+							submitHandler(event.data.text ?? '');
 						}
 					};
 					showEventConfirmation = true;
@@ -2055,15 +2055,17 @@
 		}
 
 		// Create file items first
-		const fileItems = urls.map((url) => ({
-			type: 'text',
-			name: url,
-			collection_name: '',
-			status: 'uploading',
-			context: 'full',
-			url,
-			error: ''
-		}));
+		const fileItems: (import('$lib/types/notes').NoteAttachment & { context?: string })[] =
+			urls.map((url) => ({
+				id: null,
+				type: 'text',
+				name: url,
+				collection_name: '',
+				status: 'uploading',
+				context: 'full',
+				url,
+				error: ''
+			}));
 
 		// Display all items at once
 		files = [...files, ...fileItems];
@@ -3288,11 +3290,14 @@
 		}
 	};
 
-	const responseCompletionEventHandler = (data, message) => {
+	const responseCompletionEventHandler = (
+		data: Parameters<typeof applyResponseStreamEvent>[1],
+		message: HistoryNode
+	) => {
 		message.output = applyResponseStreamEvent(message.output ?? [], data);
 
 		if (data?.type === 'response.output_text.delta') {
-			const value = data.delta ?? '';
+			const value = typeof data.delta === 'string' ? data.delta : '';
 			if (!(message.content == '' && value == '\n')) {
 				message.content += value;
 
@@ -3309,7 +3314,12 @@
 		history = history;
 	};
 
-	const chatCompletionEventHandler = async (data, message, chatId, shared = false) => {
+	const chatCompletionEventHandler = async (
+		data: import('$lib/types/messages').CompletionEvent,
+		message: HistoryNode,
+		chatId: string,
+		shared = false
+	) => {
 		const { id, done, choices, content, output, sources, selected_model_id, error, usage } = data;
 
 		if (error) {
@@ -3423,7 +3433,7 @@
 			// without blocking the user from sending new messages.
 			chatCompletedHandler(
 				chatId,
-				message.model,
+				message.model ?? '',
 				message.id,
 				createMessagesList(history, message.id)
 			);
@@ -3447,11 +3457,13 @@
 		const _files = structuredClone(inputFiles);
 
 		chatFiles.push(
-			..._files.filter(
-				(item) =>
-					['doc', 'text', 'note', 'chat', 'folder', 'collection'].includes(item.type) ||
-					(item.type === 'file' && !isRasterImageContentType(item?.content_type))
-			)
+			..._files
+				.filter(
+					(item) =>
+						['doc', 'text', 'note', 'chat', 'folder', 'collection'].includes(item.type) ||
+						(item.type === 'file' && !isRasterImageContentType(item?.content_type))
+				)
+				.map((item) => ({ ...item, id: item.id ?? null }))
 		);
 		chatFiles = chatFiles.filter(
 			// Remove duplicates
@@ -3539,7 +3551,7 @@
 
 			await loadChat();
 		} catch (error) {
-			const message = error?.detail ?? error?.message ?? $i18n.t('Context compaction failed');
+			const message = getErrorMessage(error, $i18n.t('Context compaction failed'));
 			toast.error(message, { id: toastId });
 		} finally {
 			messageInput?.focus({ preventScroll: true });
@@ -3780,7 +3792,7 @@
 	};
 
 	const sendMessage = async (
-		_history,
+		_history: import('$lib/utils/chatHistory').ChatHistory,
 		parentId: string,
 		{
 			messages = null,
@@ -3896,7 +3908,8 @@
 			if (model) {
 				const hasImages = createMessagesList(_history, parentId).some((message) =>
 					message.files?.some(
-						(file) => file.type === 'image' || isRasterImageContentType(file?.content_type)
+						(file: NonNullable<HistoryNode['files']>[number]) =>
+							file.type === 'image' || isRasterImageContentType(file?.content_type)
 					)
 				);
 
@@ -3986,11 +3999,11 @@
 	const getStopTokens = () => normalizeStopTokens(params?.stop ?? $settings?.params?.stop);
 
 	const sendMessageSocket = async (
-		model,
-		_messages,
-		_history,
-		responseMessageId,
-		_chatId,
+		model: import('$lib/stores').Model,
+		_messages: HistoryNode[],
+		_history: import('$lib/utils/chatHistory').ChatHistory,
+		responseMessageId: string,
+		_chatId: string,
 		{
 			messageIdsList,
 			regenerationPrompt,
@@ -4002,11 +4015,11 @@
 		} = {}
 	) => {
 		const responseMessage = _history.messages[responseMessageId];
-		const userMessage = _history.messages[responseMessage.parentId];
+		const userMessage = _history.messages[responseMessage.parentId ?? ''];
 
 		const chatMessageFiles = _messages
 			.filter((message) => message.files)
-			.flatMap((message) => message.files);
+			.flatMap((message) => message.files ?? []);
 
 		// Filter chatFiles to only include files that are in the chatMessageFiles
 		chatFiles = chatFiles.filter((item) => {
@@ -4016,11 +4029,13 @@
 
 		let files = structuredClone(chatFiles);
 		files.push(
-			...(userMessage?.files ?? []).filter(
-				(item) =>
-					['doc', 'text', 'note', 'chat', 'collection', 'folder'].includes(item.type) ||
-					(item.type === 'file' && !isRasterImageContentType(item?.content_type))
-			)
+			...(userMessage?.files ?? [])
+				.filter(
+					(item) =>
+						['doc', 'text', 'note', 'chat', 'collection', 'folder'].includes(item.type) ||
+						(item.type === 'file' && !isRasterImageContentType(item?.content_type))
+				)
+				.map((item) => ({ ...item, id: item.id ?? null }))
 		);
 		// Remove duplicates
 		files = files.filter((item, index, array) => array.findIndex((i) => equal(i, item)) === index);
@@ -4070,7 +4085,8 @@
 			messages = messages
 				.map((message) => {
 					const imageFiles = (message?.files ?? []).filter(
-						(file) => file.type === 'image' || isRasterImageContentType(file?.content_type)
+						(file: NonNullable<HistoryNode['files']>[number]) =>
+							file.type === 'image' || isRasterImageContentType(file?.content_type)
 					);
 
 					if (message.output && message.role === 'assistant') {
@@ -4090,7 +4106,7 @@
 									type: 'text',
 									text: message?.merged?.content ?? message.content
 								},
-								...imageFiles.map((file) => ({
+								...imageFiles.map((file: NonNullable<HistoryNode['files']>[number]) => ({
 									type: 'image_url',
 									image_url: {
 										url: file.url
@@ -4114,7 +4130,7 @@
 		}
 
 		const toolIds = [];
-		const toolServerIds = [];
+		const toolServerIds: (string | number)[] = [];
 
 		for (const toolId of selectedToolIds) {
 			if (toolId.startsWith('direct_server:')) {
@@ -4169,7 +4185,9 @@
 				tool_servers: $config?.features?.enable_tool_servers
 					? [
 							...($toolServers ?? []).filter(
-								(server, idx) => toolServerIds.includes(idx) || toolServerIds.includes(server?.id)
+								(server, idx) =>
+									toolServerIds.includes(idx) ||
+									(server.id !== undefined && toolServerIds.includes(server.id))
 							),
 							// Direct terminal servers — always included when enabled (not routed through selectedToolIds)
 							...(terminalEnabled
@@ -4325,7 +4343,7 @@
 					return null;
 				});
 			} else {
-				for (const taskId of taskIds) {
+				for (const taskId of taskIds ?? []) {
 					const res = await stopTask(localStorage.token, taskId).catch((error) => {
 						toast.error(`${error}`);
 						return null;
@@ -4400,7 +4418,7 @@
 		console.log('regenerateResponse');
 
 		if (history.currentId) {
-			let userMessage = history.messages[message.parentId];
+			let userMessage = history.messages[message.parentId ?? ''];
 
 			if (!userMessage) {
 				toast.error($i18n.t('Parent message not found'));
@@ -4525,7 +4543,7 @@
 					tags: [],
 					timestamp: Date.now()
 				},
-				$selectedFolder?.id,
+				$selectedFolder?.id ?? null,
 				chatVariables
 			);
 
@@ -5029,7 +5047,7 @@
 										bind:history
 										bind:autoScroll
 										bind:prompt
-										setInputText={(text) => {
+										setInputText={(text: string) => {
 											messageInput?.setText(text);
 										}}
 										bind:selectedModels

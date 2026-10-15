@@ -67,11 +67,15 @@
 		meta?: any;
 	};
 
-	let id = null;
+	let id = '';
+	let destroyed = false;
+	let loadVersion = 0;
+	let requestedId = '';
+	$: if ($page.params.id && $page.params.id !== requestedId) loadKnowledge($page.params.id);
 	let knowledge: Knowledge | null = null;
 	let isExternalKnowledge = false;
 
-	let inputFiles = null;
+	let inputFiles: FileList | null = null;
 	let fileItems: any[] = [];
 	let currentDirectoryId: string | null = null;
 	let breadcrumbs: any[] = [];
@@ -116,7 +120,7 @@
 		}
 	};
 
-	const createFileFromText = (name, content) => {
+	const createFileFromText = (name: string, content: string) => {
 		const blob = new Blob([content], { type: 'text/plain' });
 		const file = blobToFile(blob, `${name}.txt`);
 
@@ -124,7 +128,7 @@
 		return file;
 	};
 
-	const uploadWeb = async (urls) => {
+	const uploadWeb = async (urls: string | string[]) => {
 		const targetDirectoryId = currentDirectoryId;
 		if (!knowledge) {
 			toast.error($i18n.t('Knowledge base not found.'));
@@ -227,7 +231,8 @@
 		}
 	};
 
-	const uploadFileHandler = async (file) => {
+	const uploadFileHandler = async (file: File) => {
+		if (!knowledge) return;
 		const targetDirectoryId = currentDirectoryId;
 		console.log(file);
 
@@ -320,12 +325,13 @@
 	};
 
 	// Helper function to check if a path contains hidden folders
-	const hasHiddenFolder = (path) => {
+	const hasHiddenFolder = (path: string) => {
 		return path.split('/').some((part) => part.startsWith('.'));
 	};
 
 	// Error handler
-	const handleUploadError = (error) => {
+	const handleUploadError = (failure: unknown) => {
+		const error = failure instanceof Error ? failure : new Error(String(failure));
 		if (error.name === 'AbortError') {
 			toast.info($i18n.t('Directory selection was cancelled'));
 		} else {
@@ -352,13 +358,13 @@
 						if (entry.kind === 'file') {
 							let file: File;
 							try {
-								file = await entry.getFile();
+								file = await (await handle.getFileHandle(entry.name)).getFile();
 							} catch (error) {
 								throw new Error(`"${entryPath}": ${error}`);
 							}
 							collected.push({ path: dirPath, filename: entry.name, file });
 						} else if (entry.kind === 'directory') {
-							await traverse(entry, entryPath);
+							await traverse(await handle.getDirectoryHandle(entry.name), entryPath);
 						}
 					}
 				}
@@ -371,7 +377,7 @@
 					const input = document.createElement('input');
 					input.type = 'file';
 					input.webkitdirectory = true;
-					input.directory = true;
+					input.setAttribute('directory', '');
 					input.multiple = true;
 					input.style.display = 'none';
 					document.body.appendChild(input);
@@ -452,6 +458,8 @@
 		entries: DirectoryManifestEntry[],
 		resolveDirectoryId: (entry: DirectoryManifestEntry) => string | null | undefined
 	) => {
+		if (!knowledge) return entries.length;
+		const targetKnowledgeId = knowledge.id;
 		let failedCount = 0;
 
 		for (const [index, entry] of entries.entries()) {
@@ -464,7 +472,7 @@
 
 			const fileObject = new File([entry.file], entry.filename, { type: entry.file.type });
 			const uploadedFile = await uploadFile(localStorage.token, fileObject, {
-				knowledge_id: knowledge.id,
+				knowledge_id: targetKnowledgeId,
 				file_hash: entry.checksum,
 				directory_id: resolveDirectoryId(entry)
 			}).catch((error) => ({ error }));
@@ -623,6 +631,7 @@
 		}
 
 		debounceTimeout = setTimeout(async () => {
+			if (!knowledge) return;
 			if (knowledge.name.trim() === '' || knowledge.description.trim() === '') {
 				toast.error($i18n.t('Please fill in all fields.'));
 				return;
@@ -695,7 +704,7 @@
 		return [];
 	};
 
-	const onDragOver = (e) => {
+	const onDragOver = (e: DragEvent) => {
 		e.preventDefault();
 
 		// Check if a file is being draggedOver.
@@ -710,7 +719,7 @@
 		dragged = false;
 	};
 
-	const onDrop = async (e) => {
+	const onDrop = async (e: DragEvent) => {
 		e.preventDefault();
 		dragged = false;
 
@@ -762,30 +771,42 @@
 		}
 	};
 
-	onMount(async () => {
-		id = $page.params.id;
-		const res = await getKnowledgeById(localStorage.token, id).catch((e) => {
-			toast.error(`${e}`);
-			return null;
-		});
-
-		if (res) {
-			knowledge = res;
-			if (!Array.isArray(knowledge?.access_grants)) {
-				knowledge.access_grants = [];
+	const loadKnowledge = async (nextId: string) => {
+		requestedId = nextId;
+		id = nextId;
+		const version = ++loadVersion;
+		knowledge = null;
+		fileItems = [];
+		const res: Knowledge | null = await getKnowledgeById(localStorage.token, nextId).catch(
+			(error) => {
+				if (!destroyed && version === loadVersion) toast.error(`${error}`);
+				return null;
 			}
-		} else {
-			goto('/workspace/knowledge');
-		}
-
-		const dropZone = document.querySelector('body');
-		dropZone?.addEventListener('dragover', onDragOver);
-		dropZone?.addEventListener('drop', onDrop);
-		dropZone?.addEventListener('dragleave', onDragLeave);
+		);
+		if (destroyed || version !== loadVersion) return;
+		if (res)
+			knowledge = {
+				...res,
+				access_grants: Array.isArray(res.access_grants) ? res.access_grants : []
+			};
+		else goto('/workspace/knowledge');
+	};
+	onMount(() => {
+		const dropZone = document.body;
+		dropZone.addEventListener('dragover', onDragOver);
+		dropZone.addEventListener('drop', onDrop);
+		dropZone.addEventListener('dragleave', onDragLeave);
+		return () => {
+			dropZone.removeEventListener('dragover', onDragOver);
+			dropZone.removeEventListener('drop', onDrop);
+			dropZone.removeEventListener('dragleave', onDragLeave);
+		};
 	});
 
 	onDestroy(() => {
-		clearTimeout(debounceTimeout);
+		destroyed = true;
+		loadVersion += 1;
+		clearTimeout(debounceTimeout ?? undefined);
 		const dropZone = document.querySelector('body');
 		dropZone?.removeEventListener('dragover', onDragOver);
 		dropZone?.removeEventListener('drop', onDrop);
@@ -838,7 +859,7 @@
 			inputFiles = null;
 			const fileInputElement = document.getElementById('files-input');
 
-			if (fileInputElement) {
+			if (fileInputElement instanceof HTMLInputElement) {
 				fileInputElement.value = '';
 			}
 		} else {
@@ -860,6 +881,7 @@
 				$user?.role === 'admin'}
 			onChange={async () => {
 				try {
+					if (!knowledge) return;
 					await updateKnowledgeAccessGrants(localStorage.token, id, knowledge.access_grants ?? []);
 					toast.success($i18n.t('Saved'));
 				} catch (error) {

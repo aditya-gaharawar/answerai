@@ -55,13 +55,13 @@
 	let headers = '';
 
 	let functionNameFilterList = '';
-	let accessGrants = [];
+	let accessGrants: import('$lib/apis').AccessGrant[] = [];
 
 	let id = '';
 	let name = '';
 	let description = '';
 
-	let oauthClientInfo = null;
+	let oauthClientInfo: Record<string, unknown> | null = null;
 
 	let oauthClientId = '';
 	let oauthClientSecret = '';
@@ -159,7 +159,6 @@
 			);
 			toast.success($i18n.t('Registration successful'));
 
-			console.debug('Registration successful', res);
 			oauthClientInfo = res?.oauth_client_info ?? null;
 		}
 	};
@@ -206,7 +205,6 @@
 
 			if (res) {
 				toast.success($i18n.t('Connection successful'));
-				console.debug('Connection successful', res);
 			}
 		} else {
 			const res = await verifyToolServerConnection(localStorage.token, {
@@ -238,67 +236,61 @@
 
 			if (res) {
 				toast.success(verifySuccessMessage());
-				console.debug('Connection successful', res);
 			}
 		}
 	};
 
-	const importHandler = async (e) => {
-		const file = e.target.files[0];
+	const importHandler = async (e: Event) => {
+		if (!(e.currentTarget instanceof HTMLInputElement)) return;
+		const file = e.currentTarget.files?.[0];
 		if (!file) return;
 
-		const reader = new FileReader();
-		reader.onload = async (event) => {
-			const json = event.target.result;
-			console.log('importHandler', json);
-
-			try {
-				let data = JSON.parse(json);
-				// validate data
-				if (Array.isArray(data)) {
-					if (data.length === 0) {
-						toast.error($i18n.t('Please select a valid JSON file'));
-						return;
-					}
-					data = data[0];
+		try {
+			let data = JSON.parse(await file.text());
+			if (!data || typeof data !== 'object') throw new Error('Invalid tool connection');
+			// validate data
+			if (Array.isArray(data)) {
+				if (data.length === 0) {
+					toast.error($i18n.t('Please select a valid JSON file'));
+					return;
 				}
-
-				if (data.type) type = data.type;
-				if (data.url) url = data.url;
-
-				if (data.spec_type) spec_type = data.spec_type;
-				if (data.spec) spec = data.spec;
-				if (data.path) path = data.path;
-
-				if (data.auth_type) auth_type = data.auth_type;
-				forwardCookies = data.forward_cookies ?? false;
-				if (data.headers) headers = JSON.stringify(data.headers, null, 2);
-				if (data.key) key = data.key;
-
-				if (data.info) {
-					id = data.info.id ?? '';
-					name = data.info.name ?? '';
-					description = data.info.description ?? '';
-					oauthScope = data.info.oauth_scope ?? '';
-					oauthResourceParameter = data.info.oauth_resource_parameter ?? 'auto';
-				}
-
-				if (data.config) {
-					enable = data.config.enable ?? true;
-					accessGrants = data.config.access_grants ?? [];
-				}
-
-				if (data.info?.id) {
-					await tick();
-					id = data.info.id;
-				}
-
-				toast.success($i18n.t('Import successful'));
-			} catch (error) {
-				toast.error($i18n.t('Please select a valid JSON file'));
+				data = data[0];
 			}
-		};
-		reader.readAsText(file);
+
+			if (data.type) type = data.type;
+			if (data.url) url = data.url;
+
+			if (data.spec_type) spec_type = data.spec_type;
+			if (data.spec) spec = data.spec;
+			if (data.path) path = data.path;
+
+			if (data.auth_type) auth_type = data.auth_type;
+			forwardCookies = data.forward_cookies ?? false;
+			if (data.headers) headers = JSON.stringify(data.headers, null, 2);
+			if (data.key) key = data.key;
+
+			if (data.info) {
+				id = data.info.id ?? '';
+				name = data.info.name ?? '';
+				description = data.info.description ?? '';
+				oauthScope = data.info.oauth_scope ?? '';
+				oauthResourceParameter = data.info.oauth_resource_parameter ?? 'auto';
+			}
+
+			if (data.config) {
+				enable = data.config.enable ?? true;
+				accessGrants = data.config.access_grants ?? [];
+			}
+
+			if (data.info?.id) {
+				await tick();
+				id = data.info.id;
+			}
+
+			toast.success($i18n.t('Import successful'));
+		} catch (error) {
+			toast.error($i18n.t('Please select a valid JSON file'));
+		}
 	};
 
 	const exportHandler = async () => {
@@ -721,7 +713,7 @@
 							<div class="flex flex-col w-full">
 								<div class="flex justify-between items-center">
 									<div class="flex gap-2 items-center">
-										<div for="select-bearer-or-session" class={`text-xs text-gray-500`}>
+										<div class={`text-xs text-gray-500`}>
 											{$i18n.t('Auth')}
 										</div>
 									</div>
@@ -913,7 +905,7 @@
 									<div class="flex flex-col w-full">
 										<div class="flex justify-between items-center mb-0.5">
 											<div class="flex gap-2 items-center">
-												<div for="select-bearer-or-session" class={`text-xs text-gray-500`}>
+												<div class={`text-xs text-gray-500`}>
 													{$i18n.t('OpenAPI Spec')}
 												</div>
 											</div>

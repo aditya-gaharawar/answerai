@@ -67,7 +67,7 @@
 	export let className = '';
 
 	export let id;
-	export let title;
+	export let title = '';
 	export let createdAt: number | null = null;
 	export let updatedAt: number | null = null;
 	export let lastReadAt: number | null = null;
@@ -82,7 +82,7 @@
 	export let participants: ChatParticipant[] = [];
 	export let onReadStateChange: (data: import('$lib/types/chat').ChatReadState) => void = () => {};
 
-	export let onDragEnd = () => {};
+	export let onDragEnd: (event: DragEvent) => void = () => {};
 
 	function formatTimeAgo(timestamp: number): string {
 		const now = Date.now();
@@ -103,7 +103,7 @@
 		return $i18n.t('1m', { context: 'time_ago' });
 	}
 
-	let chat = null;
+	let chat: import('$lib/types/chat').ChatRecord | null = null;
 
 	let mouseOver = false;
 	let focusWithin = false;
@@ -207,7 +207,7 @@
 
 	let chatTitle = title;
 
-	const editChatTitle = async (id, title) => {
+	const editChatTitle = async (id: string, title: string) => {
 		if (title === '') {
 			toast.error($i18n.t('Title cannot be an empty string.'));
 		} else {
@@ -225,7 +225,7 @@
 		}
 	};
 
-	const cloneChatHandler = async (id) => {
+	const cloneChatHandler = async (id: string) => {
 		if (!($user?.role === 'admin' || ($user?.permissions?.chat?.import ?? true))) {
 			toast.error($i18n.t('Access prohibited'));
 			return;
@@ -251,7 +251,7 @@
 
 	let deleting = false;
 
-	const deleteChatHandler = async (id) => {
+	const deleteChatHandler = async (id: string) => {
 		if (deleting) return;
 		deleting = true;
 
@@ -277,7 +277,7 @@
 
 	let archiving = false;
 
-	const archiveChatHandler = async (id) => {
+	const archiveChatHandler = async (id: string) => {
 		if (archiving) return;
 		archiving = true;
 
@@ -299,7 +299,7 @@
 		}
 	};
 
-	const moveChatHandler = async (chatId, folderId) => {
+	const moveChatHandler = async (chatId: string, folderId: string | null) => {
 		if (chatId && folderId) {
 			const res = await updateChatFolderIdById(localStorage.token, chatId, folderId).catch(
 				(error) => {
@@ -320,7 +320,7 @@
 		}
 	};
 
-	let itemElement;
+	let itemElement: HTMLDivElement;
 
 	let generating = false;
 
@@ -331,7 +331,8 @@
 	let x = 0;
 	let y = 0;
 
-	const onDragStart = (event) => {
+	const onDragStart = (event: DragEvent) => {
+		if (!event.dataTransfer) return;
 		event.stopPropagation();
 		openPreview = false;
 
@@ -351,14 +352,14 @@
 		itemElement.style.opacity = '0.5'; // Optional: Visual cue to show it's being dragged
 	};
 
-	const onDrag = (event) => {
+	const onDrag = (event: DragEvent) => {
 		event.stopPropagation();
 
 		x = event.clientX;
 		y = event.clientY;
 	};
 
-	const onDragEndHandler = (event) => {
+	const onDragEndHandler = (event: DragEvent) => {
 		event.stopPropagation();
 
 		itemElement.style.opacity = '1'; // Reset visual cue after drag
@@ -367,7 +368,8 @@
 		onDragEnd(event);
 	};
 
-	const onClickOutside = (event) => {
+	const onClickOutside = (event: MouseEvent) => {
+		if (!(event.target instanceof Node)) return;
 		if (!itemElement.contains(event.target)) {
 			if (confirmEdit) {
 				if (chatTitle !== title) {
@@ -403,7 +405,7 @@
 
 	let showDeleteConfirm = false;
 
-	const chatTitleInputKeydownHandler = (e) => {
+	const chatTitleInputKeydownHandler = (e: KeyboardEvent) => {
 		// Let Enter and Escape finish IME composition without saving or cancelling the rename.
 		if (e.isComposing || e.keyCode === 229) {
 			return;
@@ -434,7 +436,7 @@
 
 		setTimeout(() => {
 			const input = document.getElementById(`chat-title-input-${id}`);
-			if (input) {
+			if (input instanceof HTMLInputElement) {
 				input.focus();
 				input.select();
 			}
@@ -445,6 +447,10 @@
 		generating = true;
 		chat = await getChatById(localStorage.token, id);
 
+		if (!chat) {
+			generating = false;
+			return;
+		}
 		const chatContent = chat.chat;
 
 		// Build the active branch message list from the history tree.
@@ -472,7 +478,10 @@
 		// For the active chat, prefer the live dropdown selection.
 		if (id === $chatId) {
 			try {
-				model = JSON.parse(sessionStorage.selectedModels || '[]').find((m) => m) ?? '';
+				model =
+					JSON.parse(sessionStorage.selectedModels || '[]').find(
+						(m: unknown) => typeof m === 'string' && m
+					) ?? '';
 			} catch {}
 		}
 

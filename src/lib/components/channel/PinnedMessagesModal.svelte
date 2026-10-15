@@ -1,7 +1,14 @@
 <script lang="ts">
+	import type {
+		ChannelRecord,
+		ChannelMessage,
+		ChannelEvent,
+		ChannelUser,
+		ChannelPinHandler
+	} from '$lib/types/channels';
 	import { toast } from 'svelte-sonner';
 	import { getContext, onMount } from 'svelte';
-	const i18n = getContext('i18n');
+	const i18n = getContext<typeof import('$lib/i18n').default>('i18n');
 
 	import { getChannelPinnedMessages, pinMessage } from '$lib/apis/channels';
 
@@ -13,11 +20,11 @@
 	import Loader from '../common/Loader.svelte';
 
 	export let show = false;
-	export let channel = null;
-	export let onPin = (messageId, pinned) => {};
+	export let channel: ChannelRecord | null = null;
+	export let onPin: ChannelPinHandler = () => {};
 
 	let page = 1;
-	let pinnedMessages = null;
+	let pinnedMessages: ChannelMessage[] | null = null;
 
 	let allItemsLoaded = false;
 	let loading = false;
@@ -108,8 +115,10 @@
 												className="rounded-xl px-2"
 												{message}
 												{channel}
-												onPin={async (message) => {
-													pinnedMessages = pinnedMessages.filter((m) => m.id !== message.id);
+												onPin={async (message: ChannelMessage) => {
+													pinnedMessages = (pinnedMessages ?? []).filter(
+														(m) => m.id !== message.id
+													);
 													onPin(message.id, !message.is_pinned);
 
 													const updatedMessage = await pinMessage(
@@ -124,11 +133,11 @@
 
 													init();
 												}}
-												onReaction={false}
-												onThread={false}
-												onReply={false}
-												onEdit={false}
-												onDelete={false}
+												onReaction={null}
+												onThread={null}
+												onReply={null}
+												onEdit={null}
+												onDelete={null}
 											/>
 
 											{#if messageIdx === pinnedMessages.length - 1 && !allItemsLoaded}

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import type { OpenAIConnections, OpenAIConnectionOptions } from '$lib/types/connections';
 	import { onMount, getContext } from 'svelte';
 
 	const i18n = getContext('i18n');
@@ -14,11 +15,19 @@
 
 	export let saveSettings: Function;
 
-	let config = null;
+	let config: OpenAIConnections = {
+		OPENAI_API_BASE_URLS: [],
+		OPENAI_API_KEYS: [],
+		OPENAI_API_CONFIGS: {}
+	};
 
 	let showConnectionModal = false;
 
-	const addConnectionHandler = async (connection) => {
+	const addConnectionHandler = async (connection: {
+		url: string;
+		key: string;
+		config: OpenAIConnectionOptions;
+	}) => {
 		config.OPENAI_API_BASE_URLS.push(connection.url);
 		config.OPENAI_API_KEYS.push(connection.key);
 		config.OPENAI_API_CONFIGS[config.OPENAI_API_BASE_URLS.length - 1] = connection.config;
@@ -55,11 +64,13 @@
 	};
 
 	onMount(async () => {
-		config = $settings?.directConnections ?? {
-			OPENAI_API_BASE_URLS: [],
-			OPENAI_API_KEYS: [],
-			OPENAI_API_CONFIGS: {}
-		};
+		config = structuredClone(
+			$settings?.directConnections ?? {
+				OPENAI_API_BASE_URLS: [],
+				OPENAI_API_KEYS: [],
+				OPENAI_API_CONFIGS: {}
+			}
+		);
 	});
 </script>
 
@@ -120,7 +131,7 @@
 									(key, keyIdx) => idx !== keyIdx
 								);
 
-								let newConfig = {};
+								let newConfig: Record<string, OpenAIConnectionOptions> = {};
 								config.OPENAI_API_BASE_URLS.forEach((url, newIdx) => {
 									newConfig[newIdx] = config.OPENAI_API_CONFIGS[newIdx < idx ? newIdx : newIdx + 1];
 								});

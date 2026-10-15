@@ -22,12 +22,13 @@
 	export let open = false;
 
 	export let className = '';
+	export let dir: 'auto' | 'ltr' | 'rtl' | undefined = undefined;
 	export let buttonClassName =
 		'w-fit py-1 text-[0.9375rem] text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition';
 
 	export let id = '';
-	export let title = null;
-	export let attributes = null;
+	export let title: string | null = null;
+	export let attributes: { done?: string; type?: string; duration?: number } | null = null;
 	export let chevronClassName = 'size-3';
 	export let chevronStrokeWidth = '2.75';
 
@@ -52,7 +53,7 @@
 	const collapsibleId = uuidv4();
 </script>
 
-<div {id} class={className}>
+<div {id} {dir} class={className}>
 	{#if title !== null}
 		<button
 			type="button"

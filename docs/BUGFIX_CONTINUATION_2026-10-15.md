@@ -1,5 +1,7 @@
 # Continued bug fixes: 15 October 2026
 
+Later fixes and current validation are documented in [the UI repair continuation](BUGFIX_UI_REVIEW_2026-10-15.md).
+
 This pass continues from `7c8fcfd76` and the earlier [bug-fix review](BUGFIX_REVIEW_2026-10-15.md). It repairs confirmed failures and expands regression coverage. It does not establish that the repository is free of unknown vulnerabilities.
 
 ## Changes

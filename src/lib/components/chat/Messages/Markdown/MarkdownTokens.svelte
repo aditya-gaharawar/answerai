@@ -6,7 +6,8 @@
 	import fileSaver from 'file-saver';
 	const { saveAs } = fileSaver;
 
-	import { type Token } from 'marked';
+	import { type Token, type Tokens } from 'marked';
+	import { escapeCsvCell } from '$lib/utils/csv';
 	import { copyToClipboard, unescapeHtml } from '$lib/utils';
 	import { resolveChatMessageToolCall } from '$lib/apis/chats';
 
@@ -49,8 +50,11 @@
 	export let allowEmbeds = false;
 
 	export let onSave: Function = () => {};
-	export let onUpdate: Function = () => {};
-	export let onPreview: Function = () => {};
+	export let onUpdate: (
+		event: { raw?: string; text?: string } | null,
+		codeBlockId?: string
+	) => void = () => {};
+	export let onPreview: (value: string) => void = () => {};
 
 	export let onTaskClick: Function = () => {};
 	export let onSourceClick: Function = () => {};
@@ -68,7 +72,7 @@
 
 	const getDisplayTokens = (tokenList: Token[] = []) => {
 		const displayTokens = [];
-		let detailGroup = [];
+		let detailGroup: Token[] = [];
 
 		const flushDetailGroup = () => {
 			if (detailGroup.length > 1) {
@@ -97,8 +101,8 @@
 		return displayTokens;
 	};
 
-	const getDetailTextContent = (token) => {
-		return decode(token?.text || '')
+	const getDetailTextContent = (token: Token) => {
+		return decode('text' in token && typeof token.text === 'string' ? token.text : '')
 			.replace(/<summary>.*?<\/summary>/gi, '')
 			.trim();
 	};
@@ -136,42 +140,24 @@
 		displayTokens.length === 1 &&
 		(displayTokens[0]?.type === 'paragraph' || displayTokens[0]?.type === 'text');
 
-	const exportTableToCSVHandler = (token, tokenIdx = 0) => {
-		console.log('Exporting table to CSV');
-
-		// Extract header row text, decode HTML entities, and escape for CSV.
-		const header = token.header.map(
-			(headerCell) => `"${decode(headerCell.text).replace(/"/g, '""')}"`
+	const exportTableToCSVHandler = (token: Token, tokenIdx = 0) => {
+		if (
+			!('header' in token) ||
+			!('rows' in token) ||
+			!Array.isArray(token.header) ||
+			!Array.isArray(token.rows)
+		)
+			return;
+		const header: Tokens.TableCell[] = token.header;
+		const rows: Tokens.TableCell[][] = token.rows;
+		const cellText = (cell: Tokens.TableCell) => decode(cell.text);
+		const csvContent = [header, ...rows]
+			.map((row) => row.map((cell) => escapeCsvCell(cellText(cell))).join(','))
+			.join('\n');
+		saveAs(
+			new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=UTF-8' }),
+			`table-${id}-${tokenIdx}.csv`
 		);
-
-		// Create an array for rows that will hold the mapped cell text.
-		const rows = token.rows.map((row) =>
-			row.map((cell) => {
-				// Map tokens into a single text
-				const cellContent = cell.tokens.map((token) => token.text).join('');
-				// Decode HTML entities and escape double quotes, wrap in double quotes
-				return `"${decode(cellContent).replace(/"/g, '""')}"`;
-			})
-		);
-
-		// Combine header and rows
-		const csvData = [header, ...rows];
-
-		// Join the rows using commas (,) as the separator and rows using newline (\n).
-		const csvContent = csvData.map((row) => row.join(',')).join('\n');
-
-		// Log rows and CSV content to ensure everything is correct.
-		console.log(csvData);
-		console.log(csvContent);
-
-		// To handle Unicode characters, you need to prefix the data with a BOM:
-		const bom = '\uFEFF'; // BOM for UTF-8
-
-		// Create a new Blob prefixed with the BOM to ensure proper Unicode encoding.
-		const blob = new Blob([bom + csvContent], { type: 'text/csv;charset=UTF-8' });
-
-		// Use FileSaver.js's saveAs function to save the generated CSV file.
-		saveAs(blob, `table-${id}-${tokenIdx}.csv`);
 	};
 </script>
 
@@ -183,7 +169,7 @@
 		<svelte:element this={headerComponent(token.depth)} dir="auto">
 			<MarkdownInlineTokens
 				id={`${id}-${tokenIdx}-h`}
-				tokens={token.tokens}
+				tokens={'tokens' in token ? (token.tokens ?? []) : []}
 				{done}
 				{sourceIds}
 				{onSourceClick}
@@ -310,7 +296,7 @@
 					id={`${id}-${tokenIdx}`}
 					{chatId}
 					{messageId}
-					tokens={token.tokens}
+					tokens={'tokens' in token ? (token.tokens ?? []) : []}
 					{done}
 					{allowEmbeds}
 					{save}
@@ -335,13 +321,16 @@
 								type="checkbox"
 								checked={item.checked}
 								on:change={(e) => {
+									const answeraiEventTarget = e.currentTarget;
+									if (!(answeraiEventTarget instanceof HTMLInputElement)) return;
+
 									onTaskClick({
 										id: id,
 										token: token,
 										tokenIdx: tokenIdx,
 										item: item,
 										itemIdx: itemIdx,
-										checked: e.target.checked
+										checked: answeraiEventTarget.checked
 									});
 								}}
 							/>
@@ -376,13 +365,16 @@
 								type="checkbox"
 								checked={item.checked}
 								on:change={(e) => {
+									const answeraiEventTarget = e.currentTarget;
+									if (!(answeraiEventTarget instanceof HTMLInputElement)) return;
+
 									onTaskClick({
 										id: id,
 										token: token,
 										tokenIdx: tokenIdx,
 										item: item,
 										itemIdx: itemIdx,
-										checked: e.target.checked
+										checked: answeraiEventTarget.checked
 									});
 								}}
 							/>
@@ -531,7 +523,7 @@
 						id={`${id}-${tokenIdx}-d`}
 						{chatId}
 						{messageId}
-						tokens={token.tokens ?? []}
+						tokens={'tokens' in token ? (token.tokens ?? []) : []}
 						attributes={token?.attributes}
 						{done}
 						{allowEmbeds}
@@ -558,17 +550,20 @@
 			/>
 		{/if}
 	{:else if token.type === 'html'}
-		<HtmlToken {id} {token} {onSourceClick} />
+		<HtmlToken {id} {token} />
 	{:else if token.type === 'iframe'}
 		<iframe
 			src="{WEBUI_BASE_URL}/api/v1/files/{token.fileId}/content"
 			title={token.fileId}
 			width="100%"
 			frameborder="0"
+			sandbox="allow-same-origin allow-downloads"
 			on:load={(e) => {
 				try {
-					e.currentTarget.style.height =
-						e.currentTarget.contentWindow.document.body.scrollHeight + 20 + 'px';
+					if (!(e.currentTarget instanceof HTMLIFrameElement)) return;
+					const frameDocument = e.currentTarget.contentDocument;
+					if (!frameDocument) return;
+					e.currentTarget.style.height = frameDocument.body.scrollHeight + 20 + 'px';
 				} catch {}
 			}}
 		></iframe>
@@ -577,7 +572,7 @@
 			<span dir="auto">
 				<MarkdownInlineTokens
 					id={`${id}-${tokenIdx}-p`}
-					tokens={token.tokens ?? []}
+					tokens={'tokens' in token ? (token.tokens ?? []) : []}
 					{done}
 					{sourceIds}
 					{onSourceClick}
@@ -587,7 +582,7 @@
 			<p dir="auto" class={singlePlainBlock ? '!my-0' : ''}>
 				<MarkdownInlineTokens
 					id={`${id}-${tokenIdx}-p`}
-					tokens={token.tokens ?? []}
+					tokens={'tokens' in token ? (token.tokens ?? []) : []}
 					{done}
 					{sourceIds}
 					{onSourceClick}
@@ -597,10 +592,10 @@
 	{:else if token.type === 'text'}
 		{#if top}
 			<p class={singlePlainBlock ? '!my-0' : ''}>
-				{#if token.tokens}
+				{#if 'tokens' in token && token.tokens}
 					<MarkdownInlineTokens
 						id={`${id}-${tokenIdx}-t`}
-						tokens={token.tokens}
+						tokens={'tokens' in token ? (token.tokens ?? []) : []}
 						{done}
 						{sourceIds}
 						{onSourceClick}
@@ -609,10 +604,10 @@
 					{unescapeHtml(token.text)}
 				{/if}
 			</p>
-		{:else if token.tokens}
+		{:else if 'tokens' in token && token.tokens}
 			<MarkdownInlineTokens
 				id={`${id}-${tokenIdx}-p`}
-				tokens={token.tokens ?? []}
+				tokens={'tokens' in token ? (token.tokens ?? []) : []}
 				{done}
 				{sourceIds}
 				{onSourceClick}

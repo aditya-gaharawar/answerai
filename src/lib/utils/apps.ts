@@ -2,11 +2,11 @@ import type { Embed } from '$lib/apis/apps';
 
 export const getAppMessageText = (message?: {
 	content?: string;
-	data?: { app?: { embeds?: Embed[] } };
+	data?: { app?: { embeds?: Embed[] } } | boolean | null;
 }) =>
 	[
 		message?.content,
-		...(message?.data?.app?.embeds ?? []).map((embed) =>
+		...((typeof message?.data === 'object' ? message?.data?.app?.embeds : []) ?? []).map((embed) =>
 			[
 				embed.author?.name,
 				embed.title,

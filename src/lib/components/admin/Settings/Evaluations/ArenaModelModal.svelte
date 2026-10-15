@@ -20,12 +20,16 @@
 	export let show = false;
 	export let edit = false;
 
+	/** @type {import('$lib/types/evaluations').ArenaConfigModel | null} */
 	export let model = null;
+	/** @type {(model: import('$lib/types/evaluations').ArenaConfigModel) => Promise<boolean>} */
 	export let onSubmit = async (_model) => true;
 
 	let name = '';
 	let locale = '';
+	/** @type {Record<string, Record<string, string>>} */
 	let translations = {};
+	/** @type {import('$lib/types/evaluations').ArenaConfigModel['meta']} */
 	let originalMeta = {};
 	let id = '';
 
@@ -50,8 +54,11 @@
 	let description = '';
 
 	let selectedModelId = '';
+	/** @type {string[]} */
 	let modelIds = [];
 	let filterMode = 'include';
+
+	/** @type {import('$lib/apis').AccessGrant[]} */
 
 	let accessGrants = [];
 
@@ -200,10 +207,13 @@
 								hidden
 								accept="image/*"
 								on:change={(e) => {
-									const files = e.target.files ?? [];
+									const answeraiEventTarget = e.currentTarget;
+									if (!(answeraiEventTarget instanceof HTMLInputElement)) return;
+
+									const files = answeraiEventTarget.files ?? [];
 									let reader = new FileReader();
 									reader.onload = (event) => {
-										let originalImageUrl = `${event.target.result}`;
+										let originalImageUrl = `${event.target?.result}`;
 
 										const img = new Image();
 										img.src = originalImageUrl;
@@ -211,6 +221,7 @@
 										img.onload = function () {
 											const canvas = document.createElement('canvas');
 											const ctx = canvas.getContext('2d');
+											if (!ctx) return;
 
 											// Calculate the aspect ratio of the image
 											const aspectRatio = img.width / img.height;
@@ -242,7 +253,7 @@
 											// Display the compressed image
 											profileImageUrl = compressedSrc;
 
-											e.target.files = null;
+											answeraiEventTarget.files = null;
 										};
 									};
 

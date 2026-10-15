@@ -21,7 +21,7 @@
 
 	const i18n: any = getContext('i18n');
 
-	export let modelIds = [];
+	export let modelIds: string[] = [];
 	export let models = [];
 	export let atSelectedModel;
 
@@ -84,7 +84,8 @@
 									// LICENSE covers this Open WebUI fallback logo.
 									// Do not alter, remove, obscure, or replace it except as LICENSE permits:
 									// https://docs.openwebui.com/license.
-									e.currentTarget.src = '/favicon.png';
+									if (e.currentTarget instanceof HTMLImageElement)
+										e.currentTarget.src = '/favicon.png';
 								}}
 							/>
 						</Tooltip>
@@ -131,16 +132,16 @@
 						{#if models[selectedModelIdx]?.info?.meta?.user}
 							<div class="mt-0.5 text-sm font-normal text-gray-400 dark:text-gray-500">
 								{$i18n.t('By')}
-								{#if models[selectedModelIdx]?.info?.meta?.user.community}
+								{#if models[selectedModelIdx]?.info?.meta?.user?.community}
 									<a
 										href="https://answerai.in/m/{models[selectedModelIdx]?.info?.meta?.user
 											.username}"
-										>{models[selectedModelIdx]?.info?.meta?.user.name
-											? models[selectedModelIdx]?.info?.meta?.user.name
-											: `@${models[selectedModelIdx]?.info?.meta?.user.username}`}</a
+										>{models[selectedModelIdx]?.info?.meta?.user?.name
+											? models[selectedModelIdx]?.info?.meta?.user?.name
+											: `@${models[selectedModelIdx]?.info?.meta?.user?.username}`}</a
 									>
 								{:else}
-									{models[selectedModelIdx]?.info?.meta?.user.name}
+									{models[selectedModelIdx]?.info?.meta?.user?.name}
 								{/if}
 							</div>
 						{/if}

@@ -1,0 +1,68 @@
+import type { AccessGrant } from '$lib/apis';
+import type { PluginOwner, PluginMeta } from './plugins';
+export type UserRecord = PluginOwner & {
+	email: string;
+	role: string;
+	profile_image_url: string;
+	created_at: number;
+	updated_at: number;
+	last_active_at: number;
+	status_emoji?: string;
+	status_message?: string;
+	info?: { location?: string; bio?: string; date_of_birth?: string } | null;
+};
+export type FileRecord = {
+	id: string;
+	user_id?: string;
+	filename: string;
+	name?: string;
+	hash?: string | null;
+	size?: number;
+	content_type?: string;
+	meta: { name?: string; size?: number; content_type?: string; collection_name?: string };
+	data?: { content?: string; status?: string };
+	created_at?: number;
+	updated_at?: number;
+};
+export type SkillRecord = {
+	id: string;
+	name: string;
+	description?: string | null;
+	content?: string;
+	meta: PluginMeta & { tags?: string[] };
+	user_id?: string;
+	user?: PluginOwner | null;
+	access_grants?: AccessGrant[];
+	is_active?: boolean;
+	write_access?: boolean;
+	created_at: number;
+	updated_at: number;
+};
+export type PromptRecord = {
+	id: string;
+	command: string;
+	name: string;
+	title?: string;
+	content: string;
+	tags?: string[] | null;
+	access_grants?: AccessGrant[];
+	user_id?: string;
+	user?: PluginOwner | null;
+	updated_at: number;
+	created_at: number;
+	is_active?: boolean;
+	write_access?: boolean;
+};
+export type KnowledgeRecord = {
+	id: string;
+	name: string;
+	description: string;
+	data?: { file_ids?: string[] } | null;
+	user_id?: string;
+	user?: PluginOwner | null;
+	meta?: Record<string, unknown> | null;
+	access_grants?: AccessGrant[];
+	write_access?: boolean;
+	created_at?: number;
+	updated_at?: number;
+};

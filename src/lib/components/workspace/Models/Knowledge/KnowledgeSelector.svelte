@@ -18,7 +18,7 @@
 
 	export let show = false;
 	export let anchorElement: HTMLElement | null = null;
-	export let selectedItems = [];
+	export let selectedItems: import('$lib/apis').ModelKnowledgeReference[] = [];
 	let dropdown: Dropdown;
 	export const close = () => dropdown.close();
 	export let disabled = false;
@@ -28,9 +28,11 @@
 	let query = '';
 	let searchDebounceTimer: ReturnType<typeof setTimeout>;
 
-	let noteItems = [];
-	let knowledgeItems = [];
-	let fileItems = [];
+	let noteItems: (import('$lib/types/notes').NoteListItem & { type: 'note'; name: string })[] = [];
+	let knowledgeItems: (import('$lib/types/resources').KnowledgeRecord & { type: 'collection' })[] =
+		[];
+	let fileItems: (import('$lib/types/resources').FileRecord & { type: 'file'; name: string })[] =
+		[];
 
 	let items = [];
 
@@ -62,7 +64,7 @@
 		});
 
 		if (res) {
-			noteItems = res.items.map((note) => {
+			noteItems = res.items.map((note: import('$lib/types/notes').NoteListItem) => {
 				return {
 					...note,
 					type: 'note',
@@ -78,7 +80,7 @@
 		});
 
 		if (res) {
-			knowledgeItems = res.items.map((note) => {
+			knowledgeItems = res.items.map((note: import('$lib/types/resources').KnowledgeRecord) => {
 				return {
 					...note,
 					type: 'collection'
@@ -93,7 +95,7 @@
 		});
 
 		if (res) {
-			fileItems = res.items.map((file) => {
+			fileItems = res.items.map((file: import('$lib/types/resources').FileRecord) => {
 				return {
 					...file,
 					type: 'file',

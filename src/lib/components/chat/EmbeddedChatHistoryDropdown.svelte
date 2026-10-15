@@ -11,7 +11,7 @@
 	const i18n = getContext('i18n');
 
 	export let title = '';
-	export let chats = [];
+	export let chats: import('$lib/types/notes').NoteChatSummary[] = [];
 	export let canCreateNew = false;
 	export let loading = false;
 

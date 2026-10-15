@@ -13,9 +13,11 @@
 	import { settings } from '$lib/stores';
 
 	export let show = false;
-	export let onSave = () => {};
+	export let onSave: (
+		actions: import('$lib/types/messages').FloatingAction[] | null
+	) => void = () => {};
 
-	export let floatingActionButtons = null;
+	export let floatingActionButtons: import('$lib/types/messages').FloatingAction[] | null = null;
 
 	const submitHandler = async () => {
 		onSave(floatingActionButtons);
@@ -99,13 +101,13 @@
 											let id = `new-button`;
 											let idx = 0;
 
-											while (floatingActionButtons.some((b) => b.id === id)) {
+											while ((floatingActionButtons ?? []).some((b) => b.id === id)) {
 												idx++;
 												id = `new-button-${idx}`;
 											}
 
 											floatingActionButtons = [
-												...floatingActionButtons,
+												...(floatingActionButtons ?? []),
 												{
 													id: id,
 													label: `${$i18n.t('New Button')}`,

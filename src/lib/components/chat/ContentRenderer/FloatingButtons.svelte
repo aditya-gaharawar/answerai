@@ -7,11 +7,11 @@
 
 	export let id = '';
 
-	export let actions = [];
-	export let onSetInputText = (text) => {};
+	export let actions: import('$lib/types/messages').FloatingAction[] = [];
+	export let onSetInputText = (text: string) => {};
 
 	let floatingInput = false;
-	let selectedAction = null;
+	let selectedAction: import('$lib/types/messages').FloatingAction | null = null;
 
 	let selectedText = '';
 	let floatingInputValue = '';
@@ -43,7 +43,7 @@
 
 	$: displayActions = actions.length ? actions : DEFAULT_ACTIONS;
 
-	const actionHandler = (actionId) => {
+	const actionHandler = (actionId: string) => {
 		let selectedContent = selectedText
 			.split('\n')
 			.map((line) => `> ${line}`)
@@ -105,7 +105,7 @@
 					aria-label={action.label}
 					class="px-1.5 py-[0.0625rem] hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl flex items-center gap-1 min-w-fit transition"
 					on:click={async () => {
-						selectedText = window.getSelection().toString();
+						selectedText = window.getSelection()?.toString() ?? '';
 						selectedAction = action;
 
 						if (action.prompt.includes('{{INPUT_CONTENT}}')) {

@@ -700,7 +700,8 @@ export const isRasterImageContentType = (contentType: string | null | undefined)
 	return baseContentType.startsWith('image/') && baseContentType !== 'image/svg+xml';
 };
 
-export const isValidHttpUrl = (string: string) => {
+export const isValidHttpUrl = (string: unknown): string is string => {
+	if (typeof string !== 'string') return false;
 	let url;
 
 	try {

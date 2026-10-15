@@ -16,7 +16,7 @@
 	export let onSelect = (e) => {};
 
 	let loaded = false;
-	let items = [];
+	let items: (import('$lib/types/resources').FileRecord & { type: string; name: string })[] = [];
 	let selectedIdx = 0;
 	let query = '';
 

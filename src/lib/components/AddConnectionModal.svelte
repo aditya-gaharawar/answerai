@@ -46,10 +46,10 @@
 	let headers = '';
 	let passthroughParams = '';
 
-	let tags = [];
+	let tags: import('$lib/utils/tags').Tag[] = [];
 
 	let modelId = '';
-	let modelIds = [];
+	let modelIds: string[] = [];
 	let availableModelIds: string[] = [];
 
 	let loading = false;

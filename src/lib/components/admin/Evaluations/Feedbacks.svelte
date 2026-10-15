@@ -1,4 +1,6 @@
 <script lang="ts">
+	import type { FeedbackRecord } from '$lib/types/evaluations';
+	import { escapeCsvCell } from '$lib/utils/csv';
 	import { toast } from 'svelte-sonner';
 	import fileSaver from 'file-saver';
 	const { saveAs } = fileSaver;
@@ -37,8 +39,8 @@
 	import Check from '$lib/components/icons/Check.svelte';
 
 	let page = 1;
-	let items = null;
-	let total = null;
+	let items: FeedbackRecord[] = [];
+	let total: number | null = null;
 
 	let orderBy: string = 'updated_at';
 	let direction: 'asc' | 'desc' = 'desc';
@@ -56,9 +58,9 @@
 	};
 
 	let showFeedbackModal = false;
-	let selectedFeedback = null;
+	let selectedFeedback: FeedbackRecord | null = null;
 
-	const openFeedbackModal = (feedback) => {
+	const openFeedbackModal = (feedback: FeedbackRecord) => {
 		showFeedbackModal = true;
 		selectedFeedback = feedback;
 	};
@@ -124,7 +126,7 @@
 		}
 	};
 
-	const feedbacksToCsv = (feedbacks) => {
+	const feedbacksToCsv = (feedbacks: FeedbackRecord[]) => {
 		const rows = feedbacks.map((f) => {
 			const { data, ...rest } = f;
 			return {
@@ -144,16 +146,11 @@
 		if (rows.length === 0) return '';
 
 		const headers = Object.keys(rows[0]);
-		const escape = (val) => {
-			const s = String(val ?? '');
-			return s.includes(',') || s.includes('"') || s.includes('\n')
-				? `"${s.replace(/"/g, '""')}"`
-				: s;
-		};
-
-		return [headers.join(','), ...rows.map((r) => headers.map((h) => escape(r[h])).join(','))].join(
-			'\n'
-		);
+		const escape = escapeCsvCell;
+		return [
+			headers.join(','),
+			...rows.map((r) => headers.map((h) => escape(r[h as keyof typeof r])).join(','))
+		].join('\n');
 	};
 
 	const exportHandler = async (format: 'json' | 'csv' = 'json') => {
@@ -239,7 +236,7 @@
 					{/if}
 				</div>
 
-				{#if total > 0}
+				{#if total !== null && total > 0}
 					<Dropdown align="end">
 						<button
 							class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-100 px-2.5 text-xs font-normal text-gray-800 transition hover:bg-gray-100/70 disabled:opacity-60 dark:bg-gray-850 dark:text-white dark:hover:bg-gray-850/60"
@@ -487,7 +484,7 @@
 			{/if}
 		</div>
 
-		{#if total > 30}
+		{#if total !== null && total > 30}
 			<Pagination bind:page count={total} perPage={30} />
 		{/if}
 	</div>

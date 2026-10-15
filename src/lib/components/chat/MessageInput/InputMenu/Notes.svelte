@@ -17,7 +17,7 @@
 
 	let loaded = false;
 
-	let items = [];
+	let items: (import('$lib/types/notes').NoteListItem & { type: string; name: string })[] = [];
 	let selectedIdx = 0;
 	let query = '';
 

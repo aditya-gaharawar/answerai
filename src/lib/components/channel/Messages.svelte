@@ -1,4 +1,11 @@
 <script lang="ts">
+	import type {
+		ChannelRecord,
+		ChannelMessage,
+		ChannelEvent,
+		ChannelUser,
+		ChannelPinHandler
+	} from '$lib/types/channels';
 	import { chatDirection } from '$lib/stores';
 	import { toast } from 'svelte-sonner';
 
@@ -30,17 +37,17 @@
 
 	const i18n = getContext<typeof import('$lib/i18n').default>('i18n');
 
-	export let id = null;
-	export let channel = null;
-	export let messages = [];
-	export let replyToMessage = null;
+	export let id: string | null = null;
+	export let channel: ChannelRecord | null = null;
+	export let messages: ChannelMessage[] | null = [];
+	export let replyToMessage: ChannelMessage | null = null;
 	export let top = false;
 	export let thread = false;
 
 	export let onLoad: Function = () => {};
-	export let onReply: Function = () => {};
+	export let onReply: (message: ChannelMessage) => void = () => {};
 	export let onThread: Function = () => {};
-	export let onPin: Function = () => {};
+	export let onPin: ChannelPinHandler = () => {};
 
 	let messagesLoading = false;
 	let appReplies: Record<string, any> = {};
@@ -50,7 +57,15 @@
 		appReplies = {};
 	}
 
-	const receiveAppChannelReply = (event) => {
+	type AppReplyEvent = {
+		channel_id: string;
+		parent_id?: string | null;
+		message_id: string;
+		app_id: string;
+		app_name?: string;
+		reply: import('svelte').ComponentProps<typeof AppChannelReply>['reply'];
+	};
+	const receiveAppChannelReply = (event: AppReplyEvent) => {
 		if (event.reply?.type === 'ack') return;
 		if (event.channel_id !== channel?.id || (event.parent_id ?? null) !== (thread ? id : null))
 			return;
@@ -67,7 +82,7 @@
 	const loadMoreMessages = async () => {
 		// scroll slightly down to disable continuous loading
 		const element = document.getElementById('messages-container');
-		element.scrollTop = element.scrollTop + 100;
+		if (element) element.scrollTop += 100;
 
 		messagesLoading = true;
 
@@ -101,7 +116,9 @@
 					<div class="flex flex-col gap-1.5 pb-4 pt-8">
 						{#if channel?.type === 'dm'}
 							<div class="flex ml-[0.0625rem] mr-0.5">
-								{#each channel.users.filter((u) => u.id !== $user?.id).slice(0, 2) as u, index}
+								{#each (channel.users ?? [])
+									.filter((u) => u.id !== $user?.id)
+									.slice(0, 2) as u, index}
 									<img
 										src={`${WEBUI_API_BASE_URL}/users/${u.id}/profile/image`}
 										alt={u.name}
@@ -158,7 +175,7 @@
 				{thread}
 				{id}
 				replyToMessage={replyToMessage?.id === message.id}
-				disabled={!channel?.write_access || message?.temp_id}
+				disabled={!channel?.write_access || !!message?.temp_id}
 				pending={!!message?.temp_id}
 				showUserProfile={messageIdx === 0 ||
 					Object.values(appReplies).some(
@@ -169,7 +186,7 @@
 					messageList.at(messageIdx - 1)?.meta?.model_id !== message?.meta?.model_id ||
 					message?.reply_to_message !== null}
 				onDelete={() => {
-					messages = messages.filter((m) => m.id !== message.id);
+					messages = (messages ?? []).filter((m) => m.id !== message.id);
 
 					const res = deleteMessage(localStorage.token, message.channel_id, message.id).catch(
 						(error) => {
@@ -178,8 +195,8 @@
 						}
 					);
 				}}
-				onEdit={(content) => {
-					messages = messages.map((m) => {
+				onEdit={(content: string) => {
+					messages = (messages ?? []).map((m) => {
 						if (m.id === message.id) {
 							m.content = content;
 						}
@@ -193,15 +210,15 @@
 						return null;
 					});
 				}}
-				onReply={(message) => {
+				onReply={(message: ChannelMessage) => {
 					onReply(message);
 				}}
-				onPin={async (message) => {
+				onPin={async (message: ChannelMessage) => {
 					const pinned = !message.is_pinned;
 					const pinnedBy = pinned ? ($user?.id ?? null) : null;
 					const pinnedAt = pinned ? Date.now() * 1000000 : null;
 
-					messages = messages.map((m) => {
+					messages = (messages ?? []).map((m) => {
 						if (m.id === message.id) {
 							m.is_pinned = pinned;
 							m.pinned_by = pinnedBy;
@@ -219,17 +236,19 @@
 						}
 					);
 				}}
-				onThread={(id) => {
+				onThread={(id: string) => {
 					onThread(id);
 				}}
-				onReaction={(name) => {
+				onReaction={(name: string) => {
+					if (!$user) return;
+					const reactingUser = { id: $user.id, name: $user.name };
 					if (
 						(message?.reactions ?? [])
 							.find((reaction) => reaction.name === name)
 							?.users?.some((u) => u.id === $user?.id) ??
 						false
 					) {
-						messages = messages.map((m) => {
+						messages = (messages ?? []).map((m) => {
 							if (m.id === message.id) {
 								const reaction = m.reactions.find((reaction) => reaction.name === name);
 
@@ -255,18 +274,18 @@
 							return null;
 						});
 					} else {
-						messages = messages.map((m) => {
+						messages = (messages ?? []).map((m) => {
 							if (m.id === message.id) {
 								if (m.reactions) {
 									const reaction = m.reactions.find((reaction) => reaction.name === name);
 
 									if (reaction) {
-										reaction.users.push({ id: $user?.id, name: $user?.name });
+										reaction.users.push(reactingUser);
 										reaction.count = reaction.users.length;
 									} else {
 										m.reactions.push({
 											name: name,
-											users: [{ id: $user?.id, name: $user?.name }],
+											users: [reactingUser],
 											count: 1
 										});
 									}
@@ -300,7 +319,11 @@
 						</div>
 						<div class="[&_.markdown-prose]:text-sm! [&_.markdown-prose]:leading-[1.375rem]!">
 							{#key event.reply}
-								<AppChannelReply appId={event.app_id} channelId={channel.id} reply={event.reply} />
+								<AppChannelReply
+									appId={event.app_id}
+									channelId={message.channel_id}
+									reply={event.reply}
+								/>
 							{/key}
 						</div>
 						<div class="mt-1.5 flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">

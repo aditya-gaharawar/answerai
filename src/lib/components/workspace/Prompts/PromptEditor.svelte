@@ -54,7 +54,7 @@
 	let tags: { name: string }[] = [];
 	let commitMessage = '';
 	let isProduction = true;
-	let accessGrants = [];
+	let accessGrants: import('$lib/apis').AccessGrant[] = [];
 	let showAccessControlModal = false;
 	let hasManualEdit = false;
 	let history: any[] = [];

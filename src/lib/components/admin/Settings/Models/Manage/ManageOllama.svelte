@@ -5,7 +5,10 @@
 		cancelModelDownload
 	} from '$lib/stores/modelDownloads';
 
+	import { errorText } from '$lib/utils/errorText';
+	import type { OllamaModel } from '$lib/stores';
 	import { toast } from 'svelte-sonner';
+	import { get } from 'svelte/store';
 	import { getContext, onMount } from 'svelte';
 	const i18n: any = getContext('i18n');
 
@@ -40,11 +43,11 @@
 	// Models
 	export let urlIdx: number | null = null;
 
-	let ollamaModels = [];
+	let ollamaModels: OllamaModel[] = [];
 
-	let updateModelId = null;
-	let updateProgress = null;
-	let updateModelsControllers = {};
+	let updateModelId: string | null = null;
+	let updateProgress: number | null = null;
+	let updateModelsControllers: Record<string, AbortController | null> = {};
 	let updateCancelled = false;
 	let showExperimentalOllama = false;
 
@@ -58,14 +61,14 @@
 	let createModelObject = '';
 
 	let createModelDigest = '';
-	let createModelPullProgress = null;
+	let createModelPullProgress: number | null = null;
 
 	let modelUploadMode = 'file';
-	let modelInputFile: File[] | null = null;
+	let modelInputFile: FileList | null = null;
 	let modelFileUrl = '';
 	let modelFileDigest = '';
 
-	let uploadProgress = null;
+	let uploadProgress: number | null = null;
 	let uploadMessage = '';
 
 	let deleteModelTag = '';
@@ -103,7 +106,7 @@
 				[model.id]: controller
 			};
 
-			if (res) {
+			if (res?.body) {
 				const reader = res.body
 					.pipeThrough(new TextDecoderStream())
 					.pipeThrough(splitStream('\n'))
@@ -140,7 +143,7 @@
 							}
 						}
 					} catch (err) {
-						if (err.name !== 'AbortError') {
+						if (!(err instanceof Error && err.name === 'AbortError')) {
 							console.error(err);
 						}
 						break;
@@ -198,7 +201,8 @@
 			MODEL_DOWNLOAD_POOL.set({
 				...$MODEL_DOWNLOAD_POOL,
 				[sanitizedModelTag]: {
-					...$MODEL_DOWNLOAD_POOL[sanitizedModelTag],
+					...($MODEL_DOWNLOAD_POOL[sanitizedModelTag] ?? {}),
+					model: sanitizedModelTag,
 					abortController: controller,
 					reader,
 					done: false
@@ -245,10 +249,10 @@
 						}
 					}
 				} catch (err) {
-					if (err.name !== 'AbortError') {
+					if (!(err instanceof Error && err.name === 'AbortError')) {
 						console.error(err);
 						if (typeof err !== 'string') {
-							err = err.message;
+							err = errorText(err, String(err));
 						}
 
 						toast.error(`${err}`);
@@ -261,7 +265,7 @@
 
 			console.log($MODEL_DOWNLOAD_POOL[sanitizedModelTag]);
 
-			if ($MODEL_DOWNLOAD_POOL[sanitizedModelTag]?.done) {
+			if (get(MODEL_DOWNLOAD_POOL)[sanitizedModelTag]?.done) {
 				toast.success(
 					$i18n.t(`Model '{{modelName}}' has been successfully downloaded.`, {
 						modelName: sanitizedModelTag
@@ -271,7 +275,9 @@
 				models.set(
 					await getModels(
 						localStorage.token,
-						$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
+						$config?.features?.enable_direct_connections
+							? ($settings?.directConnections ?? null)
+							: null
 					)
 				);
 			} else {
@@ -316,7 +322,7 @@
 			);
 		}
 
-		if (fileResponse && fileResponse.ok) {
+		if (fileResponse?.body && fileResponse.ok) {
 			const reader = fileResponse.body
 				.pipeThrough(new TextDecoderStream())
 				.pipeThrough(splitStream('\n'))
@@ -376,7 +382,7 @@
 		models.set(
 			await getModels(
 				localStorage.token,
-				$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
+				$config?.features?.enable_direct_connections ? ($settings?.directConnections ?? null) : null
 			)
 		);
 	};
@@ -394,7 +400,7 @@
 		models.set(
 			await getModels(
 				localStorage.token,
-				$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
+				$config?.features?.enable_direct_connections ? ($settings?.directConnections ?? null) : null
 			)
 		);
 
@@ -452,7 +458,7 @@
 			return;
 		}
 
-		if (res && res.ok) {
+		if (res?.body && res.ok) {
 			const reader = res.body
 				.pipeThrough(new TextDecoderStream())
 				.pipeThrough(splitStream('\n'))
@@ -510,7 +516,7 @@
 		models.set(
 			await getModels(
 				localStorage.token,
-				$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
+				$config?.features?.enable_direct_connections ? ($settings?.directConnections ?? null) : null
 			)
 		);
 
@@ -670,7 +676,7 @@
 									class="text-gray-800 dark:text-gray-100"
 									aria-label={$i18n.t('Cancel')}
 									on:click={() => {
-										cancelUpdateModelHandler(updateModelId);
+										if (updateModelId) cancelUpdateModelHandler(updateModelId);
 									}}
 								>
 									<svg

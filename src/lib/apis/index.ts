@@ -1778,12 +1778,20 @@ export interface AccessGrant {
 	permission: 'read' | 'write';
 }
 export interface ModelKnowledgeReference {
-	id?: string;
+	id?: string | null;
 	name?: string;
 	type?: string;
 	collection_name?: string;
 	status?: string;
 	[key: string]: unknown;
+	file?: unknown;
+	url?: string;
+	context?: string;
+	description?: string;
+	size?: number;
+	error?: string;
+	itemId?: string;
+	content_type?: string;
 }
 export interface ModelConfig {
 	id: string;
@@ -1814,7 +1822,14 @@ export interface ModelMeta {
 	defaultFilterIds?: string[];
 	terminalId?: string;
 	tags?: { name: string }[];
-	user?: { id: string; name: string; email?: string; profile_image_url?: string };
+	user?: {
+		id: string;
+		name: string;
+		username?: string;
+		community?: boolean;
+		email?: string;
+		profile_image_url?: string;
+	};
 	description?: string | null;
 	i18n?: Record<string, Record<string, any>>;
 	hidden?: boolean;

@@ -1,10 +1,11 @@
+import type { NoteListItem } from '$lib/types/notes';
 import DOMPurify from 'dompurify';
 import { toast } from 'svelte-sonner';
 
 import { createNewNote } from '$lib/apis/notes';
 import { safeImageUrl } from '$lib/utils/safeImageUrl';
 
-export const downloadPdf = async (note) => {
+export const downloadPdf = async (note: Pick<NoteListItem, 'title' | 'data'>) => {
 	const [{ default: jsPDF }, { default: html2canvas }] = await Promise.all([
 		import('jspdf'),
 		import('html2canvas-pro')
@@ -18,64 +19,56 @@ export const downloadPdf = async (note) => {
 	const html = DOMPurify.sanitize(note.data?.content?.html ?? '');
 	const isDarkMode = document.documentElement.classList.contains('dark');
 
-	let node;
-	if (html instanceof HTMLElement) {
-		node = html;
-	} else {
-		const virtualWidth = 800; // px, fixed width for cloned element
+	// Clone and style
+	const node = document.createElement('div');
 
-		// Clone and style
-		node = document.createElement('div');
+	// title node
+	const titleNode = document.createElement('div');
+	titleNode.textContent = note.title;
+	titleNode.style.fontSize = '24px';
+	titleNode.style.fontWeight = 'medium';
+	titleNode.style.paddingBottom = '20px';
+	titleNode.style.color = isDarkMode ? 'white' : 'black';
+	node.appendChild(titleNode);
 
-		// title node
-		const titleNode = document.createElement('div');
-		titleNode.textContent = note.title;
-		titleNode.style.fontSize = '24px';
-		titleNode.style.fontWeight = 'medium';
-		titleNode.style.paddingBottom = '20px';
-		titleNode.style.color = isDarkMode ? 'white' : 'black';
-		node.appendChild(titleNode);
+	const contentNode = document.createElement('div');
 
-		const contentNode = document.createElement('div');
+	contentNode.innerHTML = html;
 
-		contentNode.innerHTML = html;
-
-		for (const img of contentNode.querySelectorAll('img[src^="data://"]')) {
-			const fileId = img.getAttribute('src').replace('data://', '');
-			const file = (note.data?.files ?? []).find((f) => f.id === fileId);
-			if (file) {
-				img.setAttribute('src', safeImageUrl(file.url || ''));
-			}
+	for (const img of contentNode.querySelectorAll('img[src^="data://"]')) {
+		const fileId = (img.getAttribute('src') ?? '').replace('data://', '');
+		const file = (note.data?.files ?? []).find((f) => f.id === fileId);
+		if (file) {
+			img.setAttribute('src', safeImageUrl(file.url || ''));
 		}
-
-		node.appendChild(contentNode);
-
-		node.classList.add('text-black');
-		node.classList.add('dark:text-white');
-		node.style.width = `${virtualWidth}px`;
-		node.style.position = 'absolute';
-		node.style.left = '-9999px';
-		node.style.height = 'auto';
-		node.style.padding = '40px 40px';
-
-		console.log(node);
-		document.body.appendChild(node);
 	}
 
+	node.appendChild(contentNode);
+
+	node.classList.add('text-black');
+	node.classList.add('dark:text-white');
+	node.style.width = `${virtualWidth}px`;
+	node.style.position = 'absolute';
+	node.style.left = '-9999px';
+	node.style.height = 'auto';
+	node.style.padding = '40px 40px';
+
+	document.body.appendChild(node);
 	// Render to canvas with predefined width
-	const canvas = await html2canvas(node, {
-		useCORS: true,
-		backgroundColor: isDarkMode ? '#000' : '#fff',
-		scale: 2, // Keep at 1x to avoid unexpected enlargements
-		width: virtualWidth, // Set fixed virtual screen width
-		windowWidth: virtualWidth, // Ensure consistent rendering
-		windowHeight: virtualHeight
-	});
-
-	// Remove hidden node if needed
-	if (!(html instanceof HTMLElement)) {
-		document.body.removeChild(node);
-	}
+	const canvas = await (async () => {
+		try {
+			return await html2canvas(node, {
+				useCORS: true,
+				backgroundColor: isDarkMode ? '#000' : '#fff',
+				scale: 2,
+				width: virtualWidth,
+				windowWidth: virtualWidth,
+				windowHeight: virtualHeight
+			});
+		} finally {
+			node.remove();
+		}
+	})();
 
 	const imgData = canvas.toDataURL('image/jpeg', 0.7);
 

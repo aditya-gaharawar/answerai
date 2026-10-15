@@ -1,5 +1,6 @@
 <script lang="ts">
-	import type { ModelConfig } from '$lib/apis';
+	import { errorText } from '$lib/utils/errorText';
+	import type { AccessGrant, ModelConfig } from '$lib/apis';
 	import type { Model } from '$lib/stores';
 	import type { ModelsConfig } from '$lib/apis/admin-types';
 	import { marked } from 'marked';
@@ -72,7 +73,8 @@
 	import TagSelector from '$lib/components/workspace/common/TagSelector.svelte';
 
 	type ModelListItem = Partial<ModelConfig> &
-		Partial<Model> & {
+		Partial<Pick<Model, keyof Model>> & {
+			ollama?: import('$lib/stores').OllamaModel['ollama'];
 			id: string;
 			name: string;
 			user?: { id: string; name: string; profile_image_url?: string } | null;
@@ -206,7 +208,9 @@
 		models = models;
 		// Sync with server
 		await Promise.all(
-			modelsToEnable.map((model) => upsertModelHandler(model, { is_active: true }, false))
+			modelsToEnable.map((model: ModelListItem) =>
+				upsertModelHandler(model, { is_active: true }, false)
+			)
 		);
 
 		await tick();
@@ -220,7 +224,9 @@
 		models = models;
 		// Sync with server
 		await Promise.all(
-			modelsToDisable.map((model) => upsertModelHandler(model, { is_active: false }, false))
+			modelsToDisable.map((model: ModelListItem) =>
+				upsertModelHandler(model, { is_active: false }, false)
+			)
 		);
 
 		await tick();
@@ -236,7 +242,7 @@
 		models = models;
 		// Sync with server
 		await Promise.all(
-			modelsToShow.map((model) =>
+			modelsToShow.map((model: ModelListItem) =>
 				upsertModelHandler(model, { meta: { ...model.meta, hidden: false } }, false)
 			)
 		);
@@ -255,7 +261,7 @@
 		models = models;
 		// Sync with server
 		await Promise.all(
-			modelsToHide.map((model) =>
+			modelsToHide.map((model: ModelListItem) =>
 				upsertModelHandler(model, { meta: { ...model.meta, hidden: true } }, false)
 			)
 		);
@@ -265,7 +271,7 @@
 		await init();
 	};
 
-	const downloadModels = async (models) => {
+	const downloadModels = async (models: ModelListItem[]) => {
 		try {
 			const exported = [];
 			for (const model of models) exported.push(await getPortableModel(model));
@@ -304,8 +310,10 @@
 			...allModels,
 			...providerModels.filter((model: ModelListItem) => !allModelIds.has(model.id))
 		];
-		availableModelIds = new Set(allModels.map((model) => model.id));
-		allModels.push(...savedModels.filter((model) => !availableModelIds.has(model.id)));
+		availableModelIds = new Set(allModels.map((model: ModelListItem) => model.id));
+		allModels.push(
+			...savedModels.filter((model: ModelListItem) => !availableModelIds.has(model.id))
+		);
 
 		models = allModels.map((m: ModelListItem) => {
 			const savedModel = savedModels.find((model: ModelListItem) => model.id === m.id);
@@ -327,9 +335,11 @@
 		});
 
 		modelOrderList = [
-			...modelOrderList.filter((id) => models.some((model) => model.id === id)),
-			...models
-				.map((model) => model.id)
+			...modelOrderList.filter((id) =>
+				(models ?? []).some((model: ModelListItem) => model.id === id)
+			),
+			...(models ?? [])
+				.map((model: ModelListItem) => model.id)
 				.filter((id) => !modelOrderList.includes(id))
 				.sort((a, b) => a.localeCompare(b))
 		];
@@ -419,7 +429,7 @@
 		}
 	};
 
-	const toggleDefaultModelHandler = async (model) => {
+	const toggleDefaultModelHandler = async (model: ModelListItem) => {
 		const isSelected = defaultModelIdSet.has(model.id);
 		const nextDefaultModelIds = isSelected
 			? defaultModelIds.filter((id) => id !== model.id)
@@ -434,7 +444,7 @@
 		);
 	};
 
-	const toggleDefaultPinnedModelHandler = async (model) => {
+	const toggleDefaultPinnedModelHandler = async (model: ModelListItem) => {
 		const isPinned = defaultPinnedModelIdSet.has(model.id);
 		const nextDefaultPinnedModelIds = isPinned
 			? defaultPinnedModelIds.filter((id) => id !== model.id)
@@ -449,14 +459,15 @@
 		);
 	};
 
-	const positionChangeHandler = async (event) => {
+	const positionChangeHandler = async (event: Sortable.SortableEvent) => {
 		const { oldIndex, newIndex, item } = event;
 
 		if (oldIndex === undefined || newIndex === undefined || oldIndex === newIndex) {
 			return;
 		}
 
-		const parent = item.parentNode;
+		const parent = item.parentElement;
+		if (!parent || !filteredModels[oldIndex] || !filteredModels[newIndex]) return;
 		const target = parent.children[oldIndex < newIndex ? oldIndex : oldIndex + 1];
 		parent.insertBefore(item, target);
 
@@ -492,7 +503,11 @@
 		});
 	}
 
-	const upsertModelHandler = async (model, overrides = {}, showToast = true) => {
+	const upsertModelHandler = async (
+		model: ModelListItem,
+		overrides: Partial<ModelListItem> = {},
+		showToast = true
+	) => {
 		model = { ...model, ...(isPresetModel(model) ? {} : { base_model_id: null }), ...overrides };
 
 		if (savedModels.find((m: ModelListItem) => m.id === model.id) || isPresetModel(model)) {
@@ -510,8 +525,6 @@
 		} else {
 			const res = await createNewModel(localStorage.token, {
 				meta: {},
-				id: model.id,
-				name: model.name,
 				base_model_id: null,
 				params: {},
 				access_grants: [],
@@ -532,11 +545,9 @@
 		}
 	};
 
-	const toggleModelHandler = async (model) => {
+	const toggleModelHandler = async (model: ModelListItem) => {
 		if (!savedModels.find((m: ModelListItem) => m.id === model.id) && !isPresetModel(model)) {
 			const res = await createNewModel(localStorage.token, {
-				id: model.id,
-				name: model.name,
 				base_model_id: null,
 				meta: {},
 				params: {},
@@ -585,7 +596,7 @@
 		}
 	};
 
-	const hideModelHandler = async (model) => {
+	const hideModelHandler = async (model: ModelListItem) => {
 		const updatedModel = {
 			...model,
 			meta: {
@@ -596,7 +607,9 @@
 
 		await upsertModelHandler(updatedModel, { meta: updatedModel.meta }, false);
 		if (models) {
-			models = models.map((model) => (model.id === updatedModel.id ? updatedModel : model));
+			models = models.map((model: ModelListItem) =>
+				model.id === updatedModel.id ? updatedModel : model
+			);
 		}
 		_models.set(
 			await getModels(
@@ -616,8 +629,8 @@
 		);
 	};
 
-	const toggleModelPrivacyHandler = async (model) => {
-		const nextAccessGrants = isPublicModel(model)
+	const toggleModelPrivacyHandler = async (model: ModelListItem) => {
+		const nextAccessGrants: AccessGrant[] = isPublicModel(model)
 			? []
 			: [
 					...(model?.access_grants ?? []),
@@ -650,14 +663,14 @@
 				)
 			);
 			toast.success(
-				isPublicModel({ access_grants: nextAccessGrants })
+				isPublicModel({ ...model, access_grants: nextAccessGrants })
 					? $i18n.t('Model is now public')
 					: $i18n.t('Model is now private')
 			);
 		}
 	};
 
-	const copyLinkHandler = async (model) => {
+	const copyLinkHandler = async (model: ModelListItem) => {
 		const baseUrl = window.location.origin;
 		const res = await copyToClipboard(`${baseUrl}/?model=${encodeURIComponent(model.id)}`);
 
@@ -688,7 +701,7 @@
 		selectedModelId = model.id;
 	};
 
-	const cloneHandler = async (model) => {
+	const cloneHandler = async (model: ModelListItem) => {
 		model = await getFullModel(model);
 		sessionStorage.model = JSON.stringify({
 			...model,
@@ -700,7 +713,7 @@
 		await goto('/workspace/models/create');
 	};
 
-	const exportModelHandler = async (model) => {
+	const exportModelHandler = async (model: ModelListItem) => {
 		try {
 			model = await getPortableModel(model);
 		} catch (error: any) {
@@ -713,7 +726,7 @@
 		saveAs(blob, `${model.id}-${Date.now()}.json`);
 	};
 
-	const pinModelHandler = async (modelId) => {
+	const pinModelHandler = async (modelId: string) => {
 		settings.set({
 			...$settings,
 			pinnedModels: $pinnedModels.includes(modelId)
@@ -723,16 +736,16 @@
 		await updateUserSettings(localStorage.token, { ui: { pinnedModels: $settings.pinnedModels } });
 	};
 
-	onMount(async () => {
-		await init();
+	onMount(() => {
+		void init().catch((error) => toast.error(`${error}`));
 
-		const onKeyDown = (event) => {
+		const onKeyDown = (event: KeyboardEvent) => {
 			if (event.key === 'Shift') {
 				shiftKey = true;
 			}
 		};
 
-		const onKeyUp = (event) => {
+		const onKeyUp = (event: KeyboardEvent) => {
 			if (event.key === 'Shift') {
 				shiftKey = false;
 			}
@@ -811,30 +824,23 @@
 					type="file"
 					accept=".json"
 					hidden
-					on:change={() => {
-						if (importFiles.length > 0) {
-							const reader = new FileReader();
-							reader.onload = async (event) => {
-								modelsImportInProgress = true;
-
-								try {
-									const models = JSON.parse(String(event.target.result));
-									const res = await importModels(localStorage.token, models);
-
-									if (res) {
-										toast.success($i18n.t('Models imported successfully'));
-										await init();
-									} else {
-										toast.error($i18n.t('Failed to import models'));
-									}
-								} catch (e) {
-									toast.error(e?.detail ?? $i18n.t('Invalid JSON file'));
-									console.error(e);
-								}
-
-								modelsImportInProgress = false;
-							};
-							reader.readAsText(importFiles[0]);
+					on:change={async () => {
+						const file = importFiles?.[0];
+						if (!file || modelsImportInProgress) return;
+						modelsImportInProgress = true;
+						try {
+							const imported: unknown = JSON.parse(await file.text());
+							if (!Array.isArray(imported)) throw new Error('Invalid models file');
+							const res = await importModels(localStorage.token, imported);
+							if (res) {
+								toast.success($i18n.t('Models imported successfully'));
+								await init();
+							} else toast.error($i18n.t('Failed to import models'));
+						} catch (error) {
+							toast.error(errorText(error, $i18n.t('Invalid JSON file')));
+						} finally {
+							modelsImportInProgress = false;
+							modelsImportInputElement.value = '';
 						}
 					}}
 				/>
@@ -933,7 +939,8 @@
 											on:click={() => {
 												downloadModels(
 													(models ?? []).filter(
-														(model) => !selectedTag || modelTags(model).includes(selectedTag)
+														(model: ModelListItem) =>
+															!selectedTag || modelTags(model).includes(selectedTag)
 													)
 												);
 											}}
@@ -1075,10 +1082,13 @@
 													loading="lazy"
 													decoding="async"
 													on:error={(e) => {
+														const answeraiEventTarget = e.currentTarget;
+														if (!(answeraiEventTarget instanceof HTMLImageElement)) return;
+
 														// LICENSE covers this Open ANSWERAI fallback logo.
 														// Do not alter, remove, obscure, or replace it except as LICENSE permits:
 														// https://docs.openwebui.com/license.
-														e.target.src = '/favicon.png';
+														answeraiEventTarget.src = '/favicon.png';
 													}}
 												/>
 											</div>
@@ -1352,7 +1362,7 @@
 			edit
 			model={models?.find((m) => m.id === selectedModelId)}
 			preset={false}
-			onSubmit={async (model) => {
+			onSubmit={async (model: ModelListItem) => {
 				console.log(model);
 				if (!(await upsertModelHandler(model))) {
 					toast.error($i18n.t('Failed to save model'));

@@ -9,7 +9,7 @@
 	const i18n = getContext('i18n');
 
 	export let show = false;
-	export let codeExecution = null;
+	export let codeExecution: import('$lib/types/messages').CodeExecution | null | undefined = null;
 </script>
 
 <Modal size="lg" bind:show>

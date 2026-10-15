@@ -15,6 +15,8 @@
 	export let screenReader = true;
 	export let autocomplete = 'off';
 	export let name: string | undefined = undefined;
+	export let ariaLabel: string | undefined = undefined;
+	export let ariaRequired: boolean | undefined = undefined;
 	let className = '';
 	export { className as class };
 
@@ -42,6 +44,8 @@
 		<label class="sr-only" for={id}>{placeholder || $i18n.t('Password')}</label>
 	{/if}
 	<input
+		aria-label={ariaLabel}
+		aria-required={ariaRequired}
 		{id}
 		class={resolvedInputClass}
 		{placeholder}

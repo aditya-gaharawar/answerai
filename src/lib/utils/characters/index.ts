@@ -1,6 +1,6 @@
 import CRC32 from 'crc-32';
 
-export const parseFile = async (file) => {
+export const parseFile = async (file: File) => {
 	if (file.type === 'application/json') {
 		return await parseJsonFile(file);
 	} else if (file.type === 'image/png') {
@@ -10,7 +10,7 @@ export const parseFile = async (file) => {
 	}
 };
 
-const parseJsonFile = async (file) => {
+const parseJsonFile = async (file: File) => {
 	const text = await file.text();
 	const json = JSON.parse(text);
 
@@ -24,7 +24,7 @@ const parseJsonFile = async (file) => {
 	};
 };
 
-const parsePngFile = async (file) => {
+const parsePngFile = async (file: File) => {
 	const arrayBuffer = await file.arrayBuffer();
 	const text = parsePngText(arrayBuffer);
 	const json = JSON.parse(text);
@@ -41,7 +41,7 @@ const parsePngFile = async (file) => {
 	};
 };
 
-const parsePngText = (arrayBuffer) => {
+const parsePngText = (arrayBuffer: ArrayBuffer) => {
 	const textChunkKeyword = 'chara';
 	const chunks = readPngChunks(new Uint8Array(arrayBuffer));
 
@@ -57,11 +57,11 @@ const parsePngText = (arrayBuffer) => {
 	try {
 		return new TextDecoder().decode(Uint8Array.from(atob(textChunk.text), (c) => c.charCodeAt(0)));
 	} catch (e) {
-		throw new Error('Unable to parse "chara" field as base64', e);
+		throw new Error('Unable to parse "chara" field as base64', { cause: e });
 	}
 };
 
-const readPngChunks = (data) => {
+const readPngChunks = (data: Uint8Array) => {
 	const isValidPng =
 		data[0] === 0x89 &&
 		data[1] === 0x50 &&
@@ -78,9 +78,10 @@ const readPngChunks = (data) => {
 	let offset = 8; // Skip PNG signature
 
 	while (offset < data.length) {
-		const length =
-			(data[offset] << 24) | (data[offset + 1] << 16) | (data[offset + 2] << 8) | data[offset + 3];
-		const type = String.fromCharCode.apply(null, data.slice(offset + 4, offset + 8));
+		if (data.length - offset < 12) throw new Error('Truncated PNG chunk');
+		const length = new DataView(data.buffer, data.byteOffset + offset, 4).getUint32(0);
+		if (length > data.length - offset - 12) throw new Error('Invalid PNG chunk length');
+		const type = String.fromCharCode(...data.subarray(offset + 4, offset + 8));
 		const chunkData = data.slice(offset + 8, offset + 8 + length);
 		const crc =
 			(data[offset + 8 + length] << 24) |
@@ -99,7 +100,7 @@ const readPngChunks = (data) => {
 	return chunks;
 };
 
-const decodeTextChunk = (data) => {
+const decodeTextChunk = (data: Uint8Array) => {
 	let i = 0;
 	const keyword = [];
 	const text = [];
@@ -115,23 +116,18 @@ const decodeTextChunk = (data) => {
 	return { keyword: keyword.join(''), text: text.join('') };
 };
 
-const extractCharacter = (json) => {
-	function getTrimmedValue(json, keys) {
+const extractCharacter = (json: unknown) => {
+	function getTrimmedValue(json: unknown, keys: string[]): string | undefined {
 		return keys
-			.map((key: string) => {
-				const keyParts = key.split('.');
-				let value = json;
-				for (const part of keyParts) {
-					if (value && value[part] != null) {
-						value = value[part];
-					} else {
-						value = null;
-						break;
-					}
+			.map((key) => {
+				let value: unknown = json;
+				for (const part of key.split('.')) {
+					if (!value || typeof value !== 'object' || !Object.hasOwn(value, part)) return undefined;
+					value = (value as Record<string, unknown>)[part];
 				}
-				return value && value.trim();
+				return typeof value === 'string' ? value.trim() : undefined;
 			})
-			.find((value) => value);
+			.find((value) => Boolean(value));
 	}
 
 	const name = getTrimmedValue(json, ['char_name', 'name', 'data.name']);
@@ -154,44 +150,35 @@ const extractCharacter = (json) => {
 	return { name, summary, personality, scenario, greeting, examples };
 };
 
-const detectFormats = (json) => {
-	const formats = [];
-
+const detectFormats = (json: unknown) => {
+	const formats: string[] = [];
+	const record = (value: unknown): Record<string, unknown> =>
+		value && typeof value === 'object' && !Array.isArray(value)
+			? (value as Record<string, unknown>)
+			: {};
+	const root = record(json);
+	const complete = (value: unknown, keys: string[]) =>
+		keys.every(
+			(key) =>
+				typeof record(value)[key] === 'string' && Boolean((record(value)[key] as string).trim())
+		);
 	if (
-		json.char_name &&
-		json.char_persona &&
-		json.world_scenario &&
-		json.char_greeting &&
-		json.example_dialogue
+		complete(root, [
+			'char_name',
+			'char_persona',
+			'world_scenario',
+			'char_greeting',
+			'example_dialogue'
+		])
 	)
 		formats.push('Text Generation Character');
 	if (
-		json.name &&
-		json.personality &&
-		json.description &&
-		json.scenario &&
-		json.first_mes &&
-		json.mes_example
+		complete(root, ['name', 'personality', 'description', 'scenario', 'first_mes', 'mes_example'])
 	)
 		formats.push('TavernAI Character');
-	if (
-		json.character &&
-		json.character.name &&
-		json.character.title &&
-		json.character.description &&
-		json.character.greeting &&
-		json.character.definition
-	)
+	if (complete(root.character, ['name', 'title', 'description', 'greeting', 'definition']))
 		formats.push('CharacterAI Character');
-	if (
-		json.info &&
-		json.info.character &&
-		json.info.character.name &&
-		json.info.character.title &&
-		json.info.character.description &&
-		json.info.character.greeting
-	)
+	if (complete(record(root.info).character, ['name', 'title', 'description', 'greeting']))
 		formats.push('CharacterAI History');
-
 	return formats;
 };

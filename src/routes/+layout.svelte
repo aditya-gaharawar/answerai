@@ -1,4 +1,5 @@
 <script>
+	import { workerRequest } from '$lib/utils/workerRequest';
 	import { splitStream } from '$lib/utils/streamText';
 	import { CleanupScope } from '$lib/utils/cleanupScope';
 	import { io } from 'socket.io-client';
@@ -133,6 +134,7 @@
 	let showRefresh = false;
 
 	let showSyncStatsModal = false;
+	/** @type {import('$lib/types/socket').SyncStatsEvent | null} */
 	let syncStatsEventData = null;
 
 	/** @type {ReturnType<typeof setInterval> | null} */
@@ -165,7 +167,7 @@
 
 	/** @param {string | null} reason */
 	const isLikelyResumeDisconnect = (reason) => {
-		return (!pageIsVisible || recentlyResumed()) && RESUME_DISCONNECT_REASONS.has(reason);
+		return (!pageIsVisible || recentlyResumed()) && RESUME_DISCONNECT_REASONS.has(reason ?? '');
 	};
 
 	const scheduleDisconnectToast = () => {
@@ -318,12 +320,23 @@
 		return worker;
 	};
 
+	/** @type {Set<() => void>} */
+	const pendingExecutions = new Set();
+	let runtimeDestroyed = false;
+	onDestroy(() => {
+		runtimeDestroyed = true;
+		for (const dispose of pendingExecutions) dispose();
+		pendingExecutions.clear();
+		$pyodideWorker?.terminate();
+		pyodideWorker.set(null);
+	});
+	/**
+	 * @param {string} id
+	 * @param {string} code
+	 * @param {import('$lib/types/socket').SocketReply | undefined} cb
+	 * @param {{id?: string; filename?: string; name?: string}[]} files
+	 */
 	const executePythonAsWorker = async (id, code, cb, files = []) => {
-		let result = null;
-		let stdout = null;
-		let stderr = null;
-
-		let executing = true;
 		let packages = [
 			/\bimport\s+requests\b|\bfrom\s+requests\b/.test(code) ? 'requests' : null,
 			/\bimport\s+bs4\b|\bfrom\s+bs4\b/.test(code) ? 'beautifulsoup4' : null,
@@ -344,8 +357,6 @@
 			/\bimport\s+docx\b|\bfrom\s+docx\b/.test(code) ? 'python-docx' : null
 		].filter(Boolean);
 
-		const worker = getOrCreateWorker();
-
 		// Fetch file content from the server and prepare for the worker
 		let filePayloads = [];
 		if (files && files.length > 0) {
@@ -365,103 +376,46 @@
 			}
 		}
 
-		worker.postMessage({
-			type: 'execute',
-			id: id,
-			code: code,
-			packages: packages,
-			files: filePayloads.length > 0 ? filePayloads : undefined
-		});
-
-		// Timeout for this specific execution (not the worker itself)
-		let timeoutId = setTimeout(() => {
-			if (executing) {
-				executing = false;
-				stderr = 'Execution Time Limit Exceeded';
-
-				// Terminate and recreate the worker on timeout
-				worker.terminate();
-				pyodideWorker.set(null);
-
-				if (cb) {
-					cb(
-						JSON.parse(
-							JSON.stringify(
-								{
-									stdout: stdout,
-									stderr: stderr,
-									result: result
-								},
-								(_key, value) => (typeof value === 'bigint' ? value.toString() : value)
-							)
-						)
+		if (runtimeDestroyed) return;
+		const worker = getOrCreateWorker();
+		let settled = false;
+		let dispose = () => {};
+		/** @param {unknown} value */
+		const finish = (value) => {
+			settled = true;
+			pendingExecutions.delete(dispose);
+			cb?.(
+				JSON.parse(
+					JSON.stringify(value, (_key, value) =>
+						typeof value === 'bigint' ? value.toString() : value
+					)
+				)
+			);
+		};
+		dispose = workerRequest(
+			worker,
+			{ type: 'execute', code, packages, files: filePayloads.length ? filePayloads : undefined },
+			(result) => {
+				if (result && typeof result === 'object') {
+					const output = /** @type {{stdout?: unknown; stderr?: unknown; result?: unknown}} */ (
+						result
 					);
+					finish({ stdout: output.stdout, stderr: output.stderr, result: output.result });
 				}
+				window.dispatchEvent(new Event('pyodide:files'));
+			},
+			(error) => {
+				if ($pyodideWorker === worker) {
+					worker.terminate();
+					pyodideWorker.set(null);
+				}
+				finish({ stdout: null, stderr: error.message, result: null });
 			}
-		}, 60000);
-
-		// Use addEventListener so multiple concurrent executions don't clobber each other
-		const onMessage = (event) => {
-			const { id: eventId, ...data } = event.data;
-			// Only handle responses for this execution ID
-			if (eventId !== id) return;
-			// Ignore FS responses (they use a type field)
-			if (data.type && data.type.startsWith('fs:')) return;
-
-			console.log('pyodideWorker.onmessage', event);
-			clearTimeout(timeoutId);
-			worker.removeEventListener('message', onMessage);
-			worker.removeEventListener('error', onError);
-
-			data['stdout'] && (stdout = data['stdout']);
-			data['stderr'] && (stderr = data['stderr']);
-			data['result'] && (result = data['result']);
-
-			if (cb) {
-				cb(
-					JSON.parse(
-						JSON.stringify(
-							{
-								stdout: stdout,
-								stderr: stderr,
-								result: result
-							},
-							(_key, value) => (typeof value === 'bigint' ? value.toString() : value)
-						)
-					)
-				);
-			}
-
-			executing = false;
-		};
-
-		const onError = (event) => {
-			console.log('pyodideWorker.onerror', event);
-			clearTimeout(timeoutId);
-			worker.removeEventListener('message', onMessage);
-			worker.removeEventListener('error', onError);
-
-			if (cb) {
-				cb(
-					JSON.parse(
-						JSON.stringify(
-							{
-								stdout: stdout,
-								stderr: stderr,
-								result: result
-							},
-							(_key, value) => (typeof value === 'bigint' ? value.toString() : value)
-						)
-					)
-				);
-			}
-			executing = false;
-		};
-
-		worker.addEventListener('message', onMessage);
-		worker.addEventListener('error', onError);
+		);
+		if (!settled) pendingExecutions.add(dispose);
 	};
 
+	/** @param {string | undefined} serverUrl */
 	const resolveToolServer = (serverUrl) => {
 		let toolServer = $settings?.toolServers?.find((server) => server.url === serverUrl);
 		if (!toolServer) {
@@ -492,11 +446,18 @@
 		return { toolServer, toolServerData, token };
 	};
 
+	/** @param {string | undefined} serverUrl */
 	const isDirectTerminalServer = (serverUrl) =>
 		!!serverUrl &&
 		(($settings?.terminalServers ?? []).some((server) => server.url === serverUrl) ||
 			($terminalServers ?? []).some((server) => !server.id && server.url === serverUrl));
 
+	/**
+	 * @param {import('$lib/types/socket').TerminalFileResult | null} result
+	 * @param {import('$lib/types/socket').ToolParams | undefined} params
+	 * @param {string} serverUrl
+	 * @param {string} chatId
+	 */
 	const terminalFileResult = (result, params, serverUrl, chatId) => {
 		const path = result?.path ?? params?.path;
 		const name =
@@ -525,6 +486,11 @@
 		};
 	};
 
+	/**
+	 * @param {import('$lib/types/socket').ToolExecutionRequest} data
+	 * @param {import('$lib/types/socket').SocketReply | undefined} cb
+	 * @param {string} chatId
+	 */
 	const executeTool = async (data, cb, chatId) => {
 		if (!$config?.features?.enable_tool_servers) {
 			cb?.({ error: 'Tool servers are disabled' });
@@ -537,13 +503,11 @@
 			data?.params?.inline === undefined &&
 			$settings?.terminalFileDisplay === 'inline' &&
 			isDirectTerminalServer(data.server?.url);
-		const params = defaultInline ? { ...data.params, inline: true } : data?.params;
+		const params = defaultInline ? { ...data.params, inline: true } : (data.params ?? {});
 		const serverParams = data?.name === 'display_file' && params ? { ...params } : params;
 		if (serverParams && data?.name === 'display_file') {
 			delete serverParams.page;
 		}
-
-		console.log('executeTool', data, toolServer);
 
 		if (toolServer) {
 			const res = await executeToolServer(
@@ -555,7 +519,6 @@
 				chatId
 			);
 
-			console.log('executeToolServer', res);
 			const result = Array.isArray(res) ? res[0] : res;
 			const inlineDisplayFile =
 				data?.name === 'display_file' && params?.path && params?.inline === true;
@@ -590,6 +553,8 @@
 		}
 	};
 
+	/** @param {import('$lib/types/socket').RootChatEvent} event
+	 * @param {import('$lib/types/socket').SocketReply} cb */
 	const chatEventHandler = async (event, cb) => {
 		if (event.shared) return;
 		// Answer this session's availability check even when another chat is active.
@@ -597,12 +562,12 @@
 			event?.data?.type === 'request:terminal:state' &&
 			event.data.data?.session_id === $socket?.id
 		) {
+			const terminalId = event.data.data.terminal_id;
 			cb?.({
 				connected:
 					$config?.features?.enable_tool_servers &&
 					[...$connectedUserTerminals.values()].some(
-						(shell) =>
-							shell.terminalId === event.data.data?.terminal_id && shell.chatId === event.chat_id
+						(shell) => shell.terminalId === terminalId && shell.chatId === event.chat_id
 					)
 			});
 			return;
@@ -628,8 +593,7 @@
 		}
 
 		await tick();
-		const type = event?.data?.type ?? null;
-		const data = event?.data?.data ?? null;
+		const { type, data } = event.data;
 
 		// Calendar alerts are not chat-scoped, handle before chat_id checks
 		if (type === 'calendar:alert' && data) {
@@ -671,11 +635,9 @@
 		// because the backend's sio.call blocks waiting for our callback response.
 		if (data?.session_id === $socket?.id) {
 			if (type === 'execute:python') {
-				console.log('execute:python', data);
 				executePythonAsWorker(data.id, data.code, cb, data.files || []);
 				return;
 			} else if (type === 'execute:tool') {
-				console.log('execute:tool', data);
 				executeTool(data, cb, event.chat_id);
 				return;
 			} else if (type === 'request:terminal') {
@@ -695,7 +657,6 @@
 				}
 				return;
 			} else if (type === 'request:chat:completion') {
-				console.log(data, $socket?.id);
 				const { session_id, channel, form_data, model } = data;
 
 				try {
@@ -842,14 +803,13 @@
 		}
 	};
 
+	/** @param {import('$lib/types/socket').ChannelNotificationEvent} event */
 	const channelEventHandler = async (event) => {
-		console.log('channelEventHandler', event);
 		if (event.data?.type === 'channel:mute') {
+			const muted = event.data.data.is_channel_muted;
 			channels.update((items) =>
 				items.map((item) =>
-					item.id === event.channel_id
-						? { ...item, is_channel_muted: event.data.data.is_channel_muted }
-						: item
+					item.id === event.channel_id ? { ...item, is_channel_muted: muted } : item
 				)
 			);
 			return;
@@ -891,8 +851,7 @@
 
 		if ((!channel || isInBackground) && event?.user?.id !== $user?.id) {
 			await tick();
-			const type = event?.data?.type ?? null;
-			const data = event?.data?.data ?? null;
+			const { type, data } = event.data;
 
 			if ($channels) {
 				if ($channels.find((ch) => ch.id === event.channel_id) && $channelId !== event.channel_id) {
@@ -1064,6 +1023,7 @@
 		}
 	};
 
+	/** @param {import('$lib/stores').DesktopEvent} event */
 	const desktopEventHandler = async (event) => {
 		// Events that don't require auth
 		if (event.type === 'page:reload') {
@@ -1101,7 +1061,9 @@
 				.forEach((e) => {
 					e.split(' ').forEach((cls) => document.documentElement.classList.remove(cls));
 				});
-			themeToApply.split(' ').forEach((cls) => document.documentElement.classList.add(cls));
+			themeToApply
+				.split(' ')
+				.forEach((/** @type {string} */ cls) => document.documentElement.classList.add(cls));
 			return;
 		}
 		if (event.type === 'models:refresh') {
@@ -1363,7 +1325,6 @@
 			let backendConfig = null;
 			try {
 				backendConfig = await getBackendConfig();
-				console.log('Backend config:', backendConfig);
 			} catch (error) {
 				if (error && typeof error === 'object' && 'authRedirect' in error && error.authRedirect) {
 					// Forward-auth proxy is redirecting to an external login page.

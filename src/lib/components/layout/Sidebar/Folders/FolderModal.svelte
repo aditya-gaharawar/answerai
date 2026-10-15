@@ -165,7 +165,10 @@
 						hidden
 						accept="image/*"
 						on:change={(e) => {
-							const inputFiles = e.target.files;
+							const answeraiEventTarget = e.currentTarget;
+							if (!(answeraiEventTarget instanceof HTMLInputElement)) return;
+
+							const inputFiles = answeraiEventTarget.files;
 
 							let reader = new FileReader();
 							reader.onload = (event) => {
@@ -185,7 +188,7 @@
 								console.log(`Unsupported File Type '${inputFiles[0]['type']}'.`);
 
 								// clear the input
-								e.target.value = '';
+								answeraiEventTarget.value = '';
 							}
 						}}
 					/>

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import type { ModelConnection } from '$lib/types/connections';
 	import { getContext, tick } from 'svelte';
 	const i18n = getContext('i18n');
 
@@ -11,13 +12,13 @@
 	import { connect } from 'socket.io-client';
 
 	export let onDelete = () => {};
-	export let onSubmit = () => {};
+	export let onSubmit: (connection: ModelConnection) => void = () => {};
 
 	export let pipeline = false;
 
 	export let url = '';
 	export let key = '';
-	export let config = {};
+	export let config: ModelConnection['config'] = {};
 
 	let showConfigModal = false;
 </script>
@@ -34,7 +35,7 @@
 		onDelete();
 		showConfigModal = false;
 	}}
-	onSubmit={(connection) => {
+	onSubmit={(connection: ModelConnection) => {
 		url = connection.url;
 		key = connection.key;
 		config = connection.config;

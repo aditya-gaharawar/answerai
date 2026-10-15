@@ -9,14 +9,14 @@
 
 	export let id = '';
 	export let show = false;
-	export let citations = [];
+	export let citations: import('$lib/utils/citations').Citation[] = [];
 	export let showPercentage = false;
 	export let showRelevance = true;
 
 	let showCitationModal = false;
-	let selectedCitation: any = null;
+	let selectedCitation: import('$lib/utils/citations').Citation | null = null;
 
-	export const showCitation = (citation) => {
+	export const showCitation = (citation: import('$lib/utils/citations').Citation) => {
 		selectedCitation = citation;
 		showCitationModal = true;
 	};

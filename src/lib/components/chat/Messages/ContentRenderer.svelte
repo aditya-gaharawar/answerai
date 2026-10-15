@@ -21,6 +21,7 @@
 	 * Extracts all top-level <details>...</details> blocks from content,
 	 * handling nested <details> via depth tracking.
 	 * Returns { detailsContent, plainContent }.
+	 * @param {string} text
 	 */
 	const extractDetailsBlocks = (text) => {
 		const blocks = [];
@@ -77,6 +78,8 @@
 	export let history;
 	export let messageId;
 
+	/** @type {string[]} */
+
 	export let selectedModels = [];
 
 	export let done = true;
@@ -94,16 +97,22 @@
 	export let topPadding = false;
 	export let allowEmbeds = false;
 
+	/** @type {(event: unknown) => void} */
 	export let onSave = (e) => {};
+	/** @type {(event: unknown) => void} */
 	export let onSourceClick = (e) => {};
+	/** @type {(event: unknown) => void} */
 	export let onTaskClick = (e) => {};
+	/** @type {(event: unknown) => void} */
 	export let onToolCallResolved = (e) => {};
+	/** @type {(text: string) => void} */
 	export let onSetInputText = (text) => {};
 
 	/** @type {HTMLDivElement} */
 	let contentContainerElement;
 	/** @type {InstanceType<typeof FloatingButtons>} */
 	let floatingButtonsElement;
+	/** @type {Range | null} */
 	let floatingButtonsRange = null;
 
 	/** @type {string[]} */
@@ -166,24 +175,27 @@
 		}
 	);
 
+	/** @type {ReturnType<typeof setTimeout> | undefined} */
+	let selectionTimer;
+	/** @param {MouseEvent} event */
 	const updateButtonPosition = (event) => {
+		const target = event.target;
+		if (!(target instanceof Node)) return;
 		const buttonsContainerElement = document.getElementById(`floating-buttons-${id}`);
-		if (
-			!contentContainerElement?.contains(event.target) &&
-			!buttonsContainerElement?.contains(event.target)
-		) {
+		if (!contentContainerElement?.contains(target) && !buttonsContainerElement?.contains(target)) {
 			closeFloatingButtons();
 			return;
 		}
 
-		setTimeout(async () => {
+		clearTimeout(selectionTimer);
+		selectionTimer = setTimeout(async () => {
 			await tick();
 
-			if (!contentContainerElement?.contains(event.target)) return;
+			if (!contentContainerElement?.contains(target)) return;
 
 			let selection = window.getSelection();
 
-			if (selection.toString().trim().length > 0) {
+			if (selection && selection.rangeCount > 0 && selection.toString().trim().length > 0) {
 				floatingButtonsRange = selection.getRangeAt(0);
 				positionFloatingButtons();
 			} else {
@@ -234,6 +246,7 @@
 		}
 	};
 
+	/** @param {KeyboardEvent} e */
 	const keydownHandler = (e) => {
 		if (e.key === 'Escape') {
 			closeFloatingButtons();
@@ -254,6 +267,7 @@
 	}
 
 	function detachListeners() {
+		clearTimeout(selectionTimer);
 		if (listenersAttached) {
 			contentContainerElement?.removeEventListener('mouseup', updateButtonPosition);
 			document.removeEventListener('mouseup', updateButtonPosition);

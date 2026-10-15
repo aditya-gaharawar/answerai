@@ -30,11 +30,11 @@
 	let type = '';
 	let name = '';
 
-	let isPrivate = null;
-	let accessGrants = [];
+	let isPrivate: boolean | null = null;
+	let accessGrants: import('$lib/apis').AccessGrant[] = [];
 
-	let groupIds = [];
-	let userIds = [];
+	let groupIds: string[] = [];
+	let userIds: string[] = [];
 
 	let loading = false;
 

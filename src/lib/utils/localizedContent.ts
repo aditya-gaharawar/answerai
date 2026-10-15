@@ -3,11 +3,8 @@ import type { ModelControl } from '$lib/apis';
 type LocaleEntry = Record<string, any>;
 type LocalizedMap = Record<string, LocaleEntry>;
 
-export type PromptSuggestion = {
-	title: [string, string] | string[];
-	content: string;
-	[key: string]: any;
-};
+import type { PromptSuggestion } from './promptSuggestions';
+export type { PromptSuggestion } from './promptSuggestions';
 
 const isPresent = (value: unknown) => typeof value === 'string' && value.trim() !== '';
 

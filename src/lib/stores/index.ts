@@ -55,7 +55,8 @@ export const TTSWorker = writable<import('$lib/workers/KokoroWorker').KokoroWork
 export const chatId = writable('');
 export const chatTitle = writable('');
 
-type ChannelListItem = {
+export type ChannelListItem = {
+	name?: string;
 	id: string;
 	type: string | null;
 	is_channel_muted: boolean;
@@ -65,7 +66,7 @@ type ChannelListItem = {
 };
 
 export const channels = writable<ChannelListItem[]>([]);
-export const channelId = writable(null);
+export const channelId = writable<string | null>(null);
 
 export { chats, pinnedChats } from './chatList';
 export const pinnedNotes = writable<
@@ -302,7 +303,7 @@ export type Settings = {
 	temporaryChatByDefault?: boolean;
 	chatFadeStreamingText?: boolean;
 	tools?: string[];
-	floatingActionButtons?: boolean;
+	floatingActionButtons?: import('$lib/types/messages').FloatingAction[] | null;
 	showFloatingActionButtons?: boolean;
 	regenerateMenu?: boolean;
 	keepFollowUpPrompts?: boolean;

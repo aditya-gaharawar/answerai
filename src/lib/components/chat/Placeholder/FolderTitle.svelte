@@ -1,6 +1,13 @@
 <script lang="ts">
+	import type { FolderRecord } from '$lib/types/folders';
+	type FolderUpdate = {
+		name: string;
+		meta?: FolderRecord['meta'];
+		data?: FolderRecord['data'];
+		parent_id?: string | null;
+	};
 	import { getContext } from 'svelte';
-	const i18n = getContext('i18n');
+	const i18n = getContext<typeof import('$lib/i18n').default>('i18n');
 
 	import DOMPurify from 'dompurify';
 
@@ -30,11 +37,11 @@
 	import Emoji from '$lib/components/common/Emoji.svelte';
 	import EmojiPicker from '$lib/components/common/EmojiPicker.svelte';
 
-	export let folder = null;
+	export let folder: FolderRecord | null = null;
 	export let readOnly: boolean = false;
 
-	export let onUpdate: Function = (folderId) => {};
-	export let onDelete: Function = (folderId) => {};
+	export let onUpdate: (folder?: FolderRecord) => unknown = () => {};
+	export let onDelete: (folder: FolderRecord) => unknown = () => {};
 
 	let showFolderModal = false;
 	let showCreateSubFolderModal = false;
@@ -42,7 +49,8 @@
 	let showDeleteConfirm = false;
 	let deleteFolderContents = true;
 
-	const updateHandler = async ({ name, meta, data }) => {
+	const updateHandler = async ({ name, meta, data }: FolderUpdate) => {
+		if (!folder) return;
 		name = name?.trim();
 		if (!name) {
 			toast.error($i18n.t('Folder name cannot be empty.'));
@@ -60,7 +68,7 @@
 		}).catch((error) => {
 			toast.error(`${error}`);
 
-			folder.name = currentName;
+			if (folder) folder.name = currentName;
 			return null;
 		});
 
@@ -83,7 +91,8 @@
 		}
 	};
 
-	const updateIconHandler = async (iconName) => {
+	const updateIconHandler = async (iconName: string | null) => {
+		if (!folder) return;
 		const res = await updateFolderById(localStorage.token, folder.id, {
 			meta: {
 				icon: iconName ?? ''
@@ -110,6 +119,7 @@
 	};
 
 	const deleteHandler = async () => {
+		if (!folder) return;
 		const res = await deleteFolderById(localStorage.token, folder.id, deleteFolderContents).catch(
 			(error) => {
 				toast.error(`${error}`);
@@ -124,6 +134,7 @@
 	};
 
 	const exportHandler = async () => {
+		if (!folder) return;
 		const chats = await getChatsByFolderId(localStorage.token, folder.id).catch((error) => {
 			toast.error(`${error}`);
 			return null;
@@ -139,7 +150,7 @@
 		saveAs(blob, `folder-${folder.name}-export-${Date.now()}.json`);
 	};
 
-	const createSubFolderHandler = async ({ name, meta, data, parent_id }) => {
+	const createSubFolderHandler = async ({ name, meta, data, parent_id }: FolderUpdate) => {
 		name = name?.trim();
 		if (!name) {
 			toast.error($i18n.t('Folder name cannot be empty.'));
@@ -148,8 +159,8 @@
 
 		const res = await createNewFolder(localStorage.token, {
 			name,
-			data,
-			meta,
+			data: data ?? undefined,
+			meta: meta ?? undefined,
 			parent_id
 		}).catch((error) => {
 			toast.error(`${error}`);

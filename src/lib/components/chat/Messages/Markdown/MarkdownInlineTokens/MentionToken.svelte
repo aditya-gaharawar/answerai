@@ -32,10 +32,10 @@
 	let triggerChar = '';
 	let label = '';
 
-	let idType = null;
+	let idType: string | null = null;
 	let id = '';
 	let openPreview = false;
-	let resolvedUser = null;
+	let resolvedUser: import('$lib/types/resources').UserRecord | null = null;
 	let requestedUserId: string | null = null;
 	let userUnavailable = false;
 
@@ -43,8 +43,8 @@
 		init(resolvedUser, userUnavailable);
 	}
 
-	const init = (user, unavailable) => {
-		const _id = token?.id;
+	const init = (user: import('$lib/types/resources').UserRecord | null, unavailable: boolean) => {
+		const _id = typeof token?.id === 'string' ? token.id : '';
 		triggerChar = token?.triggerChar ?? '@';
 
 		if (triggerChar === '$') {
@@ -78,7 +78,7 @@
 				// Channel
 				const channel = $channels.find((c) => c.id === id);
 				if (channel) {
-					label = channel.name;
+					label = typeof channel.name === 'string' ? channel.name : $i18n.t('Unknown');
 				} else {
 					label = $i18n.t('Unknown');
 				}

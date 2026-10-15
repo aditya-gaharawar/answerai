@@ -29,7 +29,7 @@
 
 	export let referrerPolicy: HTMLIFrameElement['referrerPolicy'] =
 		'strict-origin-when-cross-origin';
-	export let allowFullscreen = true;
+	export let allowfullscreen = true;
 
 	export let payload = null; // payload to send into the iframe on request
 
@@ -222,7 +222,7 @@ window.Chart = parent.Chart; // Chart previously assigned on parent
 		width="100%"
 		frameborder="0"
 		{sandbox}
-		{allowFullscreen}
+		{allowfullscreen}
 		on:load={onLoad}
 	/>
 {:else if iframeSrc}
@@ -236,7 +236,7 @@ window.Chart = parent.Chart; // Chart previously assigned on parent
 		frameborder="0"
 		{sandbox}
 		referrerpolicy={referrerPolicy}
-		{allowFullscreen}
+		{allowfullscreen}
 		on:load={onLoad}
 	/>
 {/if}

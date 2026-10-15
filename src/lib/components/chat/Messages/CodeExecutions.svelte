@@ -5,9 +5,9 @@
 	import XMark from '$lib/components/icons/XMark.svelte';
 	import EllipsisHorizontal from '$lib/components/icons/EllipsisHorizontal.svelte';
 
-	export let codeExecutions = [];
+	export let codeExecutions: import('$lib/types/messages').CodeExecution[] = [];
 
-	let selectedCodeExecution = null;
+	let selectedCodeExecution: import('$lib/types/messages').CodeExecution | null | undefined = null;
 	let showCodeExecutionModal = false;
 
 	$: if (codeExecutions) {
@@ -17,7 +17,7 @@
 	const updateSelectedCodeExecution = () => {
 		if (selectedCodeExecution) {
 			selectedCodeExecution = codeExecutions.find(
-				(execution) => execution.id === selectedCodeExecution.id
+				(execution) => execution.id === selectedCodeExecution?.id
 			);
 		}
 	};

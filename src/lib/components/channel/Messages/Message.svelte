@@ -1,4 +1,11 @@
 <script lang="ts">
+	import type {
+		ChannelRecord,
+		ChannelMessage,
+		ChannelEvent,
+		ChannelUser,
+		ChannelPinHandler
+	} from '$lib/types/channels';
 	import { chatDirection } from '$lib/stores';
 	// Keep keys in nested template expressions visible to i18next-parser.
 	// $i18n.t("and");
@@ -16,7 +23,7 @@
 	dayjs.extend(localizedFormat);
 
 	import { getContext, tick } from 'svelte';
-	const i18n = getContext('i18n');
+	const i18n = getContext<typeof import('$lib/i18n').default>('i18n');
 
 	import { formatDate } from '$lib/utils';
 
@@ -51,8 +58,8 @@
 
 	export let className = '';
 
-	export let message;
-	export let channel;
+	export let message: ChannelMessage;
+	export let channel: ChannelRecord | null = null;
 
 	export let showUserProfile = true;
 	export let thread = false;
@@ -62,17 +69,17 @@
 	export let disabled = false;
 	export let pending = false;
 
-	export let onDelete: Function = () => {};
-	export let onEdit: Function = () => {};
-	export let onReply: Function = () => {};
-	export let onPin: Function = () => {};
-	export let onThread: Function = () => {};
-	export let onReaction: Function = () => {};
+	export let onDelete: (() => unknown) | null = null;
+	export let onEdit: ((content: string) => unknown) | null = null;
+	export let onReply: ((message: ChannelMessage) => unknown) | null = null;
+	export let onPin: ((message: ChannelMessage) => unknown) | null = null;
+	export let onThread: ((id: string) => unknown) | null = null;
+	export let onReaction: ((name: string) => unknown) | null = null;
 
 	let showButtons = false;
 
 	let edit = false;
-	let editedContent = null;
+	let editedContent = '';
 	let showDeleteConfirmDialog = false;
 	$: renderedMessageId = message ? (id ? `${id}-${message.id}` : message.id) : null;
 	$: replyToMessageId = message?.reply_to_message
@@ -137,7 +144,7 @@
 
 	const handleTouchEnd = () => {
 		if (isSwiping && swipeOffsetX >= SWIPE_THRESHOLD && onReply) {
-			onReply(message);
+			onReply?.(message);
 		}
 		swipeOffsetX = 0;
 		isSwiping = false;
@@ -146,7 +153,7 @@
 
 	const loadMessageData = async () => {
 		if (message && message?.data === true) {
-			const res = await getMessageData(localStorage.token, channel?.id, message.id);
+			const res = await getMessageData(localStorage.token, message.channel_id, message.id);
 			if (res) {
 				message.data = res;
 			}
@@ -157,7 +164,8 @@
 		loadMessageData();
 	}
 
-	$: messageOutput = Array.isArray(message?.data?.output) ? message.data.output : [];
+	$: messageData = typeof message.data === 'object' ? message.data : null;
+	$: messageOutput = Array.isArray(messageData?.output) ? messageData.output : [];
 	$: hasStructuredOutput = buildOutputDisplayItems(messageOutput).length > 0;
 </script>
 
@@ -166,7 +174,7 @@
 	title={$i18n.t('Delete Message')}
 	message={$i18n.t('Are you sure you want to delete this message?')}
 	onConfirm={async () => {
-		await onDelete();
+		await onDelete?.();
 	}}
 />
 
@@ -224,7 +232,7 @@
 								onClose={() => (showButtons = false)}
 								onSubmit={(name) => {
 									showButtons = false;
-									onReaction(name);
+									onReaction?.(name);
 								}}
 							>
 								<Tooltip content={$i18n.t('Add Reaction')}>
@@ -246,7 +254,7 @@
 									aria-label={$i18n.t('Reply')}
 									class="hover:bg-gray-100 dark:hover:bg-gray-800 transition rounded-lg p-1"
 									on:click={() => {
-										onReply(message);
+										onReply?.(message);
 									}}
 								>
 									<ArrowUpLeftAlt className="size-4" />
@@ -258,7 +266,7 @@
 							<button
 								class="hover:bg-gray-100 dark:hover:bg-gray-800 transition rounded-lg p-1"
 								on:click={() => {
-									onPin(message);
+									onPin?.(message);
 								}}
 							>
 								{#if message?.is_pinned}
@@ -275,7 +283,7 @@
 									aria-label={$i18n.t('Reply in Thread')}
 									class="hover:bg-gray-100 dark:hover:bg-gray-800 transition rounded-lg p-1"
 									on:click={() => {
-										onThread(message.id);
+										onThread?.(message.id);
 									}}
 								>
 									<ChatBubbleOvalEllipsis />
@@ -360,7 +368,8 @@
 									// LICENSE covers this Open ANSWERAI fallback logo.
 									// Do not alter, remove, obscure, or replace it except as LICENSE permits:
 									// https://docs.openwebui.com/license.
-									e.currentTarget.src = '/favicon.png';
+									if (e.currentTarget instanceof HTMLImageElement)
+										e.currentTarget.src = '/favicon.png';
 								}}
 							/>
 						{:else if message.reply_to_message.app_id}
@@ -419,7 +428,8 @@
 									// LICENSE covers this Open ANSWERAI fallback logo.
 									// Do not alter, remove, obscure, or replace it except as LICENSE permits:
 									// https://docs.openwebui.com/license.
-									e.currentTarget.src = '/favicon.png';
+									if (e.currentTarget instanceof HTMLImageElement)
+										e.currentTarget.src = '/favicon.png';
 								}}
 							/>
 						{:else if message.app_id}
@@ -519,9 +529,9 @@
 						<div class=" my-2">
 							<Skeleton />
 						</div>
-					{:else if (message?.data?.files ?? []).length > 0}
+					{:else if (messageData?.files ?? []).length > 0}
 						<div class="my-2.5 w-full flex overflow-x-auto gap-2 flex-wrap" dir={$chatDirection}>
-							{#each message?.data?.files as file}
+							{#each messageData?.files as file}
 								{@const fileUrl =
 									file.url.startsWith('data') || file.url.startsWith('http')
 										? file.url
@@ -535,9 +545,9 @@
 										<FileItem
 											item={file}
 											url={file.url}
-											name={file.name}
+											name={file.name ?? ''}
 											type={file.type}
-											size={file?.size}
+											size={file?.size ?? 0}
 											small={true}
 										/>
 									{/if}
@@ -551,7 +561,7 @@
 							<Textarea
 								className=" bg-transparent outline-hidden w-full resize-none text-sm leading-[1.375rem]"
 								bind:value={editedContent}
-								onKeydown={(e) => {
+								onKeydown={(e: KeyboardEvent) => {
 									if (e.key === 'Escape') {
 										document.getElementById('close-edit-message-button')?.click();
 									}
@@ -571,7 +581,7 @@
 										class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg px-2.5 text-xs font-normal text-gray-600 transition hover:bg-gray-100 hover:text-gray-900 disabled:opacity-60 dark:text-gray-400 dark:hover:bg-gray-850 dark:hover:text-white"
 										on:click={() => {
 											edit = false;
-											editedContent = null;
+											editedContent = '';
 										}}
 									>
 										{$i18n.t('Cancel')}
@@ -581,9 +591,9 @@
 										id="confirm-edit-message-button"
 										class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"
 										on:click={async () => {
-											onEdit(editedContent);
+											onEdit?.(editedContent);
 											edit = false;
-											editedContent = null;
+											editedContent = '';
 										}}
 									>
 										{$i18n.t('Save')}
@@ -599,7 +609,7 @@
 						>
 							{#if hasStructuredOutput}
 								<StructuredOutputRenderer
-									id={renderedMessageId}
+									id={renderedMessageId ?? ''}
 									output={messageOutput}
 									done={message?.meta?.done ?? false}
 									allowEmbeds={false}
@@ -609,7 +619,7 @@
 							{:else}
 								<span class="markdown-prose">
 									<Markdown
-										id={renderedMessageId}
+										id={renderedMessageId ?? ''}
 										content={message.content}
 										paragraphTag={message.app_id ? 'p' : 'span'}
 										allowEmbeds={false}
@@ -621,14 +631,14 @@
 							{/if}
 						</div>
 
-						{#if message.app_id && (message?.data?.app?.embeds?.length || message?.data?.app?.actions?.length)}
+						{#if message.app_id && (messageData?.app?.embeds?.length || messageData?.app?.actions?.length)}
 							<div class="mt-2">
 								<AppChannelReply
 									on:reply
 									appId={message.app_id}
-									channelId={channel.id}
+									channelId={message.channel_id}
 									source={message}
-									reply={{ embeds: message.data.app.embeds, actions: message.data.app.actions }}
+									reply={{ embeds: messageData?.app?.embeds, actions: messageData?.app?.actions }}
 								/>
 							</div>
 						{/if}
@@ -675,12 +685,12 @@
 												{disabled}
 												class="flex min-h-6 items-center gap-1.5 text-sm leading-4 transition rounded-lg px-1.5 py-0.5 cursor-pointer {reaction.users
 													.map((u) => u.id)
-													.includes($user?.id)
+													.includes($user?.id ?? '')
 													? ' bg-blue-300/10 outline outline-blue-500/50 outline-1'
 													: 'bg-gray-300/10 dark:bg-gray-500/10 hover:outline hover:outline-gray-700/30 dark:hover:outline-gray-300/30 hover:outline-1'}"
 												on:click={() => {
 													if (onReaction) {
-														onReaction(reaction.name);
+														onReaction?.(reaction.name);
 													}
 												}}
 											>
@@ -700,7 +710,7 @@
 									{#if onReaction && !disabled}
 										<EmojiPicker
 											onSubmit={(name) => {
-												onReaction(name);
+												onReaction?.(name);
 											}}
 										>
 											<Tooltip content={$i18n.t('Add Reaction')}>
@@ -716,12 +726,12 @@
 							</div>
 						{/if}
 
-						{#if !thread && message.reply_count > 0}
+						{#if !thread && (message.reply_count ?? 0) > 0}
 							<div class="flex items-center gap-1.5 -mt-0.5 mb-1.5">
 								<button
 									class="flex min-w-0 items-center text-[0.6875rem] py-1 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition"
 									on:click={() => {
-										onThread(message.id);
+										onThread?.(message.id);
 									}}
 								>
 									<span class="shrink-0 font-medium mr-1">
@@ -729,7 +739,7 @@
 									><span class="truncate">
 										{' - '}{$i18n.t('Last reply')}
 										{dayjs
-											.unix(message.latest_reply_at / 1000000000)
+											.unix((message.latest_reply_at ?? message.updated_at) / 1000000000)
 											.locale($i18n.language)
 											.fromNow()}</span
 									>

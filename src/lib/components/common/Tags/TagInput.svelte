@@ -4,7 +4,7 @@
 
 	const i18n = getContext('i18n');
 
-	export let suggestionTags = [];
+	export let suggestionTags: import('$lib/utils/tags').Tag[] = [];
 	export let disabled = false;
 
 	let tagName = '';

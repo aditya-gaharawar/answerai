@@ -112,7 +112,7 @@
 		return await language?.load();
 	};
 
-	let pyodideWorkerInstance = null;
+	let pyodideWorkerInstance: Worker | null = null;
 
 	const getPyodideWorker = () => {
 		if (!pyodideWorkerInstance) {

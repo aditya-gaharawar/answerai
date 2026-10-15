@@ -21,12 +21,12 @@
 	let selectedIdx = 0;
 	let query = '';
 
-	let selectedItem = null;
+	let selectedItem: import('$lib/types/resources').KnowledgeRecord | null = null;
 
 	let selectedFileItemsPage = 1;
 
-	let selectedFileItems = null;
-	let selectedFileItemsTotal = null;
+	let selectedFileItems: import('$lib/types/resources').FileRecord[] = [];
+	let selectedFileItemsTotal: number | null = null;
 
 	let selectedFileItemsLoading = false;
 	let selectedFileAllItemsLoaded = false;
@@ -94,7 +94,7 @@
 	};
 
 	let page = 1;
-	let items = [];
+	let items: import('$lib/types/resources').KnowledgeRecord[] = [];
 	let total = null;
 
 	let itemsLoading = false;

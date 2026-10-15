@@ -50,13 +50,13 @@
 	export let history;
 
 	export let prompt = '';
-	export let files = [];
+	export let files: import('$lib/types/notes').NoteAttachment[] = [];
 	export let messageInput: InstanceType<typeof MessageInput> | undefined = undefined;
 
-	export let selectedToolIds = [];
-	export let selectedSkillIds = [];
-	export let selectedFilterIds = [];
-	export let pendingOAuthTools = [];
+	export let selectedToolIds: string[] = [];
+	export let selectedSkillIds: string[] = [];
+	export let selectedFilterIds: string[] = [];
+	export let pendingOAuthTools: import('$lib/types/chat').PendingOAuthTool[] = [];
 
 	export let showCommands = false;
 
@@ -67,10 +67,10 @@
 	export let onToolApprovalModeChange: Function = () => {};
 	export let oauthRedirectHandler: Function = () => {};
 
-	export let onUpload: Function = (e) => {};
+	export let onUpload: Function = (e: unknown) => {};
 	export let onUpdate: (data?: { file?: any }) => void = () => {};
 	export let onSelect: (selection: import('$lib/types/chat').PromptSelection) => void = () => {};
-	export let onChange = (e) => {};
+	export let onChange = (e: unknown) => {};
 	export let onWebSearchToggle: Function = () => {};
 	export let messageQueue: { id: string; prompt: string; files: any[] }[] = [];
 	export let onQueueSendNow: (id: string) => void = () => {};
@@ -172,7 +172,8 @@
 												// LICENSE covers this Open ANSWERAI fallback logo.
 												// Do not alter, remove, obscure, or replace it except as LICENSE permits:
 												// https://docs.openwebui.com/license.
-												e.currentTarget.src = '/favicon.png';
+												if (e.currentTarget instanceof HTMLImageElement)
+													e.currentTarget.src = '/favicon.png';
 											}}
 										/>
 									</button>
@@ -223,16 +224,16 @@
 							{#if models[selectedModelIdx]?.info?.meta?.user}
 								<div class="mt-0.5 text-sm font-normal text-gray-400 dark:text-gray-500">
 									{$i18n.t('By')}
-									{#if models[selectedModelIdx]?.info?.meta?.user.community}
+									{#if models[selectedModelIdx]?.info?.meta?.user?.community}
 										<a
 											href="https://answerai.in/m/{models[selectedModelIdx]?.info?.meta?.user
 												.username}"
-											>{models[selectedModelIdx]?.info?.meta?.user.name
-												? models[selectedModelIdx]?.info?.meta?.user.name
-												: `@${models[selectedModelIdx]?.info?.meta?.user.username}`}</a
+											>{models[selectedModelIdx]?.info?.meta?.user?.name
+												? models[selectedModelIdx]?.info?.meta?.user?.name
+												: `@${models[selectedModelIdx]?.info?.meta?.user?.username}`}</a
 										>
 									{:else}
-										{models[selectedModelIdx]?.info?.meta?.user.name}
+										{models[selectedModelIdx]?.info?.meta?.user?.name}
 									{/if}
 								</div>
 							{/if}

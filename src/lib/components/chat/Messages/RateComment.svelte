@@ -34,14 +34,14 @@
 		'other'
 	];
 
-	let tags = [];
+	let tags: import('$lib/utils/tags').Tag[] = [];
 
-	let reasons = [];
-	let selectedReason = null;
+	let reasons: string[] = [];
+	let selectedReason: string | null = null;
 	let comment = '';
 
-	let detailedRating = null;
-	let selectedModel = null;
+	let detailedRating: number | null = null;
+	let selectedModel: import('$lib/stores').Model | null | undefined = null;
 
 	$: if (message?.annotation?.rating === 1) {
 		reasons = LIKE_REASONS;

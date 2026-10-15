@@ -545,10 +545,13 @@
 												alt={model.name}
 												class="size-5 rounded-full object-cover shrink-0"
 												on:error={(e) => {
+													const answeraiEventTarget = e.currentTarget;
+													if (!(answeraiEventTarget instanceof HTMLImageElement)) return;
+
 													// LICENSE covers this Open ANSWERAI fallback logo.
 													// Do not alter, remove, obscure, or replace it except as LICENSE permits:
 													// https://docs.openwebui.com/license.
-													e.target.src = '/favicon.png';
+													answeraiEventTarget.src = '/favicon.png';
 												}}
 											/>
 											<span class="truncate max-w-[9.375rem]">{model.name}</span>
@@ -660,7 +663,10 @@
 												alt={user.name || 'User'}
 												class="size-5 rounded-full object-cover shrink-0"
 												on:error={(e) => {
-													e.target.src = '/user.png';
+													const answeraiEventTarget = e.currentTarget;
+													if (!(answeraiEventTarget instanceof HTMLImageElement)) return;
+
+													answeraiEventTarget.src = '/user.png';
 												}}
 											/>
 											<span class="truncate max-w-[9.375rem]"

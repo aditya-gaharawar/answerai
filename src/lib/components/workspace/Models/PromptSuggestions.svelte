@@ -1,4 +1,9 @@
 <script lang="ts">
+	import {
+		normalizePromptSuggestions,
+		type PromptSuggestion,
+		type NormalizedPromptSuggestion
+	} from '$lib/utils/promptSuggestions';
 	import { getContext, tick } from 'svelte';
 	import { saveAs } from 'file-saver';
 	import { toast } from 'svelte-sonner';
@@ -8,18 +13,18 @@
 	import ChevronRight from '$lib/components/icons/ChevronRight.svelte';
 	const i18n = getContext<any>('i18n');
 
-	export let promptSuggestions = [];
-	export let onChange = (suggestions) => {};
+	export let promptSuggestions: PromptSuggestion[] = [];
+	export let onChange: (suggestions: NormalizedPromptSuggestion[]) => void = () => {};
 	export let inherited = false;
 	export let disabled = false;
 	let promptInputs: HTMLTextAreaElement[] = [];
 
-	let _promptSuggestions = [];
+	let _promptSuggestions: NormalizedPromptSuggestion[] = [];
 	let importInput: HTMLInputElement;
-	const updateSuggestions = (suggestions) => {
+	const updateSuggestions = (suggestions: PromptSuggestion[]) => {
 		if (disabled) return;
 		promptSuggestions = suggestions;
-		onChange(suggestions);
+		onChange(normalizePromptSuggestions(suggestions));
 	};
 
 	const setPromptSuggestions = () => {
@@ -29,7 +34,7 @@
 		}));
 	};
 
-	const autosize = (node: HTMLTextAreaElement) => {
+	const autosize = (node: HTMLTextAreaElement, _content: string) => {
 		const resize = () => {
 			node.style.height = 'auto';
 			node.style.height = `${node.scrollHeight}px`;
@@ -57,49 +62,17 @@
 		type="file"
 		accept=".json"
 		hidden
-		on:change={(e) => {
-			const files = e.target.files;
-			if (!files || files.length === 0) {
-				return;
+		on:change={async (e) => {
+			const file = e.currentTarget.files?.[0];
+			if (!file) return;
+			try {
+				const suggestions = normalizePromptSuggestions(JSON.parse(await file.text()));
+				updateSuggestions([...promptSuggestions, ...suggestions]);
+			} catch {
+				toast.error($i18n.t('Invalid JSON file'));
+			} finally {
+				importInput.value = '';
 			}
-
-			let reader = new FileReader();
-			reader.onload = async (event) => {
-				try {
-					let suggestions = JSON.parse(event.target.result);
-					if (
-						!Array.isArray(suggestions) ||
-						suggestions.some(
-							(s) =>
-								!s ||
-								typeof s.content !== 'string' ||
-								(s.title != null &&
-									typeof s.title !== 'string' &&
-									(!Array.isArray(s.title) || s.title.some((part) => typeof part !== 'string')))
-						)
-					)
-						throw new Error('Invalid prompt suggestions');
-
-					suggestions = suggestions.map((s) => {
-						if (typeof s.title === 'string') {
-							s.title = [s.title, ''];
-						} else if (!Array.isArray(s.title)) {
-							s.title = ['', ''];
-						}
-
-						return s;
-					});
-
-					updateSuggestions([...promptSuggestions, ...suggestions]);
-				} catch (error) {
-					toast.error($i18n.t('Invalid JSON file'));
-					return;
-				}
-			};
-
-			reader.readAsText(files[0]);
-
-			e.target.value = ''; // Reset the input value
 		}}
 	/>
 
@@ -192,7 +165,7 @@
 			aria-label={$i18n.t('Add prompt suggestion')}
 			class="flex items-center gap-1.5 px-2 py-1 text-xs text-gray-500 hover:text-gray-700 disabled:opacity-40 dark:text-gray-400 dark:hover:text-gray-300"
 			on:click={async () => {
-				if (promptSuggestions.length === 0 || promptSuggestions.at(-1).content.trim() !== '') {
+				if (promptSuggestions.length === 0 || promptSuggestions.at(-1)?.content.trim() !== '') {
 					updateSuggestions([...promptSuggestions, { content: '', title: ['', ''] }]);
 				}
 				await tick();

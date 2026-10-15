@@ -2,7 +2,7 @@ import { it, expect } from 'vitest';
 import { splitStream } from './streamText';
 it('preserves SSE lines across arbitrary network and multibyte boundaries', async () => {
 	const raw = new TextEncoder().encode('data: {"text":"héllo"}\n\ndata: [DONE]');
-	const source = new ReadableStream<Uint8Array>({
+	const source = new ReadableStream<Uint8Array<ArrayBuffer>>({
 		start(controller) {
 			for (const byte of raw) controller.enqueue(Uint8Array.of(byte));
 			controller.close();

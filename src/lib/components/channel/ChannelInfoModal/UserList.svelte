@@ -42,8 +42,8 @@
 
 	let page = 1;
 
-	let users = null;
-	let total = null;
+	let users: import('$lib/types/resources').UserRecord[] = [];
+	let total: number | null = null;
 
 	let query = '';
 	let debounceTimer: ReturnType<typeof setTimeout> | null = null;
@@ -324,7 +324,7 @@
 				</div>
 			</div>
 
-			{#if total > 30}
+			{#if total !== null && total > 30}
 				<Pagination bind:page count={total} perPage={30} />
 			{/if}
 		{:else}

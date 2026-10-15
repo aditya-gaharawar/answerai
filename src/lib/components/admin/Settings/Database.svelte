@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { escapeCsvCell } from '$lib/utils/csv';
+	import type { UserRecord } from '$lib/types/resources';
 	import fileSaver from 'file-saver';
 	const { saveAs } = fileSaver;
 
@@ -30,20 +32,12 @@
 	const exportUsers = async () => {
 		const users = await getAllUsers(localStorage.token);
 
-		const headers = ['id', 'name', 'email', 'role'];
-
+		const headers = ['id', 'name', 'email', 'role'] as const;
 		const csv = [
 			headers.join(','),
-			...users.users.map((user) => {
-				return headers
-					.map((header) => {
-						if (user[header] === null || user[header] === undefined) {
-							return '';
-						}
-						return `"${String(user[header]).replace(/"/g, '""')}"`;
-					})
-					.join(',');
-			})
+			...users.users.map((user: UserRecord) =>
+				headers.map((header) => escapeCsvCell(user[header])).join(',')
+			)
 		].join('\n');
 
 		const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
@@ -64,20 +58,24 @@
 			type="file"
 			accept=".json"
 			on:change={(e) => {
-				const file = e.target.files[0];
+				const answeraiEventTarget = e.currentTarget;
+				if (!(answeraiEventTarget instanceof HTMLInputElement)) return;
+
+				const file = answeraiEventTarget.files?.[0];
 				const reader = new FileReader();
 
 				reader.onload = async (e) => {
-					const res = await importConfig(localStorage.token, JSON.parse(e.target.result)).catch(
-						(error) => {
-							toast.error(`${error}`);
-						}
-					);
+					const res = await importConfig(
+						localStorage.token,
+						JSON.parse(answeraiEventTarget.result)
+					).catch((error) => {
+						toast.error(`${error}`);
+					});
 
 					if (res) {
 						toast.success($i18n.t('Config imported successfully'));
 					}
-					e.target.value = null;
+					answeraiEventTarget.value = null;
 				};
 
 				reader.readAsText(file);

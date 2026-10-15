@@ -5,14 +5,18 @@
 
 	const i18n = getContext<any>('i18n');
 
-	export let promptSuggestions = [];
-	export let localizedPromptSuggestions = {};
+	export let promptSuggestions: import('$lib/utils/promptSuggestions').PromptSuggestion[] = [];
+	export let localizedPromptSuggestions: Record<
+		string,
+		{ suggestion_prompts?: import('$lib/utils/promptSuggestions').PromptSuggestion[] }
+	> = {};
 	export let locale = '';
 	export let localeLabel = '';
 	export let onChange = () => {};
 	export let disabled = false;
 
-	const clone = (value) => JSON.parse(JSON.stringify(value ?? []));
+	const clone = (value: import('$lib/utils/promptSuggestions').PromptSuggestion[]) =>
+		JSON.parse(JSON.stringify(value ?? []));
 
 	$: hasCustomLocalePrompts =
 		locale !== '' && Array.isArray(localizedPromptSuggestions?.[locale]?.suggestion_prompts);
@@ -21,7 +25,9 @@
 		resolveLocalizedPromptSuggestions(promptSuggestions, localizedPromptSuggestions, locale)
 	);
 
-	const updateLocalePrompts = (suggestions) => {
+	const updateLocalePrompts = (
+		suggestions: import('$lib/utils/promptSuggestions').PromptSuggestion[]
+	) => {
 		localizedPromptSuggestions = {
 			...(localizedPromptSuggestions ?? {}),
 			[locale]: {

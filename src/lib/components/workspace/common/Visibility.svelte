@@ -30,7 +30,10 @@
 					class="outline-hidden bg-transparent text-sm font-normal block w-fit pr-10 max-w-full placeholder-gray-400"
 					value={state === 'private' ? 'private' : 'public'}
 					on:change={(e) => {
-						if (e.target.value === 'public') {
+						const answeraiEventTarget = e.currentTarget;
+						if (!(answeraiEventTarget instanceof HTMLSelectElement)) return;
+
+						if (answeraiEventTarget.value === 'public') {
 							state = 'public';
 						} else {
 							state = 'private';
