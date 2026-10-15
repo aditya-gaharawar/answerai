@@ -80,7 +80,9 @@
 	export let selectedModels = [];
 
 	export let done = true;
+	/** @type {import('$lib/stores').Model | null | undefined} */
 	export let model = null;
+	/** @type {unknown[] | null | undefined} */
 	export let sources = null;
 
 	export let save = false;

@@ -41,3 +41,11 @@ export type NoteChatSummary = {
 	updated_at?: number;
 	chat?: Record<string, unknown>;
 };
+
+/** Notes search returns content when available and an optional owner profile. */
+export type NoteListItem = Omit<NoteRecord, 'data' | 'write_access'> & {
+	data?: NoteData | null;
+	write_access?: boolean;
+	is_pinned?: boolean;
+	user?: import('./plugins').PluginOwner | null;
+};

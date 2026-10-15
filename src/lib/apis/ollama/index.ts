@@ -200,8 +200,12 @@ export const getOllamaModels = async (token: string = '', urlIdx: null | number 
 	}
 
 	return (res?.models ?? [])
-		.map((model) => ({ id: model.model, name: model.name ?? model.model, ...model }))
-		.sort((a, b) => {
+		.map((model: import('$lib/stores').OllamaModel) => ({
+			...model,
+			id: model.model,
+			name: model.name ?? model.model
+		}))
+		.sort((a: import('$lib/stores').OllamaModel, b: import('$lib/stores').OllamaModel) => {
 			return (a?.name ?? a?.id ?? '').localeCompare(b?.name ?? b?.id ?? '');
 		});
 };
@@ -320,7 +324,7 @@ export const generateChatCompletion = async (token: string = '', body: object) =
 		throw error;
 	}
 
-	return [res, controller];
+	return [res, controller] as const;
 };
 
 export const unloadModel = async (token: string, tagName: string) => {
@@ -445,7 +449,7 @@ export const pullModel = async (token: string, tagName: string, urlIdx: number |
 	if (error) {
 		throw error;
 	}
-	return [res, controller];
+	return [res, controller] as const;
 };
 
 export const downloadModel = async (

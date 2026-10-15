@@ -1,4 +1,17 @@
 <script lang="ts">
+	import { readDataUrl } from '$lib/utils/readDataUrl';
+	import { onDestroy } from 'svelte';
+	import { captureScreenFrame } from '$lib/utils/screenCapture';
+	import { commandTextNodes } from '$lib/components/common/RichTextInput/editorUtils';
+	import type { Editor, Range } from '@tiptap/core';
+	import type { Node as ProseMirrorNode } from 'prosemirror-model';
+	import type { EditorContent } from '$lib/types/editor';
+	import type { InputVariableValues } from '$lib/utils/inputVariables';
+	let destroyed = false;
+	onDestroy(() => {
+		destroyed = true;
+	});
+	import { chatDirection } from '$lib/stores';
 	import type { ContextUsage, ChatTask } from '$lib/types/chat';
 	import { resolveLocalizedFunction } from '$lib/utils/localizedContent';
 	import { functions as localizedFunctions } from '$lib/stores';
@@ -136,7 +149,7 @@
 		onCancel: () => void;
 	};
 
-	export let onUpload: Function = (e) => {};
+	export let onUpload: Function = () => {};
 	export let onChange: Function = () => {};
 	export let typingUsers: { id: string; name: string }[] = [];
 
@@ -163,7 +176,7 @@
 	export let uploadPending = false;
 
 	export let atSelectedModel: Model | undefined = undefined;
-	export let selectedModels: [''];
+	export let selectedModels: string[] = [];
 
 	let selectedModelIds = [];
 	$: selectedModelIds = atSelectedModel !== undefined ? [atSelectedModel.id] : selectedModels;
@@ -174,7 +187,7 @@
 	);
 
 	export let history;
-	export let taskIds = null;
+	export let taskIds: string[] | null = null;
 	export let askUser: AskUserPrompt = {
 		show: false,
 		questions: [],
@@ -234,10 +247,10 @@
 	export let onUpdate: (data?: { file?: any }) => void = () => {};
 	export let chatTasks: ChatTask[] = [];
 
-	let inputContent = null;
+	let inputContent: EditorContent | null = null;
 
 	let showInputVariablesModal = false;
-	let inputVariablesModalCallback = (variableValues) => {};
+	let inputVariablesModalCallback: (values: InputVariableValues) => void = () => {};
 	let inputVariables = {};
 	let inputVariableValues = {};
 
@@ -245,7 +258,7 @@
 	let showStatusPanel = false;
 	let copiedStatusChatId = false;
 	let selectedValvesType = 'tool'; // 'tool' or 'function'
-	let selectedValvesItemId = null;
+	let selectedValvesItemId: string | null = null;
 	let integrationsMenuCloseOnOutsideClick = true;
 
 	$: if (!showValvesModal) {
@@ -468,7 +481,7 @@
 	const trimNumber = (value: number) =>
 		value >= 10 ? String(Math.round(value)) : value.toFixed(1).replace(/\.0$/, '');
 
-	const estimateTokens = (value) => {
+	const estimateTokens = (value: unknown) => {
 		if (value === null || value === undefined || value === '') {
 			return 0;
 		}
@@ -479,10 +492,10 @@
 				value = String(value);
 			}
 		}
-		return Math.max(1, Math.floor(value.length / 4));
+		return Math.max(1, Math.floor(String(value ?? '').length / 4));
 	};
 
-	const estimateMessagesTokens = (messages) =>
+	const estimateMessagesTokens = (messages: import('$lib/types/chat').TokenEstimateMessage[]) =>
 		messages.reduce((total, message) => {
 			let next = total + 4 + estimateTokens(message.content);
 			next += estimateTokens(message.output);
@@ -561,10 +574,10 @@
 	);
 	$: contextValue = statusContextUsage
 		? contextHasThreshold
-			? `${contextPercent}% ${contextTokens}/${formatTokenCount(statusContextUsage.threshold)}`
+			? `${contextPercent}% ${contextTokens}/${formatTokenCount(statusContextUsage.threshold ?? 0)}`
 			: `${contextTokens} ${$i18n.t('tokens')}`
 		: $i18n.t('unknown');
-	$: contextBarPercent = contextHasThreshold ? Math.min(contextPercent, 100) : 0;
+	$: contextBarPercent = contextHasThreshold ? Math.min(contextPercent ?? 0, 100) : 0;
 
 	const getCommand = () => {
 		const chatInput = document.getElementById('chat-input');
@@ -647,7 +660,7 @@
 		}
 	};
 
-	const replaceSlashRangeWithPrompt = async (editor, range, text: string) => {
+	const replaceSlashRangeWithPrompt = async (editor: Editor, range: Range, text: string) => {
 		text = await textVariableHandler(text);
 
 		const { state, view } = editor;
@@ -665,7 +678,7 @@
 			const tempDiv = document.createElement('div');
 			tempDiv.innerHTML = htmlContent;
 			const fragment = DOMParser.fromSchema(state.schema).parse(tempDiv);
-			const nodesToInsert = [];
+			const nodesToInsert: ProseMirrorNode[] = [];
 
 			fragment.content.forEach((node) => {
 				if (node.type.name === 'paragraph') {
@@ -679,21 +692,13 @@
 			const newPos = range.from + nodesToInsert.reduce((sum, node) => sum + node.nodeSize, 0);
 			tr = tr.setSelection(Selection.near(tr.doc.resolve(newPos)));
 		} else if (text.includes('\n')) {
-			const nodes = text
-				.split('\n')
-				.map((line, index) =>
-					index === 0
-						? state.schema.text(line ? line : [])
-						: state.schema.nodes.paragraph.create({}, line ? state.schema.text(line) : undefined)
-				);
+			const nodes = commandTextNodes(state.schema, text);
 			tr = tr.replaceWith(range.from, range.to, nodes);
 			const newPos = nodes.reduce((pos, node) => pos + node.nodeSize, range.from);
 			tr = tr.setSelection(TextSelection.near(tr.doc.resolve(newPos)));
 		} else {
 			tr = tr.replaceWith(range.from, range.to, text !== '' ? state.schema.text(text) : []);
-			tr = tr.setSelection(
-				state.selection.constructor.near(tr.doc.resolve(range.from + text.length + 1))
-			);
+			tr = tr.setSelection(Selection.near(tr.doc.resolve(range.from + text.length + 1)));
 		}
 
 		view.dispatch(tr);
@@ -708,7 +713,7 @@
 	export let showCommands = false;
 	$: showCommands =
 		['/', '#', '@', '$', ':'].includes(command?.charAt(0)) || '\\#' === command?.slice(0, 2);
-	let suggestions = null;
+	let suggestions: import('$lib/types/editor').EditorSuggestion[] | null = null;
 	$: atSelectedModelName = resolveLocalizedModelName(atSelectedModel, $i18n.language);
 
 	let showTools = false;
@@ -750,7 +755,7 @@
 	let filesInputElement: HTMLInputElement;
 	let commandsElement;
 
-	let inputFiles;
+	let inputFiles: FileList | null = null;
 
 	let showInputModal = false;
 	let showComparison = false;
@@ -879,20 +884,20 @@
 	$: showWebSearchButton =
 		selectedModelIds.length === webSearchCapableModels.length &&
 		$config?.features?.enable_web_search &&
-		($_user.role === 'admin' || $_user?.permissions?.features?.web_search);
+		($_user?.role === 'admin' || $_user?.permissions?.features?.web_search);
 
 	let showImageGenerationButton = false;
 	$: showImageGenerationButton =
 		selectedModelIds.length === imageGenerationCapableModels.length &&
 		$config?.features?.enable_image_generation &&
-		($_user.role === 'admin' || $_user?.permissions?.features?.image_generation);
+		($_user?.role === 'admin' || $_user?.permissions?.features?.image_generation);
 
 	let showCodeInterpreterButton = false;
 	$: showCodeInterpreterButton =
 		!$selectedTerminalId &&
 		selectedModelIds.length === codeInterpreterCapableModels.length &&
 		$config?.features?.enable_code_interpreter &&
-		($_user.role === 'admin' || $_user?.permissions?.features?.code_interpreter);
+		($_user?.role === 'admin' || $_user?.permissions?.features?.code_interpreter);
 
 	// Disable code interpreter when terminal is active (mutually exclusive)
 	$: if ($selectedTerminalId && codeInterpreterEnabled) {
@@ -906,44 +911,20 @@
 
 	const scrollToBottom = () => {
 		const element = document.getElementById('messages-container');
-		element.scrollTo({
-			top: element.scrollHeight,
+		element?.scrollTo({
+			top: element?.scrollHeight ?? 0,
 			behavior: 'smooth'
 		});
 	};
 
 	const screenCaptureHandler = async () => {
 		try {
-			// Request screen media
-			const mediaStream = await navigator.mediaDevices.getDisplayMedia({
-				video: { cursor: 'never' },
-				audio: false
-			});
-			// Once the user selects a screen, temporarily create a video element
-			const video = document.createElement('video');
-			video.srcObject = mediaStream;
-			// Ensure the video loads without affecting user experience or tab switching
-			await video.play();
-			// Set up the canvas to match the video dimensions
-			const canvas = document.createElement('canvas');
-			canvas.width = video.videoWidth;
-			canvas.height = video.videoHeight;
-			// Grab a single frame from the video stream using the canvas
-			const context = canvas.getContext('2d');
-			context.drawImage(video, 0, 0, canvas.width, canvas.height);
-			// Stop all video tracks (stop screen sharing) after capturing the image
-			mediaStream.getTracks().forEach((track) => track.stop());
-
-			// bring back focus to this current tab, so that the user can see the screen capture
+			const imageUrl = await captureScreenFrame(() => destroyed);
+			if (!imageUrl) return;
 			window.focus();
-
-			// Convert the canvas to a Base64 image URL
-			const imageUrl = canvas.toDataURL('image/png');
 			const blob = await (await fetch(imageUrl)).blob();
 			const file = new File([blob], `screen-capture-${Date.now()}.png`, { type: 'image/png' });
 			inputFilesHandler([file]);
-			// Clean memory: Clear video srcObject
-			video.srcObject = null;
 		} catch (error) {
 			// Handle any errors (e.g., user cancels screen sharing)
 			console.error('Error capturing screen:', error);
@@ -969,7 +950,7 @@
 		);
 	};
 
-	const uploadFileHandler = async (file, process = true, itemData = {}) => {
+	const uploadFileHandler = async (file: File, process = true, itemData = {}) => {
 		if ($_user?.role !== 'admin' && !($_user?.permissions?.chat?.file_upload ?? true)) {
 			toast.error($i18n.t('You do not have permission to upload files.'));
 			return null;
@@ -1121,12 +1102,6 @@
 				onUpdate({ file: fileItem });
 				return null;
 			} else {
-				console.log('Extracted content from file:', {
-					name: file.name,
-					size: file.size,
-					content: content
-				});
-
 				fileItem.status = 'uploaded';
 				fileItem.type = 'text';
 				fileItem.content = content;
@@ -1138,12 +1113,12 @@
 		}
 	};
 
-	const inputFilesHandler = async (inputFiles) => {
+	const inputFilesHandler = async (inputFiles: File[]) => {
 		console.log('Input files handler called with:', inputFiles);
 
 		if (
 			($config?.file?.max_count ?? null) !== null &&
-			files.length + inputFiles.length > $config?.file?.max_count
+			files.length + inputFiles.length > ($config?.file?.max_count ?? Infinity)
 		) {
 			toast.error(
 				$i18n.t(`You can only chat with a maximum of {{maxCount}} file(s) at a time.`, {
@@ -1153,102 +1128,100 @@
 			return;
 		}
 
-		inputFiles.forEach(async (file) => {
-			console.log('Processing file:', {
-				name: file.name,
-				type: file.type,
-				size: file.size,
-				extension: file.name.split('.').at(-1)
-			});
-
-			if (
-				($config?.file?.max_size ?? null) !== null &&
-				file.size > ($config?.file?.max_size ?? 0) * 1024 * 1024
-			) {
-				console.log('File exceeds max size limit:', {
-					fileSize: file.size,
-					maxSize: ($config?.file?.max_size ?? 0) * 1024 * 1024
+		const targetChatId = chatId;
+		for (const file of inputFiles) {
+			if (destroyed || chatId !== targetChatId) break;
+			try {
+				console.log('Processing file:', {
+					name: file.name,
+					type: file.type,
+					size: file.size,
+					extension: file.name.split('.').at(-1)
 				});
-				toast.error(
-					$i18n.t(`File size should not exceed {{maxSize}} MB.`, {
-						maxSize: $config?.file?.max_size
-					})
-				);
-				return;
-			}
 
-			if (isRasterImageContentType(file['type']) || isHeicImage(file)) {
-				if (visionCapableModels.length === 0) {
-					toast.error($i18n.t('Selected model(s) do not support image inputs'));
-					return;
+				if (
+					($config?.file?.max_size ?? null) !== null &&
+					file.size > ($config?.file?.max_size ?? 0) * 1024 * 1024
+				) {
+					console.log('File exceeds max size limit:', {
+						fileSize: file.size,
+						maxSize: ($config?.file?.max_size ?? 0) * 1024 * 1024
+					});
+					toast.error(
+						$i18n.t(`File size should not exceed {{maxSize}} MB.`, {
+							maxSize: $config?.file?.max_size
+						})
+					);
+					continue;
 				}
 
-				const compressImageHandler = async (imageUrl, settings = {}, config = {}) => {
-					// Quick shortcut so we don’t do unnecessary work.
-					const settingsCompression = settings?.imageCompression ?? false;
-					const configWidth = config?.file?.image_compression?.width ?? null;
-					const configHeight = config?.file?.image_compression?.height ?? null;
+				if (isRasterImageContentType(file['type']) || isHeicImage(file)) {
+					if (visionCapableModels.length === 0) {
+						toast.error($i18n.t('Selected model(s) do not support image inputs'));
+						continue;
+					}
 
-					// If neither settings nor config wants compression, return original URL.
-					if (!settingsCompression && !configWidth && !configHeight) {
+					const compressImageHandler = async (
+						imageUrl: string,
+						settings: import('$lib/stores').Settings = {},
+						config?: import('$lib/stores').Config
+					) => {
+						// Quick shortcut so we don’t do unnecessary work.
+						const settingsCompression = settings?.imageCompression ?? false;
+						const configWidth = config?.file?.image_compression?.width ?? null;
+						const configHeight = config?.file?.image_compression?.height ?? null;
+
+						// If neither settings nor config wants compression, return original URL.
+						if (!settingsCompression && !configWidth && !configHeight) {
+							return imageUrl;
+						}
+
+						// Default to null (no compression unless set)
+						let width = null;
+						let height = null;
+
+						// If user/settings want compression, pick their preferred size.
+						if (settingsCompression) {
+							width = settings?.imageCompressionSize?.width ?? null;
+							height = settings?.imageCompressionSize?.height ?? null;
+						}
+
+						// Apply config limits as an upper bound if any
+						if (configWidth && (width === null || width > configWidth)) {
+							width = configWidth;
+						}
+						if (configHeight && (height === null || height > configHeight)) {
+							height = configHeight;
+						}
+
+						// Do the compression if required
+						if (width || height) {
+							return await compressImage(imageUrl, width, height);
+						}
 						return imageUrl;
-					}
+					};
 
-					// Default to null (no compression unless set)
-					let width = null;
-					let height = null;
-
-					// If user/settings want compression, pick their preferred size.
-					if (settingsCompression) {
-						width = settings?.imageCompressionSize?.width ?? null;
-						height = settings?.imageCompressionSize?.height ?? null;
-					}
-
-					// Apply config limits as an upper bound if any
-					if (configWidth && (width === null || width > configWidth)) {
-						width = configWidth;
-					}
-					if (configHeight && (height === null || height > configHeight)) {
-						height = configHeight;
-					}
-
-					// Do the compression if required
-					if (width || height) {
-						return await compressImage(imageUrl, width, height);
-					}
-					return imageUrl;
-				};
-
-				const imageFile = isHeicImage(file) ? await convertHeicToJpeg(file) : file;
-				let reader = new FileReader();
-
-				reader.onload = async (event) => {
-					let imageUrl = event.target.result;
-
-					// Compress the image if settings or config require it
+					const imageFile = isHeicImage(file) ? await convertHeicToJpeg(file) : file;
+					let imageUrl = await readDataUrl(imageFile);
 					imageUrl = await compressImageHandler(imageUrl, $settings, $config);
-
+					if (destroyed || chatId !== targetChatId) break;
 					if ($temporaryChatEnabled) {
-						files = [
-							...files,
-							{
-								type: 'image',
-								url: imageUrl
-							}
-						];
+						files = [...files, { type: 'image', url: imageUrl }];
 					} else {
 						const blob = await (await fetch(imageUrl)).blob();
-						const compressedFile = new File([blob], imageFile.name, { type: imageFile.type });
-
-						uploadFileHandler(compressedFile, false);
+						if (destroyed || chatId !== targetChatId) break;
+						await uploadFileHandler(
+							new File([blob], imageFile.name, { type: imageFile.type }),
+							false
+						);
 					}
-				};
-
-				reader.readAsDataURL(imageFile);
-			} else {
-				uploadFileHandler(file);
+				} else {
+					await uploadFileHandler(file);
+				}
+			} catch (error) {
+				if (!destroyed && chatId === targetChatId) toast.error(`${error}`);
 			}
-		});
+		}
 	};
 
 	const createNote = async () => {
@@ -1837,7 +1810,7 @@
 								focus({ preventScroll: true });
 							}}
 							onConfirm={async (data) => {
-								const { text, filename } = data;
+								const { text } = data;
 
 								recording = false;
 
@@ -1997,7 +1970,7 @@
 							false)
 								? 'focus-within:outline focus-within:outline-2 focus-within:-outline-offset-2 focus-within:outline-blue-500 [&_.ProseMirror:focus-visible]:outline-none!'
 								: ''}  transition px-0.5 bg-white/5 dark:bg-gray-500/5 backdrop-blur-sm dark:text-gray-100"
-							dir={$settings?.chatDirection ?? 'auto'}
+							dir={$chatDirection}
 						>
 							{#if atSelectedModel !== undefined}
 								<div class="px-2.5 pt-2.5 text-left w-full flex flex-col z-10">
@@ -2006,7 +1979,7 @@
 											<img
 												alt={$i18n.t('model profile')}
 												class="size-3.5 max-w-[1.75rem] object-cover rounded-full"
-												src={`${WEBUI_API_BASE_URL}/models/model/profile/image?id=${$models.find((model) => model.id === atSelectedModel.id).id}&lang=${$i18n.language}`}
+												src={`${WEBUI_API_BASE_URL}/models/model/profile/image?id=${atSelectedModel.id}&lang=${$i18n.language}`}
 											/>
 											<div class="translate-y-[0.5px]">
 												<span class="">{atSelectedModelName}</span>
@@ -2029,7 +2002,7 @@
 							{#if files.length > 0}
 								<div
 									class="mx-2 mt-2 pb-1 flex items-center flex-wrap gap-1.5"
-									dir={$settings?.chatDirection ?? 'auto'}
+									dir={$chatDirection}
 								>
 									{#each files as file, fileIdx}
 										{#if file.type === 'image' || isRasterImageContentType(file?.content_type)}
@@ -2170,27 +2143,23 @@
 													insertPromptAsRichText={$settings?.insertPromptAsRichText ?? false}
 													shiftEnter={!($settings?.ctrlEnterToSend ?? false) &&
 														!$mobile &&
-														!(
-															'ontouchstart' in window ||
-															navigator.maxTouchPoints > 0 ||
-															navigator.msMaxTouchPoints > 0
-														)}
+														!('ontouchstart' in window || navigator.maxTouchPoints > 0)}
 													placeholder={placeholder ? placeholder : $i18n.t('Send a Message')}
 													largeTextAsFile={($settings?.largeTextAsFile ?? false) && !shiftKey}
 													autocomplete={$config?.features?.enable_autocomplete_generation &&
 														($settings?.promptAutocomplete ?? false)}
-													generateAutoCompletion={async (text) => {
+													generateAutoCompletion={async (text: string) => {
 														if (selectedModelIds.length === 0 || !selectedModelIds.at(0)) {
 															return null;
 														}
 
 														const res = await generateAutoCompletion(
 															localStorage.token,
-															selectedModelIds.at(0),
+															selectedModelIds.at(0) ?? '',
 															text,
 															history?.currentId
 																? createMessagesList(history, history.currentId)
-																: null,
+																: [],
 															'general'
 														).catch((error) => {
 															console.log(error);
@@ -2207,8 +2176,8 @@
 														compositionEndedAt = e.timeStamp;
 														isComposing = false;
 													}}
-													on:keydown={async (e) => {
-														e = e.detail.event;
+													on:keydown={async (event) => {
+														const e = event.detail.event;
 
 														const isCtrlPressed = e.ctrlKey || e.metaKey; // metaKey is for Cmd key on Mac
 														const suggestionsContainerElement =
@@ -2231,7 +2200,7 @@
 																	...document.getElementsByClassName('edit-user-message-button')
 																]?.at(-1);
 
-																editButton?.click();
+																if (editButton instanceof HTMLElement) editButton.click();
 															}
 														}
 
@@ -2241,7 +2210,7 @@
 																!(
 																	'ontouchstart' in window ||
 																	navigator.maxTouchPoints > 0 ||
-																	navigator.msMaxTouchPoints > 0
+																	navigator.maxTouchPoints > 0
 																)
 															) {
 																if (inOrNearComposition(e)) {
@@ -2279,8 +2248,8 @@
 															codeInterpreterEnabled = false;
 														}
 													}}
-													on:paste={async (e) => {
-														e = e.detail.event;
+													on:paste={async (event) => {
+														const e = event.detail.event;
 														console.log(e);
 
 														const clipboardData = e.clipboardData || window.clipboardData;
@@ -2357,12 +2326,14 @@
 												console.error('Google Drive Error:', error);
 												toast.error(
 													$i18n.t('Error accessing Google Drive: {{error}}', {
-														error: error.message
+														error: error instanceof Error ? error.message : String(error)
 													})
 												);
 											}
 										}}
-										uploadOneDriveHandler={async (authorityType) => {
+										uploadOneDriveHandler={async (
+											authorityType: 'personal' | 'organizations' | undefined
+										) => {
 											try {
 												const fileData = await pickAndDownloadFile(authorityType);
 												if (fileData) {
@@ -2419,7 +2390,7 @@
 											}) => oauthRedirectHandler(tool, chatInputDraft)}
 											{onWebSearchToggle}
 											closeOnOutsideClick={integrationsMenuCloseOnOutsideClick}
-											onShowValves={(e) => {
+											onShowValves={(e: { type: string; id: string }) => {
 												const { type, id } = e;
 												selectedValvesType = type;
 												selectedValvesItemId = id;

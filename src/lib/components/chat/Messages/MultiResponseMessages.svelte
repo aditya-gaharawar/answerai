@@ -1,4 +1,5 @@
 <script lang="ts">
+	import type { ChatHistory, HistoryNode } from '$lib/utils/chatHistory';
 	import { onMount, tick, getContext } from 'svelte';
 	import { createEventDispatcher } from 'svelte';
 
@@ -26,12 +27,12 @@
 	} from '$lib/utils';
 	const i18n = getContext<typeof import('$lib/i18n').default>('i18n');
 
-	export let chatId;
-	export let history;
-	export let messageId;
-	export let selectedModels = [];
+	export let chatId = '';
+	export let history: ChatHistory;
+	export let messageId: string;
+	export let selectedModels: string[] = [];
 
-	export let isLastMessage;
+	export let isLastMessage = false;
 	export let readOnly = false;
 	export let shareMode: 'continue' | null = null;
 	export let allowDelete = true;
@@ -63,12 +64,12 @@
 
 	const dispatch = createEventDispatcher();
 
-	let currentMessageId;
-	let parentMessage;
-	let groupedMessageIds = {};
-	let groupedMessageIdsIdx = {};
+	let currentMessageId = '';
+	let parentMessage: HistoryNode | null = null;
+	let groupedMessageIds: Record<string, { messageIds: string[] }> = {};
+	let groupedMessageIdsIdx: Record<string, number> = {};
 
-	let selectedModelIdx = null;
+	let selectedModelIdx: number | null = null;
 
 	let message = structuredClone(history.messages[messageId]);
 	$: if (history.messages) {
@@ -82,7 +83,8 @@
 		}
 	}
 
-	const gotoMessage = async (modelIdx, messageIdx: number) => {
+	const gotoMessage = async (modelIdx: number | null, messageIdx: number) => {
+		if (modelIdx === null || !groupedMessageIds[modelIdx]?.messageIds.length) return;
 		// Clamp messageIdx to ensure it's within valid range
 		groupedMessageIdsIdx[modelIdx] = Math.max(
 			0,
@@ -104,7 +106,8 @@
 		triggerScroll();
 	};
 
-	const showPreviousMessage = async (modelIdx) => {
+	const showPreviousMessage = async (modelIdx: number | null) => {
+		if (modelIdx === null || !groupedMessageIds[modelIdx]?.messageIds.length) return;
 		groupedMessageIdsIdx[modelIdx] = Math.max(0, groupedMessageIdsIdx[modelIdx] - 1);
 
 		let messageId = groupedMessageIds[modelIdx].messageIds[groupedMessageIdsIdx[modelIdx]];
@@ -117,7 +120,8 @@
 		triggerScroll();
 	};
 
-	const showNextMessage = async (modelIdx) => {
+	const showNextMessage = async (modelIdx: number | null) => {
+		if (modelIdx === null || !groupedMessageIds[modelIdx]?.messageIds.length) return;
 		groupedMessageIdsIdx[modelIdx] = Math.min(
 			groupedMessageIds[modelIdx].messageIds.length - 1,
 			groupedMessageIdsIdx[modelIdx] + 1
@@ -138,13 +142,14 @@
 		await tick();
 
 		currentMessageId = messageId;
-		parentMessage = history.messages[messageId].parentId
-			? history.messages[history.messages[messageId].parentId]
-			: null;
+		const source = history.messages[messageId];
+		parentMessage = source?.parentId ? (history.messages[source.parentId] ?? null) : null;
 
-		groupedMessageIds = parentMessage?.models.reduce((a, model, modelIdx) => {
+		groupedMessageIds = (parentMessage?.models ?? []).reduce<
+			Record<string, { messageIds: string[] }>
+		>((a, model, modelIdx) => {
 			// Find all messages that are children of the parent message and have the same model
-			let modelMessageIds = parentMessage?.childrenIds
+			let modelMessageIds = (parentMessage?.childrenIds ?? [])
 				.map((id) => history.messages[id])
 				.filter((m) => m?.modelIdx === modelIdx)
 				.map((m) => m.id);
@@ -152,7 +157,7 @@
 			// Legacy support for messages that don't have a modelIdx
 			// Find all messages that are children of the parent message and have the same model
 			if (modelMessageIds.length === 0) {
-				let modelMessages = parentMessage?.childrenIds
+				let modelMessages = (parentMessage?.childrenIds ?? [])
 					.map((id) => history.messages[id])
 					.filter((m) => m?.model === model);
 
@@ -169,29 +174,32 @@
 			};
 		}, {});
 
-		groupedMessageIdsIdx = parentMessage?.models.reduce((a, model, modelIdx) => {
-			const idx = groupedMessageIds[modelIdx].messageIds.findIndex((id) => id === messageId);
-			if (idx !== -1) {
-				return {
-					...a,
-					[modelIdx]: idx
-				};
-			} else {
-				return {
-					...a,
-					[modelIdx]: groupedMessageIds[modelIdx].messageIds.length - 1
-				};
-			}
-		}, {});
+		groupedMessageIdsIdx = (parentMessage?.models ?? []).reduce<Record<string, number>>(
+			(a, model, modelIdx) => {
+				const idx = groupedMessageIds[modelIdx].messageIds.findIndex((id) => id === messageId);
+				if (idx !== -1) {
+					return {
+						...a,
+						[modelIdx]: idx
+					};
+				} else {
+					return {
+						...a,
+						[modelIdx]: groupedMessageIds[modelIdx].messageIds.length - 1
+					};
+				}
+			},
+			{}
+		);
 
-		selectedModelIdx = history.messages[messageId]?.modelIdx;
+		selectedModelIdx = history.messages[messageId]?.modelIdx ?? null;
 
 		console.log(groupedMessageIds, groupedMessageIdsIdx);
 
 		await tick();
 	};
 
-	const onGroupClick = async (_messageId, modelIdx) => {
+	const onGroupClick = async (_messageId: string, modelIdx: number) => {
 		if (messageId != _messageId) {
 			history.currentId = getDeepestChildId(history, _messageId);
 			selectedModelIdx = modelIdx;
@@ -245,7 +253,7 @@
 								e.currentTarget.scrollLeft += e.deltaY;
 							}}
 						>
-							{#each Object.keys(groupedMessageIds) as modelIdx}
+							{#each Object.keys(groupedMessageIds).map(Number) as modelIdx}
 								{#if groupedMessageIdsIdx[modelIdx] !== undefined && (groupedMessageIds[modelIdx]?.messageIds ?? []).length > 0}
 									<!-- svelte-ignore a11y-no-static-element-interactions -->
 									<!-- svelte-ignore a11y-click-events-have-key-events -->
@@ -288,7 +296,8 @@
 									{selectedModels}
 									isLastMessage={true}
 									siblings={groupedMessageIds[selectedModelIdx].messageIds}
-									gotoMessage={(message, messageIdx) => gotoMessage(selectedModelIdx, messageIdx)}
+									gotoMessage={(message: HistoryNode, messageIdx: number) =>
+										gotoMessage(selectedModelIdx, messageIdx)}
 									showPreviousMessage={() => showPreviousMessage(selectedModelIdx)}
 									showNextMessage={() => showNextMessage(selectedModelIdx)}
 									{setInputText}
@@ -300,9 +309,10 @@
 									{actionMessage}
 									{submitMessage}
 									{continueResponse}
-									regenerateResponse={async (message, prompt = null) => {
+									regenerateResponse={async (message: HistoryNode, prompt = null) => {
 										regenerateResponse(message, prompt);
 										await tick();
+										if (selectedModelIdx === null) return;
 										groupedMessageIdsIdx[selectedModelIdx] =
 											groupedMessageIds[selectedModelIdx].messageIds.length - 1;
 									}}
@@ -320,7 +330,7 @@
 					{/if}
 				</div>
 			{:else}
-				{#each Object.keys(groupedMessageIds) as modelIdx}
+				{#each Object.keys(groupedMessageIds).map(Number) as modelIdx}
 					{#if groupedMessageIdsIdx[modelIdx] !== undefined && groupedMessageIds[modelIdx].messageIds.length > 0}
 						<!-- svelte-ignore a11y-no-static-element-interactions -->
 						<!-- svelte-ignore a11y-click-events-have-key-events -->
@@ -352,7 +362,8 @@
 										{selectedModels}
 										isLastMessage={true}
 										siblings={groupedMessageIds[modelIdx].messageIds}
-										gotoMessage={(message, messageIdx) => gotoMessage(modelIdx, messageIdx)}
+										gotoMessage={(message: HistoryNode, messageIdx: number) =>
+											gotoMessage(modelIdx, messageIdx)}
 										showPreviousMessage={() => showPreviousMessage(modelIdx)}
 										showNextMessage={() => showNextMessage(modelIdx)}
 										{setInputText}
@@ -365,7 +376,7 @@
 										{actionMessage}
 										{submitMessage}
 										{continueResponse}
-										regenerateResponse={async (message, prompt = null) => {
+										regenerateResponse={async (message: HistoryNode, prompt = null) => {
 											regenerateResponse(message, prompt);
 											await tick();
 											groupedMessageIdsIdx[modelIdx] =
@@ -393,12 +404,13 @@
 			{#if !Object.keys(groupedMessageIds).find((modelIdx) => {
 				const { messageIds } = groupedMessageIds[modelIdx];
 				const _messageId = messageIds[groupedMessageIdsIdx[modelIdx]];
-				return !history.messages[_messageId]?.done ?? false;
+				return !history.messages[_messageId]?.done;
 			})}
+				{@const merged = history.messages[messageId]?.merged}
 				<div class="flex justify-end">
 					<div class="w-full">
-						{#if history.messages[messageId]?.merged?.status}
-							{@const message = history.messages[messageId]?.merged}
+						{#if merged?.status}
+							{@const message = merged}
 
 							<div class="w-full rounded-xl pl-5 pr-2 py-2 mt-2">
 								<Name>

@@ -15,6 +15,7 @@
 	import { updateUserSettings } from '$lib/apis/users';
 	import PinnedModelItem from './PinnedModelItem.svelte';
 
+	/** @type {string | null} */
 	export let selectedChatId = null;
 	export let shiftKey = false;
 

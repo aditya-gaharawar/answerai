@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { workerRequest } from '$lib/utils/workerRequest';
+	import { normalizeExecutionOutput } from '$lib/utils/executionOutput';
 	import hljs from 'highlight.js';
 	import { toast } from 'svelte-sonner';
 	import { getContext, onMount, tick, onDestroy } from 'svelte';
@@ -35,7 +37,7 @@
 	export let edit = true;
 
 	export let onSave = (e: string) => {};
-	export let onUpdate = (e, codeBlockId = '') => {};
+	export let onUpdate = (e: { raw?: string; text?: string } | null, codeBlockId = '') => {};
 	export let onPreview = (e: string) => {};
 
 	export let save = false;
@@ -43,34 +45,34 @@
 	export let preview = false;
 	export let collapsed = false;
 
-	export let token;
+	export let token: { raw?: string; text?: string } | null = null;
 	export let lang = '';
 	export let code = '';
-	export let attributes = {};
+	export let attributes: { output?: string; [key: string]: unknown } = {};
 
 	export let className = '';
 	export let editorClassName = '';
 	export let stickyButtonsClassName = 'top-0';
 
-	let localPyodideWorker = null;
+	let cleanupExecution: (() => void) | null = null;
 
 	let _code = '';
 	$: _code = code;
 	$: isDiff = ['diff', 'patch'].includes(lang.trim().toLowerCase());
 	let editingDiff = false;
 
-	let _token = null;
+	let _token: typeof token | null = null;
 
-	let renderHTML = null;
+	let renderHTML: string | null = null;
 	let renderError: { type: 'diagram' | 'visualization'; detail: string } | null = null;
 
-	let highlightedCode = null;
+	let highlightedCode: string | null = null;
 	let executing = false;
 
-	let stdout = null;
-	let stderr = null;
-	let result = null;
-	let files = null;
+	let stdout: string | null = null;
+	let stderr: string | null = null;
+	let result: unknown | null = null;
+	let files: { type: string; data: string }[] | null = null;
 
 	let copied = false;
 	let saved = false;
@@ -103,7 +105,7 @@
 		onPreview(code);
 	};
 
-	const checkPythonCode = (str) => {
+	const checkPythonCode = (str: string) => {
 		// Check if the string contains typical Python syntax characters
 		const pythonSyntax = [
 			'def ',
@@ -138,7 +140,13 @@
 		return false;
 	};
 
-	const executePython = async (code) => {
+	const applyExecutionOutput = (output: unknown) => {
+		({ stdout, stderr, result, files } = normalizeExecutionOutput(output));
+	};
+
+	const executePython = async (code: string) => {
+		cleanupExecution?.();
+		files = null;
 		result = null;
 		stdout = null;
 		stderr = null;
@@ -151,67 +159,7 @@
 				return null;
 			});
 
-			if (output) {
-				if (output['stdout']) {
-					stdout = output['stdout'];
-					const stdoutLines = stdout.split('\n');
-
-					for (const [idx, line] of stdoutLines.entries()) {
-						if (line.startsWith('data:image/png;base64')) {
-							if (files) {
-								files.push({
-									type: 'image/png',
-									data: line
-								});
-							} else {
-								files = [
-									{
-										type: 'image/png',
-										data: line
-									}
-								];
-							}
-
-							if (stdout.includes(`${line}\n`)) {
-								stdout = stdout.replace(`${line}\n`, ``);
-							} else if (stdout.includes(`${line}`)) {
-								stdout = stdout.replace(`${line}`, ``);
-							}
-						}
-					}
-				}
-
-				if (output['result']) {
-					result = output['result'];
-					const resultLines = result.split('\n');
-
-					for (const [idx, line] of resultLines.entries()) {
-						if (line.startsWith('data:image/png;base64')) {
-							if (files) {
-								files.push({
-									type: 'image/png',
-									data: line
-								});
-							} else {
-								files = [
-									{
-										type: 'image/png',
-										data: line
-									}
-								];
-							}
-
-							if (result.includes(`${line}\n`)) {
-								result = result.replace(`${line}\n`, ``);
-							} else if (result.includes(`${line}`)) {
-								result = result.replace(`${line}`, ``);
-							}
-						}
-					}
-				}
-
-				output['stderr'] && (stderr = output['stderr']);
-			}
+			if (output) applyExecutionOutput(output);
 
 			executing = false;
 		} else {
@@ -249,116 +197,23 @@
 		const isShared = !!sharedWorker;
 		const worker = sharedWorker ?? createPyodideWorker();
 
-		if (!isShared) {
-			localPyodideWorker = worker;
-		}
-
-		worker.postMessage({
-			id: id,
-			code: code,
-			packages: packages
-		});
-
-		const timeoutId = setTimeout(() => {
-			if (executing) {
+		cleanupExecution = workerRequest(
+			worker,
+			{ code, packages },
+			(data) => {
+				applyExecutionOutput(data);
 				executing = false;
-				stderr = 'Execution Time Limit Exceeded';
-				if (!isShared) {
-					worker.terminate();
-					localPyodideWorker = null;
-				}
-			}
-		}, 60000);
-
-		const handler = (event) => {
-			// Ignore messages from other requests on the shared worker
-			if (event.data?.id !== id) return;
-
-			console.log('pyodideWorker.onmessage', event);
-			const { id: _id, ...data } = event.data;
-
-			console.log(_id, data);
-
-			if (data['stdout']) {
-				stdout = data['stdout'];
-				const stdoutLines = stdout.split('\n');
-
-				for (const [idx, line] of stdoutLines.entries()) {
-					if (line.startsWith('data:image/png;base64')) {
-						if (files) {
-							files.push({
-								type: 'image/png',
-								data: line
-							});
-						} else {
-							files = [
-								{
-									type: 'image/png',
-									data: line
-								}
-							];
-						}
-
-						if (stdout.includes(`${line}\n`)) {
-							stdout = stdout.replace(`${line}\n`, ``);
-						} else if (stdout.includes(`${line}`)) {
-							stdout = stdout.replace(`${line}`, ``);
-						}
-					}
-				}
-			}
-
-			if (typeof data['result'] === 'string') {
-				result = data['result'];
-				const resultLines = result.split('\n');
-
-				for (const [idx, line] of resultLines.entries()) {
-					if (line.startsWith('data:image/png;base64')) {
-						if (files) {
-							files.push({
-								type: 'image/png',
-								data: line
-							});
-						} else {
-							files = [
-								{
-									type: 'image/png',
-									data: line
-								}
-							];
-						}
-
-						if (result.startsWith(`${line}\n`)) {
-							result = result.replace(`${line}\n`, ``);
-						} else if (result.startsWith(`${line}`)) {
-							result = result.replace(`${line}`, ``);
-						}
-					}
-				}
-			}
-
-			data['stderr'] && (stderr = data['stderr']);
-			data['result'] && (result = data['result']);
-
-			clearTimeout(timeoutId);
-			worker.removeEventListener('message', handler);
-			executing = false;
-
-			// Signal PyodideFileNav to auto-refresh after execution
-			window.dispatchEvent(new Event('pyodide:files'));
-		};
-
-		worker.addEventListener('message', handler);
-
-		worker.onerror = (event) => {
-			console.log('pyodideWorker.onerror', event);
-			clearTimeout(timeoutId);
-			worker.removeEventListener('message', handler);
-			executing = false;
-		};
+				window.dispatchEvent(new Event('pyodide:files'));
+			},
+			(error) => {
+				stderr = error.message;
+				executing = false;
+			},
+			{ owned: !isShared }
+		);
 	};
 
-	let mermaid = null;
+	let mermaid: Awaited<ReturnType<typeof initMermaid>> | null = null;
 	const renderMermaid = async (code: string) => {
 		if (!mermaid) {
 			mermaid = await initMermaid();
@@ -412,9 +267,7 @@
 		if (attributes?.output) {
 			try {
 				const output = JSON.parse(unescapeHtml(attributes.output));
-				stdout = output.stdout;
-				stderr = output.stderr;
-				result = output.result;
+				applyExecutionOutput(output);
 			} catch (error) {
 				console.error('Error:', error);
 			}
@@ -428,10 +281,7 @@
 	});
 
 	onDestroy(() => {
-		if (localPyodideWorker) {
-			localPyodideWorker.terminate();
-			localPyodideWorker = null;
-		}
+		cleanupExecution?.();
 	});
 </script>
 
@@ -445,7 +295,7 @@
 				<SvgPanZoom
 					className=" rounded-2xl max-h-fit overflow-hidden"
 					svg={renderHTML}
-					content={_token.text}
+					content={_token?.text ?? ''}
 				/>
 			{:else}
 				<div class="p-3">
@@ -621,7 +471,8 @@
 								<div class=" ">
 									<div class=" text-gray-500 text-xs mb-1">{$i18n.t('STDOUT/STDERR')}</div>
 									<div
-										class="text-sm font-mono whitespace-pre-wrap {stdout?.split('\n')?.length > 100
+										class="text-sm font-mono whitespace-pre-wrap {(stdout?.split('\n').length ??
+											0) > 100
 											? `max-h-96`
 											: ''}  overflow-y-auto"
 									>

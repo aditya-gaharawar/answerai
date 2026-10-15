@@ -1,4 +1,10 @@
 <script lang="ts">
+	import {
+		updateModelDownload,
+		removeModelDownload,
+		cancelModelDownload
+	} from '$lib/stores/modelDownloads';
+
 	import { toast } from 'svelte-sonner';
 	import { getContext, onMount } from 'svelte';
 	const i18n: any = getContext('i18n');
@@ -183,7 +189,7 @@
 			}
 		);
 
-		if (res) {
+		if (res?.body) {
 			const reader = res.body
 				.pipeThrough(new TextDecoderStream())
 				.pipeThrough(splitStream('\n'))
@@ -226,21 +232,13 @@
 										downloadProgress = 100;
 									}
 
-									MODEL_DOWNLOAD_POOL.set({
-										...$MODEL_DOWNLOAD_POOL,
-										[sanitizedModelTag]: {
-											...$MODEL_DOWNLOAD_POOL[sanitizedModelTag],
-											pullProgress: downloadProgress,
-											digest: data.digest
-										}
+									updateModelDownload(sanitizedModelTag, controller, {
+										pullProgress: downloadProgress,
+										digest: data.digest
 									});
 								} else {
-									MODEL_DOWNLOAD_POOL.set({
-										...$MODEL_DOWNLOAD_POOL,
-										[sanitizedModelTag]: {
-											...$MODEL_DOWNLOAD_POOL[sanitizedModelTag],
-											done: data.status === 'success'
-										}
+									updateModelDownload(sanitizedModelTag, controller, {
+										done: data.status === 'success'
 									});
 								}
 							}
@@ -280,7 +278,7 @@
 				toast.error($i18n.t('Download canceled'));
 			}
 
-			delete $MODEL_DOWNLOAD_POOL[sanitizedModelTag];
+			removeModelDownload(sanitizedModelTag, controller);
 
 			MODEL_DOWNLOAD_POOL.set({
 				...$MODEL_DOWNLOAD_POOL
@@ -415,20 +413,13 @@
 	};
 
 	const cancelModelPullHandler = async (model: string) => {
-		const { reader, abortController } = $MODEL_DOWNLOAD_POOL[model];
-		if (abortController) {
-			abortController.abort();
-		}
-		if (reader) {
-			await reader.cancel();
-			delete $MODEL_DOWNLOAD_POOL[model];
-			MODEL_DOWNLOAD_POOL.set({
-				...$MODEL_DOWNLOAD_POOL
-			});
-			toast.success($i18n.t('{{model}} download has been canceled', { model: model }));
-		}
+		const download = await cancelModelDownload(model);
+		if (!download) return;
+		const displayModel = download.providerLabel
+			? `${download.model} (${download.providerLabel})`
+			: download.model;
+		toast.success($i18n.t('{{model}} download has been canceled', { model: displayModel }));
 	};
-
 	const createModelHandler = async () => {
 		createModelLoading = true;
 
@@ -706,7 +697,7 @@
 
 					{#if Object.keys($MODEL_DOWNLOAD_POOL).length > 0}
 						{#each Object.keys($MODEL_DOWNLOAD_POOL) as model}
-							{#if 'pullProgress' in $MODEL_DOWNLOAD_POOL[model]}
+							{#if 'pullProgress' in ($MODEL_DOWNLOAD_POOL[model] ?? {})}
 								<div class="flex flex-col">
 									<div class="font-normal mb-1">{model}</div>
 									<div class="">
@@ -716,10 +707,10 @@
 													class="dark:bg-gray-600 bg-gray-500 text-xs font-normal text-gray-100 text-center p-0.5 leading-none rounded-full"
 													style="width: {Math.max(
 														15,
-														$MODEL_DOWNLOAD_POOL[model].pullProgress ?? 0
+														$MODEL_DOWNLOAD_POOL[model]?.pullProgress ?? 0
 													)}%"
 												>
-													{$MODEL_DOWNLOAD_POOL[model].pullProgress ?? 0}%
+													{$MODEL_DOWNLOAD_POOL[model]?.pullProgress ?? 0}%
 												</div>
 											</div>
 
@@ -751,9 +742,9 @@
 												</button>
 											</Tooltip>
 										</div>
-										{#if 'digest' in $MODEL_DOWNLOAD_POOL[model]}
+										{#if 'digest' in ($MODEL_DOWNLOAD_POOL[model] ?? {})}
 											<div class="mt-1 text-xs dark:text-gray-500" style="font-size: 0.5rem;">
-												{$MODEL_DOWNLOAD_POOL[model].digest}
+												{$MODEL_DOWNLOAD_POOL[model]?.digest}
 											</div>
 										{/if}
 									</div>

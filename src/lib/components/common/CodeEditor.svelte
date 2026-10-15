@@ -127,7 +127,7 @@
 	const formatPythonCodePyodide = (code: string) => {
 		return new Promise((resolve, reject) => {
 			const id = `format-${++_formatReqId}`;
-			let timeout;
+			let timeout: ReturnType<typeof setTimeout> | undefined;
 			const worker = getPyodideWorker();
 
 			const startTag = `--||CODE-START-${id}||--`;

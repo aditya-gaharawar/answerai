@@ -48,9 +48,8 @@ def _read_weight_map(index: Path) -> dict:
     metadata = json.loads(raw)
     if not isinstance(metadata, dict):
         raise ValueError('Model shard index must be an object')
-    weight_map = metadata.get('weight_map')
-    if weight_map is None:
-        return {}
+    # Accelerate also accepts a flat parameter-to-shard mapping without weight_map.
+    weight_map = metadata['weight_map'] if 'weight_map' in metadata else metadata
     if not isinstance(weight_map, dict):
         raise ValueError('Model weight_map must be an object')
     if not all(isinstance(value, str) for value in weight_map.values()):

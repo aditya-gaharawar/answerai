@@ -1,4 +1,6 @@
 <script lang="ts">
+	import type { FolderRecord, FolderRegistry } from '$lib/types/folders';
+	import { buildFolderTree } from '$lib/utils/folderTree';
 	import { toast } from 'svelte-sonner';
 	import { v4 as uuidv4 } from 'uuid';
 	import Sortable from 'sortablejs';
@@ -99,10 +101,10 @@
 
 	let scrollTop = 0;
 
-	let navElement;
+	let navElement: HTMLElement;
 	let shiftKey = false;
 
-	let selectedChatId = null;
+	let selectedChatId: string | null = null;
 
 	// Keep the optimistic sidebar highlight in sync with the active chat. Leaving the
 	// chat view (e.g. navigating to an admin page) clears chatId, and programmatic
@@ -129,22 +131,15 @@
 	let showSharedFolders = false;
 	let showChatsMenu = false;
 
-	let folders = {};
+	let folders: Record<string, FolderRecord> = Object.create(null);
 	type SelectedSidebarFolder = { id: string } | null;
-	let folderRegistry: Record<
-		string,
-		{
-			setFolderItems?: () => unknown;
-			upsertChat?: (chat: Record<string, unknown>) => unknown;
-			setChatActive?: (chatId: string, active: boolean) => boolean;
-			setChatReadAt?: (chatId: string, lastReadAt: number) => boolean;
-			setAllChatsRead?: () => unknown;
-		}
-	> = {};
+	let folderRegistry: FolderRegistry = {};
 
-	let newFolderId = null;
+	let newFolderId: string | null = null;
+	let pinnedMenuSortable: Sortable | null = null;
+	let destroyed = false;
 
-	let sharedFolders: any[] = [];
+	let sharedFolders: FolderRecord[] = [];
 
 	const initSelectedFolderChats = (folder: SelectedSidebarFolder) => {
 		if (!folder?.id) {
@@ -156,7 +151,7 @@
 
 	$: pinnedItems = $settings?.pinnedMenuItems ?? DEFAULT_PINNED_ITEMS;
 
-	$: isMenuItemVisible = (id) => {
+	$: isMenuItemVisible = (id: string) => {
 		switch (id) {
 			case 'notes':
 				return (
@@ -189,7 +184,7 @@
 		}
 	};
 
-	const getMenuItemMeta = (id) => {
+	const getMenuItemMeta = (id: string) => {
 		const items = {
 			notes: { label: $i18n.t('Notes'), href: '/notes', iconType: 'note' },
 			workspace: { label: $i18n.t('Workspace'), href: '/workspace', iconType: 'workspace' },
@@ -197,7 +192,7 @@
 			calendar: { label: $i18n.t('Calendar'), href: '/calendar', iconType: 'calendar' },
 			playground: { label: $i18n.t('Playground'), href: '/playground', iconType: 'playground' }
 		};
-		return items[id];
+		return Object.hasOwn(items, id) ? items[id as keyof typeof items] : undefined;
 	};
 
 	const menuItemPathPrefixes = {
@@ -208,7 +203,7 @@
 		playground: '/playground'
 	};
 
-	const getActiveMenuItemId = (pathname) => {
+	const getActiveMenuItemId = (pathname: string) => {
 		for (const [id, pathPrefix] of Object.entries(menuItemPathPrefixes)) {
 			if (pathname === pathPrefix || pathname.startsWith(`${pathPrefix}/`)) {
 				return id;
@@ -223,11 +218,13 @@
 	const initPinnedMenuSortable = () => {
 		const el = document.getElementById('pinned-menu-items-list');
 		if (el && !$mobile) {
-			new Sortable(el, {
+			pinnedMenuSortable?.destroy();
+			pinnedMenuSortable = new Sortable(el, {
 				animation: 150,
 				onUpdate: async (event) => {
 					const itemId = event.item.dataset.id;
 					const newIndex = event.newIndex;
+					if (!itemId || newIndex === undefined) return;
 					const current = [...pinnedItems];
 					const oldIndex = current.indexOf(itemId);
 					current.splice(oldIndex, 1);
@@ -246,7 +243,7 @@
 			return;
 		}
 
-		const [folderList, sharedFolderList] = await Promise.all([
+		const [folderList, sharedFolderList]: [FolderRecord[], FolderRecord[]] = await Promise.all([
 			getFolders(localStorage.token).catch((error) => {
 				return [];
 			}),
@@ -257,79 +254,34 @@
 		_folders.set(folderList.sort((a, b) => b.updated_at - a.updated_at));
 
 		sharedFolders = sharedFolderList;
-		const folderMap: Record<string, any> = {};
-
-		// First pass: Initialize all folder entries
-		for (const folder of folderList) {
-			// Ensure folder is added to folders with its data
-			folderMap[folder.id] = { ...(folderMap[folder.id] || {}), ...folder };
-
-			if (newFolderId && folder.id === newFolderId) {
-				folderMap[folder.id].new = true;
-				newFolderId = null;
-			}
-		}
-
-		// Second pass: Tie child folders to their parents
-		for (const folder of folderList) {
-			if (folder.parent_id) {
-				// Ensure the parent folder is initialized if it doesn't exist
-				if (!folderMap[folder.parent_id]) {
-					folderMap[folder.parent_id] = {}; // Create a placeholder if not already present
-				}
-
-				// Initialize childrenIds array if it doesn't exist and add the current folder id
-				folderMap[folder.parent_id].childrenIds = folderMap[folder.parent_id].childrenIds
-					? [...folderMap[folder.parent_id].childrenIds, folder.id]
-					: [folder.id];
-
-				// Sort the children by updated_at field
-				folderMap[folder.parent_id].childrenIds.sort((a, b) => {
-					return folderMap[b].updated_at - folderMap[a].updated_at;
-				});
-			}
-		}
-
-		// Merge shared folders into the same structure
-		for (const sf of sharedFolders) {
-			if (folderMap[sf.id]) {
-				folderMap[sf.id].showOwnerInfo = true;
-				continue;
-			}
-			folderMap[sf.id] = { ...sf, shared: true };
-		}
-
-		// Build parent-child relationships for shared folders
-		for (const sf of sharedFolders) {
-			if (folderMap[sf.id]?.shared && sf.parent_id && folderMap[sf.parent_id]) {
-				folderMap[sf.parent_id].childrenIds = folderMap[sf.parent_id].childrenIds
-					? [...new Set([...folderMap[sf.parent_id].childrenIds, sf.id])]
-					: [sf.id];
-			}
-		}
-
-		folders = folderMap;
+		folders = buildFolderTree(folderList, sharedFolderList, newFolderId);
+		newFolderId = null;
 	};
 
-	const createFolder = async ({ name, data, meta, parent_id }) => {
-		name = name?.trim();
-		if (!name) {
+	const createFolder = async ({
+		name,
+		data,
+		meta,
+		parent_id
+	}: import('$lib/apis/folders').FolderForm) => {
+		let folderName = name?.trim();
+		if (!folderName) {
 			toast.error($i18n.t('Folder name cannot be empty.'));
 			return;
 		}
 
 		// Check for duplicate names in the same parent
 		const siblings = Object.values(folders).filter((folder) => folder.parent_id === parent_id);
-		if (siblings.find((folder) => folder.name.toLowerCase() === name.toLowerCase())) {
+		if (siblings.find((folder) => folder.name.toLowerCase() === (folderName ?? '').toLowerCase())) {
 			// If a folder with the same name already exists, append a number to the name
 			let i = 1;
 			while (
-				siblings.find((folder) => folder.name.toLowerCase() === `${name} ${i}`.toLowerCase())
+				siblings.find((folder) => folder.name.toLowerCase() === `${folderName} ${i}`.toLowerCase())
 			) {
 				i++;
 			}
 
-			name = `${name} ${i}`;
+			folderName = `${folderName} ${i}`;
 		}
 
 		// Add a dummy folder to the list to show the user that the folder is being created
@@ -338,15 +290,15 @@
 			...folders,
 			[tempId]: {
 				id: tempId,
-				name: name,
-				parent_id: parent_id,
+				name: folderName,
+				parent_id: parent_id ?? null,
 				created_at: Date.now(),
 				updated_at: Date.now()
 			}
 		};
 
 		const res = await createNewFolder(localStorage.token, {
-			name,
+			name: folderName,
 			data,
 			meta,
 			parent_id
@@ -371,7 +323,7 @@
 		if (res) {
 			await channels.set(
 				res.sort(
-					(a, b) =>
+					(a: { type: string | null }, b: { type: string | null }) =>
 						['', null, 'group', 'dm'].indexOf(a.type) - ['', null, 'group', 'dm'].indexOf(b.type)
 				)
 			);
@@ -455,7 +407,11 @@
 		);
 	};
 
-	const applyChatReadState = (data) => {
+	const applyChatReadState = (data: {
+		chat_id?: string;
+		last_read_at?: number;
+		folder_unread_counts?: Record<string, number>;
+	}) => {
 		if (data?.folder_unread_counts) {
 			applyFolderUnreadCounts(data.folder_unread_counts);
 		}
@@ -485,7 +441,11 @@
 		}
 	};
 
-	const importChatHandler = async (items, pinned = false, folderId = null) => {
+	const importChatHandler = async (
+		items: { chat?: object; meta?: object; created_at?: number; updated_at?: number }[],
+		pinned = false,
+		folderId: string | null = null
+	) => {
 		if (!canImportChats) {
 			toast.error($i18n.t('Access prohibited'));
 			return;
@@ -511,27 +471,19 @@
 		initChatList();
 	};
 
-	const inputFilesHandler = async (files) => {
-		console.log(files);
-
+	const inputFilesHandler = async (files: Iterable<File>) => {
 		for (const file of files) {
-			const reader = new FileReader();
-			reader.onload = async (e) => {
-				const content = e.target.result;
-
-				try {
-					const chatItems = JSON.parse(content);
-					importChatHandler(chatItems);
-				} catch {
-					toast.error($i18n.t(`Invalid file format.`));
-				}
-			};
-
-			reader.readAsText(file);
+			try {
+				const items: unknown = JSON.parse(await file.text());
+				if (!Array.isArray(items)) throw new Error('Expected a chat array');
+				await importChatHandler(items);
+			} catch {
+				toast.error($i18n.t('Invalid file format.'));
+			}
 		}
 	};
 
-	const tagEventHandler = async (type, tagName, chatId) => {
+	const tagEventHandler = async (type: string, tagName: string, chatId: string) => {
 		console.log(type, tagName, chatId);
 		if (type === 'delete') {
 			initChatList();
@@ -542,7 +494,7 @@
 
 	let draggedOver = false;
 
-	const onDragOver = (e) => {
+	const onDragOver = (e: DragEvent) => {
 		e.preventDefault();
 
 		// Check if a file is being draggedOver.
@@ -557,7 +509,7 @@
 		draggedOver = false;
 	};
 
-	const onDrop = async (e) => {
+	const onDrop = async (e: DragEvent) => {
 		e.preventDefault();
 		console.log(e); // Log the drop event
 
@@ -574,13 +526,13 @@
 		draggedOver = false; // Reset draggedOver status after drop
 	};
 
-	const onKeyDown = (e) => {
+	const onKeyDown = (e: KeyboardEvent) => {
 		if (e.key === 'Shift') {
 			shiftKey = true;
 		}
 	};
 
-	const onKeyUp = (e) => {
+	const onKeyUp = (e: KeyboardEvent) => {
 		if (e.key === 'Shift') {
 			shiftKey = false;
 		}
@@ -649,6 +601,8 @@
 	};
 
 	onDestroy(() => {
+		destroyed = true;
+		pinnedMenuSortable?.destroy();
 		if (isResizing) {
 			document.body.style.userSelect = '';
 		}
@@ -660,7 +614,7 @@
 		return () => socketInstance?.off('connect', initChannels);
 	});
 
-	onMount(async () => {
+	onMount(() => {
 		try {
 			const width = Number(localStorage.getItem('sidebarWidth'));
 			if (!Number.isNaN(width) && width >= MIN_WIDTH && width <= MAX_WIDTH) {
@@ -669,7 +623,7 @@
 		} catch {}
 
 		document.documentElement.style.setProperty('--sidebar-width', `${$sidebarWidth}px`);
-		sidebarWidth.subscribe((w) => {
+		const unsubscribeWidth = sidebarWidth.subscribe((w) => {
 			document.documentElement.style.setProperty('--sidebar-width', `${w}px`);
 		});
 
@@ -684,7 +638,7 @@
 				if ($showSidebar && !value) {
 					const navElement = document.getElementsByTagName('nav')[0];
 					if (navElement) {
-						navElement.style['-webkit-app-region'] = 'drag';
+						navElement.style.setProperty('-webkit-app-region', 'drag');
 					}
 				}
 			}),
@@ -697,12 +651,12 @@
 				if (navElement) {
 					if ($mobile) {
 						if (!value) {
-							navElement.style['-webkit-app-region'] = 'drag';
+							navElement.style.setProperty('-webkit-app-region', 'drag');
 						} else {
-							navElement.style['-webkit-app-region'] = 'no-drag';
+							navElement.style.setProperty('-webkit-app-region', 'no-drag');
 						}
 					} else {
-						navElement.style['-webkit-app-region'] = 'drag';
+						navElement.style.setProperty('-webkit-app-region', 'drag');
 					}
 				}
 			})
@@ -742,11 +696,15 @@
 			return Promise.all(Object.values(folderRegistry).map((folder) => folder?.setFolderItems?.()));
 		});
 
-		await tick();
-		await initSidebarData();
-		initPinnedMenuSortable();
+		void (async () => {
+			await tick();
+			if (destroyed) return;
+			await initSidebarData();
+			if (!destroyed) initPinnedMenuSortable();
+		})().catch(console.error);
 
 		return () => {
+			unsubscribeWidth();
 			unsubscribers.forEach((unsubscriber) => unsubscriber());
 
 			window.removeEventListener('keydown', onKeyDown);
@@ -846,7 +804,7 @@
 	bind:show={showCreateChannel}
 	onSubmit={async (payload: any) => {
 		let { type, name, is_private, access_grants, group_ids, user_ids } = payload ?? {};
-		name = name?.trim();
+		let channelName = name?.trim();
 
 		if (type === 'dm') {
 			if (!user_ids || user_ids.length === 0) {
@@ -854,7 +812,7 @@
 				return;
 			}
 		} else {
-			if (!name) {
+			if (!channelName) {
 				toast.error($i18n.t('Channel name cannot be empty.'));
 				return;
 			}
@@ -862,7 +820,7 @@
 
 		const res = await createNewChannel(localStorage.token, {
 			type: type,
-			name: name,
+			name: channelName,
 			is_private: is_private,
 			access_grants: access_grants,
 			group_ids: group_ids,
@@ -873,7 +831,7 @@
 		});
 
 		if (res) {
-			$socket.emit('join-channels', { auth: { token: $user?.token } });
+			$socket?.emit('join-channels', { auth: { token: $user?.token } });
 			await initChannels();
 			showCreateChannel = false;
 			showChannels = true;
@@ -884,7 +842,7 @@
 
 <FolderModal
 	bind:show={showCreateFolderModal}
-	onSubmit={async (folder) => {
+	onSubmit={async (folder: import('$lib/apis/folders').FolderForm) => {
 		await createFolder(folder);
 		showCreateFolderModal = false;
 	}}
@@ -1209,10 +1167,10 @@
 				<div
 					class="relative flex flex-col flex-1 overflow-y-auto scrollbar-hidden space-y-1.5 pt-2.5 pb-2.5"
 					on:scroll={(e) => {
-						if (e.target.scrollTop === 0) {
+						if (e.currentTarget.scrollTop === 0) {
 							scrollTop = 0;
 						} else {
-							scrollTop = e.target.scrollTop;
+							scrollTop = e.currentTarget.scrollTop;
 						}
 					}}
 				>
@@ -1476,7 +1434,7 @@
 											return null;
 										});
 
-										folderRegistry[chat.folder_id]?.setFolderItems();
+										folderRegistry[chat.folder_id]?.setFolderItems?.();
 
 										if (res) {
 											chat = res;

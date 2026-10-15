@@ -80,3 +80,25 @@ def test_cached_model_path_still_passes_validation(tmp_path, monkeypatch):
     hub.snapshot_download = unavailable
     with pytest.raises(RuntimeError, match='local model snapshot'):
         namespace['get_model_path']('example/model', True)
+
+
+@pytest.mark.parametrize(
+    'metadata',
+    [
+        {'layer': '../secret'},
+        {'layer': '/etc/passwd'},
+        {'weight_map': None},
+        {'weight_map': []},
+        [],
+    ],
+)
+def test_flat_and_malformed_indexes_are_validated(tmp_path, metadata):
+    (tmp_path / 'model.safetensors.index.json').write_text(json.dumps(metadata))
+    with pytest.raises(ValueError):
+        validate_model_snapshot(str(tmp_path))
+
+
+def test_flat_shard_index_supports_regular_files(tmp_path):
+    (tmp_path / 'weights.safetensors').write_bytes(b'weights')
+    (tmp_path / 'model.safetensors.index.json').write_text(json.dumps({'layer': 'weights.safetensors'}))
+    validate_model_snapshot(str(tmp_path))

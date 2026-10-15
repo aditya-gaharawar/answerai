@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { normalizeStopTokens } from '$lib/utils/stopTokens';
 	import type {
 		ContextUsage,
 		ChatTask,
@@ -635,7 +636,12 @@
 		return !!getPendingAskUserFromMessage(message);
 	};
 
-	const answerPendingAskUser = async (messageId, callId, answers, timedOut = false) => {
+	const answerPendingAskUser = async (
+		messageId: string,
+		callId: string | null | undefined,
+		answers: Record<string, unknown>,
+		timedOut = false
+	) => {
 		if (!$chatId || !messageId || !callId) {
 			return;
 		}
@@ -657,7 +663,7 @@
 		onToolCallResolved(res);
 	};
 
-	const rejectPendingAskUser = async (messageId, callId) => {
+	const rejectPendingAskUser = async (messageId: string, callId: string | null | undefined) => {
 		if (!$chatId || !messageId || !callId) {
 			return;
 		}
@@ -728,7 +734,7 @@
 		}
 	};
 
-	const onToolCallResolved = (res) => {
+	const onToolCallResolved = (res: { task_ids?: string[]; task_id?: string }) => {
 		const newTaskIds = res?.task_ids ?? (res?.task_id ? [res.task_id] : []);
 		if (newTaskIds.length > 0) {
 			taskIds = [...(taskIds ?? []), ...newTaskIds];
@@ -745,7 +751,10 @@
 		oldSelectedModelIds = structuredClone(selectedModelIds);
 	};
 
-	const mergeFiles = (current, incoming) => {
+	const mergeFiles = <T extends { type?: string; id?: string | null; url?: string; name?: string }>(
+		current: T[] | null | undefined,
+		incoming: T[] | null | undefined
+	) => {
 		const seen = new Set();
 		return [...(incoming ?? []), ...(current ?? [])].filter((file) => {
 			const key = `${file?.type ?? ''}:${file?.id ?? file?.url ?? file?.name ?? ''}`;
@@ -807,7 +816,7 @@
 		initEmbeddedDraft();
 	}
 
-	let saveControlsTimer;
+	let saveControlsTimer: ReturnType<typeof setTimeout> | undefined;
 	$: if (!loading && !$temporaryChatEnabled && $chatId && params && chatFiles) {
 		clearTimeout(saveControlsTimer);
 		saveControlsTimer = setTimeout(saveControls, 400);
@@ -921,7 +930,7 @@
 		messageInput?.focus({ preventScroll: true });
 	};
 
-	const onSelect = async (e) => {
+	const onSelect = async (e: import('$lib/types/chat').PromptSelection) => {
 		const { type, data } = e;
 
 		if (type === 'prompt') {
@@ -1030,7 +1039,7 @@
 				const comparedModels = selectedModels
 					.filter((id) => id)
 					.map((id) => $models.find((m) => m.id === id));
-				const isSharedDefaultFeature = (feature) =>
+				const isSharedDefaultFeature = (feature: string) =>
 					comparedModels.length > 0 &&
 					comparedModels.every(
 						(model) =>
@@ -1072,7 +1081,7 @@
 					const defaultIds = [
 						...new Set(
 							[...(model?.info?.meta?.toolIds ?? [])].filter((id) =>
-								$tools.find((t) => t.id === id)
+								($tools ?? []).find((t) => t.id === id)
 							)
 						)
 					];
@@ -1081,7 +1090,7 @@
 					const unauthed = [];
 					const authed = [];
 					for (const id of defaultIds) {
-						const tool = $tools.find((t) => t.id === id);
+						const tool = ($tools ?? []).find((t) => t.id === id);
 						if (tool && tool.authenticated === false) {
 							const parts = id.split(':');
 							const serverId = parts.at(-1) ?? id;
@@ -1161,7 +1170,7 @@
 		}
 	};
 
-	const showMessage = async (message, scroll = true, save = true) => {
+	const showMessage = async (message: HistoryNode, scroll = true, save = true) => {
 		const _chatId = JSON.parse(JSON.stringify($chatId));
 		let _messageId = JSON.parse(JSON.stringify(message.id));
 
@@ -1185,7 +1194,7 @@
 		}
 	};
 
-	const updateLastReadAt = (id) => {
+	const updateLastReadAt = (id: string) => {
 		$socket?.emit('events:chat', {
 			chat_id: id,
 			data: { type: 'last_read_at' }
@@ -1212,7 +1221,9 @@
 		}
 	};
 
-	const handleContextCompactionStatus = (status) => {
+	const handleContextCompactionStatus = (
+		status: import('$lib/types/messages').MessageStatus & { error?: unknown }
+	) => {
 		if (status?.action !== 'context_compaction') {
 			return;
 		}
@@ -1593,7 +1604,7 @@
 						}
 
 						const existingCodeExecutionIndex = message.code_executions.findIndex(
-							(execution) => execution.id === data.id
+							(execution: { id: string }) => execution.id === data.id
 						);
 
 						if (existingCodeExecutionIndex !== -1) {
@@ -1794,7 +1805,9 @@
 
 		$audioQueue?.destroy();
 
-		const audioQueueInstance = new AudioQueue(document.getElementById('audioElement'));
+		const audioElement = document.getElementById('audioElement');
+		const audioQueueInstance =
+			audioElement instanceof HTMLAudioElement ? new AudioQueue(audioElement) : null;
 		audioQueue.set(audioQueueInstance);
 
 		// Restore direct terminal enabled states based on persisted selectedTerminalId
@@ -1874,6 +1887,8 @@
 			try {
 				cancelBrowserInteractions();
 				clearTimeout(saveControlsTimer);
+				if (scrollRAF !== null) cancelAnimationFrame(scrollRAF);
+				if (contentsRAF !== null) clearTimeout(contentsRAF);
 				saveControls();
 				if (chatIdProp && !$temporaryChatEnabled) {
 					updateLastReadAt(chatIdProp);
@@ -1909,7 +1924,9 @@
 
 	// File upload functions
 
-	const uploadGoogleDriveFile = async (fileData) => {
+	const uploadGoogleDriveFile = async (
+		fileData: import('$lib/utils/google-drive-picker').DriveSelection
+	) => {
 		// Validate input
 		if (!fileData?.id || !fileData?.name || !fileData?.url || !fileData?.headers?.Authorization) {
 			throw new Error('Invalid file data provided');
@@ -2017,17 +2034,17 @@
 		} catch (e) {
 			console.error('Error uploading file:', e);
 			fileItem.status = 'error';
-			fileItem.error = e.message || `${e}`;
+			fileItem.error = e instanceof Error ? e.message : String(e);
 			files = files.filter((f) => f.itemId !== tempItemId);
 			toast.error(
 				$i18n.t('Error uploading file: {{error}}', {
-					error: e.message || 'Unknown error'
+					error: e instanceof Error ? e.message : 'Unknown error'
 				})
 			);
 		}
 	};
 
-	const uploadWeb = async (urls) => {
+	const uploadWeb = async (urls: string | string[]) => {
 		if ($user?.role !== 'admin' && !($user?.permissions?.chat?.web_upload ?? true)) {
 			toast.error($i18n.t('You do not have permission to upload web content.'));
 			return;
@@ -2123,7 +2140,11 @@
 		await processNextInQueue($chatId);
 	};
 
-	const onUpload = async (event) => {
+	const onUpload = async (
+		event:
+			| { type: 'google-drive'; data: import('$lib/utils/google-drive-picker').DriveSelection }
+			| { type: 'web'; data: string | string[] }
+	) => {
 		const { type, data } = event;
 
 		if (type === 'google-drive') {
@@ -2133,10 +2154,10 @@
 		}
 	};
 
-	const onHistoryChange = (history) => {
+	const onHistoryChange = (history: ChatHistory | null) => {
 		if (history) {
 			bridge?.update();
-			clearTimeout(contentsRAF);
+			if (contentsRAF !== null) clearTimeout(contentsRAF);
 			contentsRAF = setTimeout(() => {
 				getContents();
 				contentsRAF = null;
@@ -2354,7 +2375,7 @@
 	$: if (!$user && (bridge?.connected || bridge?.connecting)) bridge.end();
 	$: if (selectedModelIds && $models && $config) bridge?.syncModel();
 
-	const dispatchCallOverlayAudio = (message, final = false) => {
+	const dispatchCallOverlayAudio = (message: HistoryNode, final = false) => {
 		if (message.error || !$showCallOverlay || callMode !== 'current') {
 			return;
 		}
@@ -2395,7 +2416,7 @@
 
 	const getContents = () => {
 		const messages = history ? createMessagesList(history, history.currentId) : [];
-		let contents = [];
+		let contents: { type: string; content: string }[] = [];
 		messages.forEach((message) => {
 			if (message?.role !== 'user') {
 				const messageContent =
@@ -2638,17 +2659,19 @@
 		}
 
 		if ($page.url.searchParams.get('tools')) {
-			selectedToolIds = $page.url.searchParams
-				.get('tools')
-				?.split(',')
-				.map((id) => id.trim())
-				.filter((id) => id && ($tools ?? []).find((t) => t.id === id));
+			selectedToolIds =
+				$page.url.searchParams
+					.get('tools')
+					?.split(',')
+					.map((id) => id.trim())
+					.filter((id) => id && ($tools ?? []).find((t) => t.id === id)) ?? [];
 		} else if ($page.url.searchParams.get('tool-ids')) {
-			selectedToolIds = $page.url.searchParams
-				.get('tool-ids')
-				?.split(',')
-				.map((id) => id.trim())
-				.filter((id) => id && ($tools ?? []).find((t) => t.id === id));
+			selectedToolIds =
+				$page.url.searchParams
+					.get('tool-ids')
+					?.split(',')
+					.map((id) => id.trim())
+					.filter((id) => id && ($tools ?? []).find((t) => t.id === id)) ?? [];
 		}
 
 		// Restore tool selection after OAuth redirect
@@ -2883,7 +2906,7 @@
 		});
 	};
 
-	const scrollToBottom = async (behavior = 'auto') => {
+	const scrollToBottom = async (behavior: ScrollBehavior = 'auto') => {
 		await tick();
 		if (messagesContainerElement) {
 			messagesContainerElement.scrollTo({
@@ -2923,8 +2946,8 @@
 	const shouldAutoScrollResponse = () =>
 		autoScroll && ($settings?.scrollOnResponseGeneration ?? true);
 
-	let scrollRAF = null;
-	let contentsRAF = null;
+	let scrollRAF: number | null = null;
+	let contentsRAF: ReturnType<typeof setTimeout> | null = null;
 	const autoScrollToBottom = () => {
 		if (!shouldAutoScrollResponse()) return;
 
@@ -2977,7 +3000,7 @@
 		}
 	};
 
-	const sendQueuedMessageNow = async (id) => {
+	const sendQueuedMessageNow = async (id: string) => {
 		if (processingQueueChats.has($chatId)) return;
 
 		const queue = $chatRequestQueues[$chatId] ?? [];
@@ -3005,7 +3028,7 @@
 		}
 	};
 
-	const editQueuedMessage = async (id) => {
+	const editQueuedMessage = async (id: string) => {
 		const queue = $chatRequestQueues[$chatId] ?? [];
 		const item = queue.find((m) => m.id === id);
 		if (!item) return;
@@ -3020,7 +3043,7 @@
 		await processNextInQueue($chatId);
 	};
 
-	const deleteQueuedMessage = async (id) => {
+	const deleteQueuedMessage = async (id: string) => {
 		const queue = $chatRequestQueues[$chatId] ?? [];
 		chatRequestQueues.update((q) => ({
 			...q,
@@ -3030,7 +3053,12 @@
 		await processNextInQueue($chatId);
 	};
 
-	const chatCompletedHandler = async (_chatId, modelId, responseMessageId, messages) => {
+	const chatCompletedHandler = async (
+		_chatId: string,
+		modelId: string,
+		responseMessageId: string,
+		messages: HistoryNode[]
+	) => {
 		// Backend handles outlet filters and persistence inline.
 		// Just refresh the sidebar chat list.
 		if ($chatId == _chatId && !$temporaryChatEnabled) {
@@ -3038,7 +3066,13 @@
 		}
 	};
 
-	const chatActionHandler = async (_chatId, actionId, modelId, responseMessageId, event = null) => {
+	const chatActionHandler = async (
+		_chatId: string,
+		actionId: string,
+		modelId: string,
+		responseMessageId: string,
+		event: unknown = null
+	) => {
 		const messages = createMessagesList(history, responseMessageId);
 
 		const res = await chatAction(localStorage.token, actionId, {
@@ -3103,7 +3137,7 @@
 		}, 1000);
 	};
 
-	const createMessagePair = async (userPrompt) => {
+	const createMessagePair = async (userPrompt: string) => {
 		if (isShared) return;
 		messageInput?.setText('');
 		if (selectedModels.length === 0) {
@@ -3163,7 +3197,7 @@
 				history.messages[responseMessage.id] = responseMessage;
 			}
 
-			history.currentId = responseMessages.at(-1).id;
+			history.currentId = responseMessages.at(-1)?.id ?? null;
 
 			await tick();
 
@@ -3179,8 +3213,20 @@
 		}
 	};
 
-	const addMessages = async ({ modelId, parentId, messages }) => {
+	const addMessages = async ({
+		modelId,
+		parentId,
+		messages
+	}: {
+		modelId: string;
+		parentId: string;
+		messages: Pick<HistoryNode, 'role' | 'content'>[];
+	}) => {
 		const model = $models.filter((m) => m.id === modelId).at(0);
+		if (!model) {
+			toast.error($i18n.t('Model not found'));
+			return;
+		}
 
 		let parentMessage = history.messages[parentId];
 		let currentParentId = parentMessage ? parentMessage.id : null;
@@ -3937,16 +3983,7 @@
 		return features;
 	};
 
-	const getStopTokens = () => {
-		const stop = params?.stop ?? $settings?.params?.stop;
-		if (!stop) return undefined;
-
-		const tokens = Array.isArray(stop) ? stop : stop.split(',').map((s) => s.trim());
-
-		return tokens
-			.filter(Boolean)
-			.map((token) => decodeURIComponent(JSON.parse(`"${token.replace(/"/g, '\\"')}"`)));
-	};
+	const getStopTokens = () => normalizeStopTokens(params?.stop ?? $settings?.params?.stop);
 
 	const sendMessageSocket = async (
 		model,
@@ -4255,7 +4292,7 @@
 		return res;
 	};
 
-	const handleOpenAIError = (error, responseMessage) => {
+	const handleOpenAIError = (error: unknown, responseMessage: HistoryNode) => {
 		const responseFailed = responseMessage.done && responseMessage.error;
 		const errorMessage = getErrorMessage(error, $i18n.t('Server connection failed'));
 		responseMessage.error = { content: errorMessage };
@@ -4321,7 +4358,7 @@
 		}
 	};
 
-	const submitMessage = async (parentId, prompt) => {
+	const submitMessage = async (parentId: string | null, prompt: string) => {
 		let userPrompt = prompt;
 		let userMessageId = uuidv4();
 
@@ -4356,7 +4393,10 @@
 		await sendMessage(history, userMessageId);
 	};
 
-	const regenerateResponse = async (message, suggestionPrompt = null) => {
+	const regenerateResponse = async (
+		message: HistoryNode,
+		suggestionPrompt: string | null = null
+	) => {
 		console.log('regenerateResponse');
 
 		if (history.currentId) {
@@ -4415,7 +4455,7 @@
 		}
 	};
 
-	const mergeResponses = async (messageId, responses, _chatId) => {
+	const mergeResponses = async (messageId: string, responses: string[], _chatId: string) => {
 		console.log('mergeResponses', messageId, responses);
 		const message = history.messages[messageId];
 		const mergedResponse = {
@@ -4467,7 +4507,7 @@
 		}
 	};
 
-	const initChatHandler = async (history) => {
+	const initChatHandler = async (history: ChatHistory) => {
 		let _chatId = $chatId;
 		const selectedFolderId = $selectedFolder?.id;
 
@@ -4517,7 +4557,7 @@
 		return _chatId;
 	};
 
-	const saveChatHandler = async (_chatId, history) => {
+	const saveChatHandler = async (_chatId: string, history: ChatHistory) => {
 		if (isShared) return;
 		if ($chatId == _chatId) {
 			if (!$temporaryChatEnabled) {
@@ -4610,7 +4650,7 @@
 		await sessionStorage.removeItem(`chat-input${chatId ? `-${chatId}` : ''}`);
 	};
 
-	const moveChatHandler = async (chatId, folderId) => {
+	const moveChatHandler = async (chatId: string, folderId: string | null) => {
 		if (chatId && folderId) {
 			const res = await updateChatFolderIdById(localStorage.token, chatId, folderId).catch(
 				(error) => {
@@ -5258,7 +5298,7 @@
 						chatId={$chatId}
 						chatUser={chatOwner}
 						modelId={selectedModelIds?.at(0) ?? null}
-						models={selectedModelIds.reduce((a, e, i, arr) => {
+						models={selectedModelIds.reduce<Model[]>((a, e, i, arr) => {
 							const model = $models.find((m) => m.id === e);
 							if (model) {
 								return [...a, model];

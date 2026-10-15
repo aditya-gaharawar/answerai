@@ -1,4 +1,8 @@
 <script lang="ts">
+	import type { Model } from '$lib/stores';
+	import type { HistoryNode } from '$lib/utils/chatHistory';
+	import type { MessageStatus, MessageAnnotation } from '$lib/types/messages';
+	import { chatDirection } from '$lib/stores';
 	import { resolveLocalizedFunction } from '$lib/utils/localizedContent';
 	import { functions as localizedFunctions } from '$lib/stores';
 	import { toast } from 'svelte-sonner';
@@ -53,7 +57,7 @@
 
 	import DeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 
-	import Error from './Error.svelte';
+	import ErrorMessage from './Error.svelte';
 	import Citations from './Citations.svelte';
 	import CodeExecutions from './CodeExecutions.svelte';
 	import ContentRenderer from './ContentRenderer.svelte';
@@ -68,29 +72,17 @@
 	import OutputEditView from './OutputEditView.svelte';
 	import { getOutputText, replaceOutputMessageText, type OutputItem } from './structuredOutput';
 
-	interface MessageType {
+	interface MessageType extends HistoryNode {
 		user_id?: string;
 		id: string;
 		model: string;
 		content: string;
 		output?: OutputItem[];
-		files?: { type: string; url: string }[];
+		files?: (Omit<import('$lib/types/notes').NoteAttachment, 'id'> & { id?: string | null })[];
 		timestamp: number;
 		role: string;
-		statusHistory?: {
-			done: boolean;
-			action: string;
-			description: string;
-			urls?: string[];
-			query?: string;
-		}[];
-		status?: {
-			done: boolean;
-			action: string;
-			description: string;
-			urls?: string[];
-			query?: string;
-		};
+		statusHistory?: MessageStatus[];
+		status?: MessageStatus;
 		done: boolean;
 		error?: boolean | { content: string };
 		sources?: string[];
@@ -118,13 +110,18 @@
 			load_duration?: number;
 			usage?: unknown;
 		};
-		annotation?: { type: string; rating: number };
+		annotation?: MessageAnnotation;
+		feedbackId?: string;
+		arena?: boolean;
+		embeds?: string[];
+		citations?: unknown[];
+		followUps?: string[];
 	}
 
 	export let chatId = '';
 	export let history;
 	export let messageId;
-	export let selectedModels = [];
+	export let selectedModels: string[] = [];
 
 	let messageSource = history.messages[messageId];
 	let message: MessageType = structuredClone(messageSource);
@@ -180,13 +177,13 @@
 	export let topPadding = false;
 	export let onInsertToNote: ((content: string) => void) | null = null;
 
-	let citationsElement: HTMLDivElement;
+	let citationsElement: InstanceType<typeof Citations> | undefined;
 
 	let contentContainerElement: HTMLDivElement;
 	let buttonsContainerElement: HTMLDivElement;
 	let showDeleteConfirm = false;
 
-	let model = null;
+	let model: Model | null | undefined = null;
 	$: localizedModelName = model ? resolveLocalizedModelName(model, $i18n.language) : message.model;
 	$: model = $models.find((m) => m.id === message.model);
 
@@ -244,7 +241,7 @@
 	// Resolve voice: model-specific > user settings > config default
 	const getVoiceId = () =>
 		model?.info?.meta?.tts?.voice ??
-		($settings?.audio?.tts?.defaultVoice === $config.audio.tts.voice
+		($settings?.audio?.tts?.defaultVoice === $config?.audio?.tts?.voice
 			? ($settings?.audio?.tts?.voice ?? $config?.audio?.tts?.voice)
 			: $config?.audio?.tts?.voice);
 
@@ -261,9 +258,13 @@
 
 		speaking = true;
 
-		if ($config.audio.tts.engine === '') {
+		if ($config?.audio?.tts?.engine === '') {
 			let voices = [];
 			const getVoicesLoop = setInterval(() => {
+				if (signal.aborted) {
+					clearInterval(getVoicesLoop);
+					return;
+				}
 				voices = speechSynthesis.getVoices();
 				if (voices.length > 0) {
 					clearInterval(getVoicesLoop);
@@ -286,10 +287,16 @@
 					speechSynthesis.speak(speech);
 				}
 			}, 100);
+			signal.addEventListener('abort', () => clearInterval(getVoicesLoop), { once: true });
 		} else {
-			$audioQueue.setId(`${message.id}`);
-			$audioQueue.setPlaybackRate($settings.audio?.tts?.playbackRate ?? 1);
-			$audioQueue.onStopped = ({ event }) => {
+			const queue = $audioQueue;
+			if (!queue) {
+				stopAudio();
+				return;
+			}
+			queue.setId(`${message.id}`);
+			queue.setPlaybackRate($settings.audio?.tts?.playbackRate ?? 1);
+			queue.onStopped = ({ event }) => {
 				speaking = false;
 				speakingIdx = undefined;
 
@@ -316,21 +323,17 @@
 			console.debug('Prepared message content for TTS', messageContentParts, 'voice:', voiceId);
 
 			if ($settings.audio?.tts?.engine === 'browser-kokoro') {
-				if (!$TTSWorker) {
-					await TTSWorker.set(
-						new KokoroWorker({
-							dtype: $settings.audio?.tts?.engineConfig?.dtype ?? 'fp32'
-						})
-					);
-
-					await $TTSWorker.init();
-				}
-
+				const speechWorker =
+					$TTSWorker ?? new KokoroWorker($settings.audio?.tts?.engineConfig?.dtype ?? 'fp32');
+				if (!$TTSWorker) TTSWorker.set(speechWorker);
+				await speechWorker.init();
 				for (const [, sentence] of messageContentParts.entries()) {
 					if (signal.aborted) return;
 
-					const url = await $TTSWorker
-						.generate({ text: sentence, voice: voiceId })
+					const worker = $TTSWorker;
+					if (!worker) throw new Error('Speech worker is unavailable');
+					const url = await worker
+						.generate({ text: sentence, voice: voiceId ?? 'af_heart' })
 						.catch((error) => {
 							console.error(error);
 							toast.error(`${error}`);
@@ -341,7 +344,7 @@
 					if (signal.aborted) return;
 
 					if (url && speaking) {
-						$audioQueue.enqueue(url);
+						queue.enqueue(url);
 						loadingSpeech = false;
 					}
 				}
@@ -363,7 +366,7 @@
 					if (res && speaking) {
 						const blob = await res.blob();
 						const url = URL.createObjectURL(blob);
-						$audioQueue.enqueue(url);
+						queue.enqueue(url);
 						loadingSpeech = false;
 					}
 				}
@@ -371,11 +374,11 @@
 		}
 	};
 
-	let preprocessedDetailsCache = [];
+	let preprocessedDetailsCache: string[] = [];
 
 	function preprocessForEditing(content: string): string {
 		// Replace <details>...</details> with unique ID placeholder
-		const detailsBlocks = [];
+		const detailsBlocks: string[] = [];
 		let i = 0;
 
 		content = content.replace(/<details[\s\S]*?<\/details>/gi, (match) => {
@@ -467,7 +470,7 @@
 		feedbackLoading = true;
 		console.log('Feedback', rating, details);
 
-		const updatedMessage = {
+		const updatedMessage: MessageType = {
 			...message,
 			annotation: {
 				...(message?.annotation ?? {}),
@@ -488,16 +491,20 @@
 
 		const messages = createMessagesList(history, message.id);
 
+		const parent = message.parentId === null ? undefined : history.messages[message.parentId];
 		let feedbackItem = {
 			type: 'rating',
 			data: {
 				...(updatedMessage?.annotation ? updatedMessage.annotation : {}),
 				model_id: message?.selectedModelId ?? message.model,
-				...(history.messages[message.parentId].childrenIds.length > 1
+				...((parent?.childrenIds ?? []).length > 1
 					? {
-							sibling_model_ids: history.messages[message.parentId].childrenIds
+							sibling_model_ids: (parent?.childrenIds ?? [])
 								.filter((id: string) => id !== message.id)
-								.map((id) => history.messages[id]?.selectedModelId ?? history.messages[id].model)
+								.map(
+									(id: string) =>
+										history.messages[id]?.selectedModelId ?? history.messages[id].model
+								)
 						}
 					: {})
 			},
@@ -506,7 +513,8 @@
 				model_id: message.model,
 				message_id: message.id,
 				message_index: messages.length,
-				chat_id: chatId
+				chat_id: chatId,
+				base_models: {} as Record<string, string | null>
 			},
 			snapshot: {
 				chat: chat
@@ -578,7 +586,7 @@
 					saveMessage(message.id, taggedMessage);
 					await updateFeedbackById(
 						localStorage.token,
-						taggedMessage.feedbackId,
+						taggedMessage.feedbackId ?? '',
 						feedbackItem
 					).catch((error) => {
 						toast.error(`${error}`);
@@ -616,11 +624,12 @@
 		}
 	};
 
-	const contentCopyHandler = (e) => {
+	const contentCopyHandler = (e: ClipboardEvent) => {
 		if (contentContainerElement) {
 			e.preventDefault();
 			// Get the selected HTML
 			const selection = window.getSelection();
+			if (!selection || !selection.rangeCount || !e.clipboardData) return;
 			const range = selection.getRangeAt(0);
 			const tempDiv = document.createElement('div');
 
@@ -680,7 +689,7 @@
 	<div
 		class=" flex w-full message-{message.id}"
 		id="message-{message.id}"
-		dir={$settings.chatDirection}
+		dir={$chatDirection}
 		style="scroll-margin-top: 3rem;"
 	>
 		<div class={`shrink-0 ltr:mr-2 rtl:ml-2 hidden @lg:flex mt-0.5 `}>
@@ -709,10 +718,7 @@
 						{/if}
 
 						{#if message?.files && message.files?.filter( (f) => ['image', 'file'].includes(f.type) ).length > 0}
-							<div
-								class="my-1 w-full flex overflow-x-auto gap-2 flex-wrap"
-								dir={$settings?.chatDirection ?? 'auto'}
-							>
+							<div class="my-1 w-full flex overflow-x-auto gap-2 flex-wrap" dir={$chatDirection}>
 								{#each message.files.filter((f) => ['image', 'file'].includes(f.type)) as file}
 									<div>
 										{#if file.type === 'image' || (file?.content_type ?? '').startsWith('image/')}
@@ -721,9 +727,9 @@
 											<FileItem
 												item={file}
 												url={file.url}
-												name={file.name}
+												name={file.name ?? ''}
 												type={file.type}
-												size={file?.size}
+												size={file?.size ?? 0}
 												small={true}
 											/>
 										{/if}
@@ -850,6 +856,7 @@
 									id={`${chatId}-${message.id}`}
 									{chatId}
 									messageId={message.id}
+									{history}
 									content={message.content}
 									output={message.output}
 									sources={message.sources}
@@ -868,7 +875,7 @@
 									onTaskClick={async (e) => {
 										console.log(e);
 									}}
-									{onToolCallResolved}
+									onToolCallResolved={(data) => onToolCallResolved(data)}
 									onSourceClick={async (id) => {
 										console.log(id);
 
@@ -914,7 +921,11 @@
 							{/if}
 
 							{#if message?.error}
-								<Error content={message?.error?.content ?? message.content} />
+								<ErrorMessage
+									content={typeof message.error === 'object'
+										? message.error.content
+										: message.content}
+								/>
 							{/if}
 
 							{#if (message?.sources || message?.citations) && (model?.info?.meta?.capabilities?.citations ?? true)}
@@ -1008,15 +1019,15 @@
 												min="1"
 												max={siblings.length}
 												on:focus={(e) => {
-													e.target.select();
+													e.currentTarget.select();
 												}}
 												on:blur={(e) => {
-													gotoMessage(message, e.target.value - 1);
+													gotoMessage(message, Number(e.currentTarget.value) - 1);
 													messageIndexEdit = false;
 												}}
 												on:keydown={(e) => {
 													if (e.key === 'Enter') {
-														gotoMessage(message, e.target.value - 1);
+														gotoMessage(message, Number(e.currentTarget.value) - 1);
 														messageIndexEdit = false;
 													}
 												}}
@@ -1032,7 +1043,7 @@
 
 												await tick();
 												const input = document.getElementById(`message-index-input-${message.id}`);
-												if (input) {
+												if (input instanceof HTMLInputElement) {
 													input.focus();
 													input.select();
 												}

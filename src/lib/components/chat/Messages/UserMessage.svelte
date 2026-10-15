@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { chatDirection } from '$lib/stores';
 	import { toast } from 'svelte-sonner';
 	import { tick, getContext, onMount } from 'svelte';
 
@@ -148,7 +149,7 @@
 			? 'my-2'
 			: 'mb-2'
 		: ''}"
-	dir={$settings.chatDirection}
+	dir={$chatDirection}
 	id="message-{message.id}"
 	style="scroll-margin-top: 3rem;"
 >
@@ -195,7 +196,7 @@
 				{#if message.files}
 					<div
 						class="mb-1 w-full flex flex-col justify-end overflow-x-auto gap-1 flex-wrap"
-						dir={$settings?.chatDirection ?? 'auto'}
+						dir={$chatDirection}
 					>
 						{#each message.files as file}
 							{@const fileUrl =
@@ -394,7 +395,7 @@
 					{#if timerExpanded}
 						<div
 							class="mt-2 ml-3 whitespace-pre-wrap break-words border-l border-gray-100 pl-3 text-[0.78125rem] leading-relaxed text-gray-600 dark:border-white/10 dark:text-gray-400"
-							dir={$settings?.chatDirection ?? 'auto'}
+							dir={$chatDirection}
 						>
 							{message.content}
 						</div>
@@ -427,10 +428,7 @@
 										/>
 									</div>
 								{:else}
-									<div
-										class="whitespace-pre-wrap text-[0.9375rem]"
-										dir={$settings?.chatDirection ?? 'auto'}
-									>
+									<div class="whitespace-pre-wrap text-[0.9375rem]" dir={$chatDirection}>
 										{message.content}
 									</div>
 								{/if}

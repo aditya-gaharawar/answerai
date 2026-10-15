@@ -108,8 +108,15 @@ const initialize = async () => {
 	}
 };
 
+export type DriveSelection = {
+	id: string;
+	name: string;
+	url: string;
+	blob: Blob;
+	headers: { Authorization: string; Accept: string };
+};
 export const createPicker = () => {
-	return new Promise(async (resolve, reject) => {
+	return new Promise<DriveSelection | null>(async (resolve, reject) => {
 		try {
 			console.log('Initializing Google Drive Picker...');
 			await initialize();
@@ -123,7 +130,7 @@ export const createPicker = () => {
 
 			const picker = new google.picker.PickerBuilder()
 				.enableFeature(google.picker.Feature.NAV_HIDDEN)
-				.enableFeature(google.picker.Feature.MULTISELECT_ENABLED)
+
 				.addView(
 					new google.picker.DocsView()
 						.setIncludeFolders(false)

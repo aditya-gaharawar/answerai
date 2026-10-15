@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { chatDirection } from '$lib/stores';
 	import { toast } from 'svelte-sonner';
 
 	import dayjs from 'dayjs';
@@ -284,11 +285,7 @@
 				}}
 			/>
 			{#each Object.entries(appReplies).filter(([, event]) => event.message_id === message.id) as [key, event] (key)}
-				<div
-					class="flex gap-3 px-4 pt-3 pb-2"
-					data-app-reply={event.app_id}
-					dir={$settings.chatDirection}
-				>
+				<div class="flex gap-3 px-4 pt-3 pb-2" data-app-reply={event.app_id} dir={$chatDirection}>
 					<span
 						class="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-lg bg-gray-100 dark:bg-gray-800"
 						role="img"

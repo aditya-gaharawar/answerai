@@ -1,4 +1,5 @@
 <script lang="ts">
+	import type { NoteListItem } from '$lib/types/notes';
 	import WorkspaceAccessModal from '$lib/components/workspace/common/WorkspaceAccessModal.svelte';
 	let accessModal: WorkspaceAccessModal;
 	import { marked } from 'marked';
@@ -50,34 +51,36 @@
 
 	let loaded = false;
 
-	let importFiles = '';
+	let importFiles: FileList | null = null;
 	let importDocumentFiles: FileList | null = null;
 	let notesImportInputElement: HTMLInputElement;
-	let selectedNote = null;
+	let selectedNote: NoteListItem | null = null;
 	let openNoteMenuId: string | null = null;
 	let showDeleteConfirm = false;
 	let shiftKey = false;
 
-	let notes = {};
-
-	let items = null;
-	let total = null;
+	let items: NoteListItem[] | null = null;
+	let total: number | null = null;
 
 	let query = '';
 	let searchDebounceTimer: ReturnType<typeof setTimeout>;
 
 	let sortKey = 'updated_at';
 	let sortDirection = 'desc';
-	let displayOption = null;
-	let viewOption = null;
-	let permission = null;
+	let displayOption = '';
+	let viewOption = '';
+	let permission = '';
 
 	let page = 1;
+	let requestVersion = 0;
+	let disposed = false;
 
 	let itemsLoading = false;
+	let loadError = false;
 	let allItemsLoaded = false;
 
-	const downloadHandler = async (type) => {
+	const downloadHandler = async (type: string) => {
+		if (!selectedNote) return;
 		// Fetch the full note since the list response may not contain full content
 		const note = await getNoteById(localStorage.token, selectedNote.id).catch((error) => {
 			toast.error(`${error}`);
@@ -101,7 +104,7 @@
 		}
 	};
 
-	const deleteNoteHandler = async (id) => {
+	const deleteNoteHandler = async (id: string) => {
 		const res = await deleteNoteById(localStorage.token, id).catch((error) => {
 			toast.error(`${error}`);
 			return null;
@@ -135,7 +138,7 @@
 				data: {
 					content: {
 						json: null,
-						html: marked.parse(content ?? ''),
+						html: await marked.parse(content ?? ''),
 						md: content
 					}
 				},
@@ -157,18 +160,17 @@
 	};
 
 	const reset = () => {
+		requestVersion += 1;
 		page = 1;
 		items = null;
 		total = null;
 		allItemsLoaded = false;
 		itemsLoading = false;
-		notes = {};
 	};
 
 	const loadMoreItems = async () => {
-		if (allItemsLoaded) return;
-		page += 1;
-		await getItemsPage();
+		if (allItemsLoaded || itemsLoading) return;
+		await getItemsPage(page + 1);
 	};
 
 	const init = async () => {
@@ -195,55 +197,47 @@
 		init();
 	}
 
-	const getItemsPage = async () => {
+	const getItemsPage = async (requestedPage = page) => {
+		const version = ++requestVersion;
 		itemsLoading = true;
-
-		if (viewOption === 'created') {
-			permission = null;
-		}
-
-		const res = await searchNotes(
-			localStorage.token,
-			query,
-			viewOption,
-			permission,
-			sortKey,
-			page,
-			sortKey ? sortDirection : null
-		).catch(() => {
-			return [];
-		});
-
-		if (res) {
+		loadError = false;
+		const activePermission = viewOption === 'created' ? null : permission;
+		try {
+			const res: { items: NoteListItem[]; total: number } | null = await searchNotes(
+				localStorage.token,
+				query,
+				viewOption,
+				activePermission,
+				sortKey,
+				requestedPage,
+				sortKey ? sortDirection : null
+			).catch((error) => {
+				if (!disposed && version === requestVersion) {
+					loadError = true;
+					toast.error(`${error}`);
+				}
+				return null;
+			});
+			if (disposed || version !== requestVersion || !res) return;
+			const pageItems = res.items ?? [];
 			total = res.total;
-			const pageItems = res.items;
-
-			if ((pageItems ?? []).length === 0) {
-				allItemsLoaded = true;
-			} else {
-				allItemsLoaded = false;
-			}
-
-			if (items) {
-				const existingIds = new Set(items.map((item) => item.id));
-				const newItems = pageItems.filter((item) => !existingIds.has(item.id));
-				items = [...items, ...newItems];
-			} else {
-				items = pageItems;
-			}
+			allItemsLoaded = pageItems.length === 0;
+			const existingIds = new Set((items ?? []).map((item) => item.id));
+			items = [...(items ?? []), ...pageItems.filter((item) => !existingIds.has(item.id))];
+			page = requestedPage;
+			return res;
+		} finally {
+			if (!disposed && version === requestVersion) itemsLoading = false;
 		}
-
-		itemsLoading = false;
-		return res;
 	};
 
-	const groupNotes = (res) => {
+	const groupNotes = (res: NoteListItem[] | null): [string, NoteListItem[]][] => {
 		if (!Array.isArray(res)) {
 			return []; // Return empty array for invalid input
 		}
 
 		// Build the grouped object while tracking order
-		const grouped: Record<string, any[]> = {};
+		const grouped: Record<string, NoteListItem[]> = Object.create(null);
 		const orderedKeys: string[] = [];
 
 		for (const note of res) {
@@ -253,13 +247,12 @@
 				orderedKeys.push(timeRange);
 			}
 			grouped[timeRange].push({
-				...note,
-				timeRange
+				...note
 			});
 		}
 
 		// Return as array of [timeRange, notes] to preserve insertion order
-		return orderedKeys.map((key) => [key, grouped[key]] as [string, any[]]);
+		return orderedKeys.map((key) => [key, grouped[key]] as [string, NoteListItem[]]);
 	};
 
 	const setSortKey = (key: string) => {
@@ -273,7 +266,7 @@
 
 	let dragged = false;
 
-	const onDragOver = (e) => {
+	const onDragOver = (e: DragEvent) => {
 		e.preventDefault();
 
 		// Check if a file is being dragged.
@@ -304,8 +297,8 @@
 	};
 
 	onMount(() => {
-		viewOption = localStorage?.noteViewOption ?? null;
-		displayOption = localStorage?.noteDisplayOption ?? null;
+		viewOption = localStorage?.noteViewOption ?? '';
+		displayOption = localStorage?.noteDisplayOption ?? '';
 
 		loaded = true;
 
@@ -336,6 +329,8 @@
 		window.addEventListener('blur', onBlur);
 
 		return () => {
+			disposed = true;
+			requestVersion += 1;
 			clearTimeout(searchDebounceTimer);
 
 			window.removeEventListener('keydown', onKeyDown);
@@ -393,12 +388,13 @@
 			bind:show={showDeleteConfirm}
 			title={$i18n.t('Delete note?')}
 			on:confirm={() => {
-				deleteNoteHandler(selectedNote.id);
+				if (selectedNote) deleteNoteHandler(selectedNote.id);
 				showDeleteConfirm = false;
 			}}
 		>
 			<div class=" text-sm text-gray-500 truncate">
-				{$i18n.t('This will delete')} <span class="  font-normal">{selectedNote.title}</span>.
+				{$i18n.t('This will delete')}
+				<span class="  font-normal">{selectedNote?.title ?? ''}</span>.
 			</div>
 		</DeleteConfirmDialog>
 
@@ -503,7 +499,7 @@
 							align="end"
 							bind:value={viewOption}
 							items={[
-								{ value: null, label: $i18n.t('All') },
+								{ value: '', label: $i18n.t('All') },
 								{ value: 'created', label: $i18n.t('Created by you') },
 								{ value: 'shared', label: $i18n.t('Shared with you') }
 							]}
@@ -516,12 +512,12 @@
 							}}
 						/>
 
-						{#if [null, 'shared'].includes(viewOption)}
+						{#if ['', 'shared'].includes(viewOption)}
 							<DropdownOptions
 								align="end"
 								bind:value={permission}
 								items={[
-									{ value: null, label: $i18n.t('Write') },
+									{ value: '', label: $i18n.t('Write') },
 									{ value: 'read_only', label: $i18n.t('Read Only') }
 								]}
 							/>
@@ -531,7 +527,7 @@
 							align="end"
 							bind:value={displayOption}
 							items={[
-								{ value: null, label: $i18n.t('List') },
+								{ value: '', label: $i18n.t('List') },
 								{ value: 'grid', label: $i18n.t('Grid') }
 							]}
 							onChange={() => {
@@ -546,13 +542,22 @@
 				</div>
 			</div>
 
+			{#if loadError}
+				<button
+					type="button"
+					class="my-3 rounded-lg px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-800"
+					on:click={() => getItemsPage(items === null ? 1 : page + 1)}
+				>
+					{$i18n.t('Retry')}
+				</button>
+			{/if}
 			{#if items !== null && total !== null}
 				{#if (items ?? []).length > 0}
 					{@const groupedNotes = groupNotes(items)}
 
 					<div class="@container h-full my-1">
 						<div>
-							{#if displayOption === null}
+							{#if displayOption === ''}
 								<div
 									class="flex w-full items-center gap-2 px-2 pb-2 text-xs text-gray-400 dark:text-gray-600"
 								>
@@ -599,7 +604,7 @@
 									{$i18n.t(timeRange)}
 								</div>
 
-								{#if displayOption === null}
+								{#if displayOption === ''}
 									<div
 										class="{groupedNotes.length - 1 !== idx ? 'mb-3' : ''} gap-y-0.5 flex flex-col"
 									>
@@ -880,7 +885,7 @@
 						</div>
 					</div>
 				{/if}
-			{:else}
+			{:else if itemsLoading}
 				<div class="w-full h-full flex justify-center items-center py-10">
 					<Spinner className="size-4" />
 				</div>

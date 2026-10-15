@@ -1,4 +1,11 @@
 <script lang="ts">
+	import type { ModelConfig } from '$lib/apis';
+	import type { PluginOwner } from '$lib/types/plugins';
+	type WorkspaceModel = ModelConfig & {
+		updated_at: number;
+		created_at: number;
+		user?: PluginOwner | null;
+	};
 	import WorkspaceAccessModal from './common/WorkspaceAccessModal.svelte';
 	let accessModal: WorkspaceAccessModal;
 	import dayjs from 'dayjs';
@@ -11,7 +18,7 @@
 
 	import { onMount, getContext, tick, onDestroy } from 'svelte';
 	import { goto } from '$app/navigation';
-	const i18n = getContext<any>('i18n');
+	const i18n = getContext<typeof import('$lib/i18n').default>('i18n');
 	dayjs.extend(relativeTime);
 
 	import {
@@ -74,7 +81,7 @@
 
 	let shiftKey = false;
 
-	let importFiles;
+	let importFiles: FileList | null = null;
 	let modelsImportInputElement: HTMLInputElement;
 	let tagsContainerElement: HTMLDivElement;
 
@@ -82,12 +89,12 @@
 
 	let showModelDeleteConfirm = false;
 
-	let selectedModel = null;
+	let selectedModel: WorkspaceModel | null = null;
 	let updatingModels: Record<string, boolean> = {};
 
-	let groupIds = [];
+	let groupIds: string[] = [];
 
-	let tags = [];
+	let tags: string[] = [];
 	let selectedTag = '';
 
 	let query = '';
@@ -96,8 +103,8 @@
 	let sortDirection = 'desc';
 
 	let page = 1;
-	let models = null;
-	let total = null;
+	let models: WorkspaceModel[] = [];
+	let total: number | null = null;
 
 	let searchDebounceTimer: ReturnType<typeof setTimeout>;
 	let searchController: AbortController;
@@ -151,7 +158,7 @@
 		}
 	};
 
-	const openModel = (model) => {
+	const openModel = (model: WorkspaceModel) => {
 		if (model.write_access) {
 			goto(`/workspace/models/edit?id=${encodeURIComponent(model.id)}`);
 		}
@@ -161,12 +168,12 @@
 		return target instanceof Element && !!target.closest('button, a, input, [role="menu"]');
 	};
 
-	const confirmDeleteModel = (model: any) => {
+	const confirmDeleteModel = (model: WorkspaceModel) => {
 		selectedModel = model;
 		showModelDeleteConfirm = true;
 	};
 
-	const toggleModelHandler = async (model: any) => {
+	const toggleModelHandler = async (model: WorkspaceModel) => {
 		if (updatingModels[model.id]) return;
 		const previousState = !model.is_active;
 		updatingModels = { ...updatingModels, [model.id]: true };
@@ -240,7 +247,8 @@
 		}
 	};
 
-	const deleteModelHandler = async (model) => {
+	const deleteModelHandler = async (model: WorkspaceModel | null) => {
+		if (!model) return;
 		const res = await deleteModelById(localStorage.token, model.id).catch((e) => {
 			toast.error(`${e}`);
 			return null;
@@ -256,15 +264,15 @@
 		await _models.set(
 			await getModels(
 				localStorage.token,
-				$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
+				$config?.features?.enable_direct_connections ? ($settings?.directConnections ?? null) : null
 			)
 		);
 	};
 
-	const getFullModel = async (model: any) =>
+	const getFullModel = async (model: WorkspaceModel) =>
 		(await getModelById(localStorage.token, model.id).catch(() => null)) ?? model;
 
-	const cloneModelHandler = async (model) => {
+	const cloneModelHandler = async (model: WorkspaceModel) => {
 		model = await getFullModel(model);
 		sessionStorage.model = JSON.stringify({
 			...model,
@@ -274,7 +282,7 @@
 		goto('/workspace/models/create');
 	};
 
-	const shareModelHandler = async (model) => {
+	const shareModelHandler = async (model: WorkspaceModel) => {
 		// LICENSE covers this Open WebUI Community wordmark.
 		// Do not alter, remove, obscure, or replace it except as LICENSE permits:
 		// https://docs.openwebui.com/license.
@@ -283,12 +291,13 @@
 		const url = 'https://answerai.in';
 		const fullModel = getFullModel(model);
 
-		const tab = await window.open(`${url}/post?type=model`, '_blank');
+		const tab = window.open(`${url}/post?type=model`, '_blank');
+		if (!tab) return;
 
-		const messageHandler = async (event) => {
-			if (event.origin !== url) return;
+		const messageHandler = async (event: MessageEvent) => {
+			if (event.origin !== url || event.source !== tab) return;
 			if (event.data === 'loaded') {
-				tab.postMessage(JSON.stringify(await fullModel), '*');
+				tab.postMessage(JSON.stringify(await fullModel), url);
 				window.removeEventListener('message', messageHandler);
 			}
 		};
@@ -296,7 +305,7 @@
 		window.addEventListener('message', messageHandler, false);
 	};
 
-	const hideModelHandler = async (model) => {
+	const hideModelHandler = async (model: WorkspaceModel) => {
 		const updatedModel = {
 			...model,
 			meta: {
@@ -323,12 +332,12 @@
 		await _models.set(
 			await getModels(
 				localStorage.token,
-				$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
+				$config?.features?.enable_direct_connections ? ($settings?.directConnections ?? null) : null
 			)
 		);
 	};
 
-	const copyLinkHandler = async (model) => {
+	const copyLinkHandler = async (model: WorkspaceModel) => {
 		const baseUrl = window.location.origin;
 		const res = await copyToClipboard(`${baseUrl}/?model=${encodeURIComponent(model.id)}`);
 
@@ -339,7 +348,7 @@
 		}
 	};
 
-	const downloadModels = async (models = null) => {
+	const downloadModels = async (models: WorkspaceModel[] | null = null) => {
 		try {
 			models = await exportModels(
 				localStorage.token,
@@ -355,7 +364,7 @@
 		saveAs(blob, `models-export-${Date.now()}.json`);
 	};
 
-	const exportModelHandler = async (model) => {
+	const exportModelHandler = async (model: WorkspaceModel) => {
 		try {
 			[model] = await exportModels(localStorage.token, [model.id]);
 		} catch (error: any) {
@@ -368,7 +377,7 @@
 		saveAs(blob, `${model.id}-${Date.now()}.json`);
 	};
 
-	const pinModelHandler = async (modelId) => {
+	const pinModelHandler = async (modelId: string) => {
 		settings.set({
 			...$settings,
 			pinnedModels: $pinnedModels.includes(modelId)
@@ -380,7 +389,7 @@
 
 	const fetchAllWorkspaceModels = async () => {
 		// Fetch all workspace models across every page
-		const allModels = [];
+		const allModels: WorkspaceModel[] = [];
 		let currentPage = 1;
 		let fetchedTotal = 0;
 
@@ -470,23 +479,26 @@
 		toast.success($i18n.t('All models are now hidden'));
 	};
 
-	onMount(async () => {
-		viewOption = localStorage.workspaceViewOption ?? '';
-		page = 1;
+	onMount(() => {
+		let disposed = false;
+		void (async () => {
+			viewOption = localStorage.workspaceViewOption ?? '';
+			page = 1;
 
-		let groups = await getGroups(localStorage.token);
-		groupIds = groups.map((group) => group.id);
+			let groups = await getGroups(localStorage.token);
+			groupIds = groups.map((group: { id: string }) => group.id);
 
-		await tick();
-		loaded = true;
+			await tick();
+			if (!disposed) loaded = true;
+		})().catch((error) => toast.error(`${error}`));
 
-		const onKeyDown = (event) => {
+		const onKeyDown = (event: KeyboardEvent) => {
 			if (event.key === 'Shift') {
 				shiftKey = true;
 			}
 		};
 
-		const onKeyUp = (event) => {
+		const onKeyUp = (event: KeyboardEvent) => {
 			if (event.key === 'Shift') {
 				shiftKey = false;
 			}
@@ -501,6 +513,7 @@
 		window.addEventListener('blur', onBlur);
 
 		return () => {
+			disposed = true;
 			window.removeEventListener('keydown', onKeyDown);
 			window.removeEventListener('keyup', onKeyUp);
 			window.removeEventListener('blur', onBlur);
@@ -534,46 +547,32 @@
 		type="file"
 		accept=".json"
 		hidden
-		on:change={() => {
-			console.log(importFiles);
-
-			let reader = new FileReader();
-			reader.onload = async (event) => {
-				let savedModels = [];
-				try {
-					savedModels = JSON.parse(event.target.result);
-					console.log(savedModels);
-				} catch (e) {
-					toast.error($i18n.t('Invalid JSON file'));
-					return;
-				}
-
-				if (!Array.isArray(savedModels)) {
-					toast.error($i18n.t('Invalid JSON file'));
-					return;
-				}
-				try {
-					await importModels(
-						localStorage.token,
-						savedModels.map((model) => model.info ?? model)
-					);
-				} catch (error: any) {
-					toast.error(`${error?.detail ?? error}`);
-					return;
-				}
-
-				await _models.set(
+		on:change={async () => {
+			const file = importFiles?.[0];
+			if (!file) return;
+			try {
+				const savedModels: unknown = JSON.parse(await file.text());
+				if (!Array.isArray(savedModels)) throw new Error($i18n.t('Invalid JSON file'));
+				await importModels(
+					localStorage.token,
+					savedModels.map((model) => model.info ?? model)
+				);
+				_models.set(
 					await getModels(
 						localStorage.token,
-						$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
+						$config?.features?.enable_direct_connections
+							? ($settings?.directConnections ?? null)
+							: null
 					)
 				);
-
 				page = 1;
-				getModelList();
-			};
-
-			reader.readAsText(importFiles[0]);
+				await getModelList();
+			} catch (error) {
+				toast.error(`${error}`);
+			} finally {
+				importFiles = null;
+				modelsImportInputElement.value = '';
+			}
 		}}
 	/>
 
@@ -792,7 +791,8 @@
 												// LICENSE covers this Open WebUI fallback logo.
 												// Do not alter, remove, obscure, or replace it except as LICENSE permits:
 												// https://docs.openwebui.com/license.
-												e.target.src = '/favicon.png';
+												if (e.currentTarget instanceof HTMLImageElement)
+													e.currentTarget.src = '/favicon.png';
 											}}
 										/>
 									</div>
@@ -993,7 +993,7 @@
 					</div>
 				</div>
 
-				{#if total > 30}
+				{#if total !== null && total > 30}
 					<Pagination bind:page count={total} perPage={30} />
 				{/if}
 			{:else}

@@ -1,4 +1,13 @@
-<script>
+<script lang="ts">
+	import type { ChatSummary } from '$lib/types/chat';
+	import type { FolderRecord, FolderRegistry } from '$lib/types/folders';
+	import type { FolderForm } from '$lib/apis/folders';
+	type FolderChat = Partial<ChatSummary> & { id: string };
+	type FolderReadState = {
+		chat_id: string;
+		last_read_at?: number;
+		folder_unread_counts?: Record<string, number>;
+	};
 	import { getContext, createEventDispatcher, onMount, onDestroy, tick } from 'svelte';
 
 	const i18n = getContext('i18n');
@@ -48,11 +57,11 @@
 	import FolderModal from './Folders/FolderModal.svelte';
 	import Emoji from '$lib/components/common/Emoji.svelte';
 
-	export let folderRegistry = {};
+	export let folderRegistry: FolderRegistry = {};
 	export let open = false;
 
-	export let folders;
-	export let folderId;
+	export let folders: Record<string, FolderRecord>;
+	export let folderId: string;
 	export let shiftKey = false;
 
 	export let className = '';
@@ -61,12 +70,16 @@
 
 	export let parentDragged = false;
 
-	export let onDelete = () => {};
-	export let onItemMove = () => {};
-	export let onFolderUnreadCounts = () => {};
+	export let onDelete: (id: string) => void = () => {};
+	export let onItemMove: (data: {
+		originFolderId: string | null;
+		targetFolderId: string;
+		e: DragEvent;
+	}) => void = () => {};
+	export let onFolderUnreadCounts: (counts: Record<string, number>) => void = () => {};
 
 	/** @type {HTMLDivElement} */
-	let folderElement;
+	let folderElement: HTMLElement;
 
 	let openPreview = false;
 	let showFolderModal = false;
@@ -74,12 +87,12 @@
 	let edit = false;
 
 	let showCreateSubFolderModal = false;
-	let createSubFolderParentId = null;
+	let createSubFolderParentId: string | null = null;
 
 	let draggedOver = false;
 	let dragged = false;
 
-	let clickTimer = null;
+	let clickTimer: ReturnType<typeof setTimeout> | null = null;
 
 	$: if (
 		$mobile ||
@@ -95,27 +108,27 @@
 
 	let name = '';
 
-	const formatUnreadCount = (count) =>
+	const formatUnreadCount = (count: number) =>
 		new Intl.NumberFormat(undefined, {
 			notation: 'compact',
 			compactDisplay: 'short'
 		}).format(count);
 
-	const isUnreadChat = (chat) =>
+	const isUnreadChat = (chat: FolderChat) =>
 		!(chat.active ?? false) &&
 		(chat.last_read_at == null ||
 			(typeof chat.updated_at === 'number' &&
 				typeof chat.last_read_at === 'number' &&
 				chat.updated_at > chat.last_read_at));
 
-	const sortFolderChats = (items) =>
+	const sortFolderChats = (items: FolderChat[]) =>
 		[...items].sort(
 			(a, b) =>
 				Number(isUnreadChat(b)) - Number(isUnreadChat(a)) ||
 				Number(b.updated_at ?? 0) - Number(a.updated_at ?? 0)
 		);
 
-	const mergeFolderChats = (items, nextItems) => {
+	const mergeFolderChats = (items: FolderChat[], nextItems: FolderChat[]) => {
 		const merged = [...items];
 		const indexById = new Map(merged.map((chat, index) => [chat.id, index]));
 
@@ -136,7 +149,7 @@
 		return sortFolderChats(merged);
 	};
 
-	const applyReadState = (data) => {
+	const applyReadState = (data: FolderReadState) => {
 		if (data?.folder_unread_counts) {
 			onFolderUnreadCounts(data.folder_unread_counts);
 		}
@@ -176,7 +189,7 @@
 
 	$: isWritable = !folders[folderId]?.shared || folders[folderId]?.permission === 'write';
 
-	const onDragOver = (e) => {
+	const onDragOver = (e: DragEvent) => {
 		e.stopPropagation();
 		if (dragged || parentDragged || !isWritable) {
 			return;
@@ -185,14 +198,14 @@
 		draggedOver = true;
 	};
 
-	const onDrop = async (e) => {
+	const onDrop = async (e: DragEvent) => {
 		e.preventDefault();
 		e.stopPropagation();
 		if (dragged || parentDragged || !isWritable) {
 			return;
 		}
 
-		if (folderElement.contains(e.target)) {
+		if (e.target instanceof Node && e.dataTransfer && folderElement.contains(e.target)) {
 			console.log('Dropped on the Button');
 
 			if (e.dataTransfer.items && e.dataTransfer.items.length > 0) {
@@ -204,23 +217,14 @@
 						if (file && file.type === 'application/json') {
 							console.log('Dropped file is a JSON file!');
 
-							// Read the JSON file with FileReader
-							const reader = new FileReader();
-							reader.onload = async function (event) {
-								try {
-									const fileContent = JSON.parse(event.target.result);
-									open = true;
-									dispatch('import', {
-										folderId: folderId,
-										items: fileContent
-									});
-								} catch (error) {
-									console.error('Error parsing JSON file:', error);
-								}
-							};
-
-							// Start reading the file
-							reader.readAsText(file);
+							try {
+								const fileContent: unknown = JSON.parse(await file.text());
+								if (!Array.isArray(fileContent)) throw new Error('Expected a chat array');
+								open = true;
+								dispatch('import', { folderId, items: fileContent });
+							} catch (error) {
+								console.error('Error parsing JSON file:', error);
+							}
 						} else {
 							console.error('Only JSON file types are supported.');
 						}
@@ -317,7 +321,7 @@
 		}
 	};
 
-	const onDragLeave = (e) => {
+	const onDragLeave = (e: DragEvent) => {
 		e.preventDefault();
 		if (dragged || parentDragged || !isWritable) {
 			return;
@@ -330,35 +334,35 @@
 	dragImage.src =
 		'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
 
-	let x;
-	let y;
+	let x = 0;
+	let y = 0;
 
-	const onDragStart = (event) => {
+	const onDragStart = (event: DragEvent) => {
 		event.stopPropagation();
-		event.dataTransfer.setDragImage(dragImage, 0, 0);
+		event.dataTransfer?.setDragImage(dragImage, 0, 0);
 
 		// Set the data to be transferred
-		event.dataTransfer.setData(
+		event.dataTransfer?.setData(
 			'text/plain',
 			JSON.stringify({
 				type: 'folder',
 				id: folderId
 			})
 		);
-		event.dataTransfer.setData('application/x-answerai-drag', '');
+		event.dataTransfer?.setData('application/x-answerai-drag', '');
 
 		dragged = true;
 		folderElement.style.opacity = '0.5'; // Optional: Visual cue to show it's being dragged
 	};
 
-	const onDrag = (event) => {
+	const onDrag = (event: DragEvent) => {
 		event.stopPropagation();
 
 		x = event.clientX;
 		y = event.clientY;
 	};
 
-	const onDragEnd = (event) => {
+	const onDragEnd = (event: DragEvent) => {
 		event.stopPropagation();
 
 		folderElement.style.opacity = '1'; // Reset visual cue after drag
@@ -366,7 +370,7 @@
 	};
 
 	onMount(async () => {
-		open = folders[folderId].is_expanded;
+		open = folders[folderId].is_expanded ?? false;
 		folderRegistry[folderId] = {
 			setFolderItems,
 			upsertChat: (chat) => {
@@ -444,6 +448,8 @@
 	});
 
 	onDestroy(() => {
+		if (clickTimer !== null) clearTimeout(clickTimer);
+		clearTimeout(isExpandedUpdateTimeout);
 		delete folderRegistry[folderId];
 
 		if (folderElement) {
@@ -473,7 +479,7 @@
 		}
 	};
 
-	const updateHandler = async ({ name, meta, data }) => {
+	const updateHandler = async ({ name, meta, data }: FolderForm) => {
 		name = name?.trim();
 		if (!name) {
 			toast.error($i18n.t('Folder name cannot be empty.'));
@@ -527,7 +533,7 @@
 		);
 	};
 
-	let isExpandedUpdateTimeout;
+	let isExpandedUpdateTimeout: ReturnType<typeof setTimeout> | undefined;
 
 	const isExpandedUpdateDebounceHandler = () => {
 		clearTimeout(isExpandedUpdateTimeout);
@@ -537,13 +543,12 @@
 	};
 
 	const SIDEBAR_CHATS_PAGE_SIZE = 10;
-	/** @type {any[] | null} */
-	let chats = null;
+	let chats: FolderChat[] | null = null;
 	let chatsPage = 1;
 	let hasMoreChats = false;
 	let chatsLoading = false;
 	let queuedReload = false;
-	let pendingUpsertChats = [];
+	let pendingUpsertChats: FolderChat[] = [];
 
 	export const setFolderItems = async (append = false) => {
 		if (open && chatsLoading) {
@@ -569,7 +574,7 @@
 				const res = await getSharedFolderChats(localStorage.token, folderId, {
 					page: nextPage
 				});
-				const nextChats = res?.chats ?? [];
+				const nextChats: FolderChat[] = res?.chats ?? [];
 				const merged = append ? mergeFolderChats(chats ?? [], nextChats) : nextChats;
 				chats = mergeFolderChats(merged, pendingUpsertChats);
 				pendingUpsertChats = pendingUpsertChats.filter(
@@ -585,7 +590,7 @@
 						return [];
 					}
 				);
-				const fallbackChats = fallback ?? [];
+				const fallbackChats: FolderChat[] = fallback ?? [];
 				const merged = append ? mergeFolderChats(chats ?? [], fallbackChats) : fallbackChats;
 				chats = mergeFolderChats(merged, pendingUpsertChats);
 				pendingUpsertChats = pendingUpsertChats.filter(
@@ -644,7 +649,7 @@
 		await tick();
 
 		const input = document.getElementById(`folder-${folderId}-input`);
-		if (input) {
+		if (input instanceof HTMLInputElement) {
 			input.focus();
 			input.select();
 		}
@@ -666,7 +671,7 @@
 		saveAs(blob, `folder-${folders[folderId].name}-export-${Date.now()}.json`);
 	};
 
-	const createSubFolderHandler = async ({ name, meta, data, parent_id }) => {
+	const createSubFolderHandler = async ({ name, meta, data, parent_id }: FolderForm) => {
 		name = name?.trim();
 		if (!name) {
 			toast.error($i18n.t('Folder name cannot be empty.'));
@@ -750,7 +755,7 @@
 		bind:open
 		className="w-full"
 		buttonClassName="w-full"
-		onChange={(state) => {
+		onChange={(state: boolean) => {
 			dispatch('open', state);
 		}}
 	>
@@ -776,7 +781,7 @@
 				>
 					{#if folders[folderId]?.meta?.icon}
 						<div class="flex group-hover:hidden transition-all">
-							<Emoji className="size-3.5" shortCode={folders[folderId].meta.icon} />
+							<Emoji className="size-3.5" shortCode={folders[folderId].meta?.icon ?? ''} />
 						</div>
 
 						<div class="hidden group-hover:flex transition-all p-[0.0625rem]">
@@ -878,7 +883,7 @@
 										class="inline-flex h-4 min-w-4 shrink-0 items-center justify-center rounded-md bg-sky-500/10 px-1 text-[0.625rem] font-semibold leading-4 text-sky-600 dark:bg-sky-400/10 dark:text-sky-300"
 										title={$i18n.t('Unread')}
 									>
-										{formatUnreadCount(folders[folderId].unread_count)}
+										{formatUnreadCount(folders[folderId].unread_count ?? 0)}
 									</div>
 								{/if}
 							</LinkPreview.Trigger>
@@ -938,7 +943,7 @@
 					class="ml-3 pl-1 mt-[0.0625rem] flex flex-col overflow-y-auto scrollbar-hidden border-s border-gray-100 dark:border-gray-900"
 				>
 					{#if folders[folderId]?.childrenIds}
-						{@const children = folders[folderId]?.childrenIds
+						{@const children = (folders[folderId]?.childrenIds ?? [])
 							.map((id) => folders[id])
 							.sort((a, b) =>
 								a.name.localeCompare(b.name, undefined, {

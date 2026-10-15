@@ -25,7 +25,7 @@ export const appInfo = writable(null);
 export const appData = writable(null);
 
 // Frontend
-export const MODEL_DOWNLOAD_POOL = writable({});
+export { MODEL_DOWNLOAD_POOL } from './modelDownloads';
 
 export const mobile = writable(false);
 
@@ -50,7 +50,7 @@ export const shortCodesToEmojis = writable(
 	}, {})
 );
 
-export const TTSWorker = writable(null);
+export const TTSWorker = writable<import('$lib/workers/KokoroWorker').KokoroWorker | null>(null);
 
 export const chatId = writable('');
 export const chatTitle = writable('');
@@ -72,9 +72,9 @@ export const pinnedNotes = writable<
 	(Partial<import('$lib/types/notes').NoteRecord> & { id: string; title: string })[]
 >([]);
 export const tags = writable<import('$lib/utils/tags').Tag[]>([]);
-export const folders = writable([]);
+export const folders = writable<import('$lib/types/folders').FolderRecord[]>([]);
 
-export const selectedFolder = writable(null);
+export const selectedFolder = writable<import('$lib/types/folders').FolderRecord | null>(null);
 
 export const models: Writable<Model[]> = writable([]);
 
@@ -106,7 +106,7 @@ export const adminGroupCount: Writable<number | null> = writable(null);
 export const adminLeaderboardCount: Writable<number | null> = writable(null);
 export const adminFeedbackCount: Writable<number | null> = writable(null);
 
-export const toolServers = writable([]);
+export const toolServers = writable<import('$lib/types/connections').ToolServerData[]>([]);
 export const terminalServers: Writable<any[] | null> = writable(null);
 
 // Persistent Pyodide worker for code interpreter FS
@@ -115,6 +115,13 @@ export const pyodideWorker: Writable<Worker | null> = writable(null);
 export const banners: Writable<Banner[]> = writable([]);
 
 export const settings: Writable<Settings> = writable({});
+export const chatDirection = derived(settings, (value) =>
+	value.chatDirection === 'LTR'
+		? ('ltr' as const)
+		: value.chatDirection === 'RTL'
+			? ('rtl' as const)
+			: ('auto' as const)
+);
 
 // Users who never pinned a model follow the admin default, so changes to it keep reaching them
 export const pinnedModels = derived([settings, config], ([$settings, $config]) =>
@@ -174,12 +181,19 @@ export const connectedUserTerminals = writable(
 	new Map<symbol, { terminalId: string; chatId: string }>()
 );
 
-export const artifactCode = writable(null);
-export const artifactContents = writable(null);
+export const artifactCode = writable<string | null>(null);
+export const artifactContents = writable<{ type: string; content: string }[]>([]);
 
-export const embed = writable(null);
+export const embed = writable<{
+	url: string;
+	title?: string;
+	source?: unknown;
+	chatId?: string;
+	messageId?: string;
+	sourceId?: string;
+} | null>(null);
 
-export const temporaryChatEnabled = writable(false);
+export const temporaryChatEnabled = writable<boolean | null>(false);
 
 // Transient one-shot event from the desktop shell (Spotlight, drag-and-drop, etc.).
 // Set by +layout.svelte, consumed and cleared by Chat.svelte.
@@ -193,14 +207,23 @@ export const desktopEvent: Writable<DesktopEvent | null> = writable(null);
 export const isLastActiveTab = writable(true);
 export const playingNotificationSound = writable(false);
 
-export type Model = OpenAIModel | OllamaModel;
+export type Model = OpenAIModel | OllamaModel | ArenaModel;
+export interface ArenaModel extends BaseModel {
+	owned_by: 'arena';
+}
 
 type BaseModel = {
 	id: string;
 	name: string;
 	info?: ModelConfig;
 	owned_by: 'ollama' | 'openai' | 'arena';
+	tags?: import('$lib/utils/tags').Tag[];
+	connection_type?: string;
+	urlIdx?: string | number;
+	openai?: { id: string };
+	external?: boolean;
 	preset?: boolean;
+	has_user_valves?: boolean;
 	arena?: boolean;
 	direct?: boolean;
 	actions?: {
@@ -208,9 +231,16 @@ type BaseModel = {
 		name: string;
 		description?: string;
 		icon_url?: string;
+		icon?: string;
 		[key: string]: unknown;
 	}[];
-	filters?: { id: string; name: string; description?: string; has_user_valves?: boolean }[];
+	filters?: {
+		id: string;
+		name: string;
+		description?: string;
+		has_user_valves?: boolean;
+		icon?: string;
+	}[];
 };
 
 export interface OpenAIModel extends BaseModel {
@@ -425,6 +455,7 @@ export type Config = {
 		enable_calendar?: boolean;
 		enable_automations?: boolean;
 		enable_notes?: boolean;
+		enable_websocket?: boolean;
 		enable_code_execution?: boolean;
 		enable_code_interpreter?: boolean;
 		enable_message_rating?: boolean;

@@ -36,7 +36,7 @@
 	let valvesSpec = null;
 	let valves = {};
 
-	let debounceTimer;
+	let debounceTimer: ReturnType<typeof setTimeout> | undefined;
 
 	const debounceSubmitHandler = async () => {
 		if (debounceTimer) {

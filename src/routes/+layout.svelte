@@ -1,4 +1,6 @@
 <script>
+	import { splitStream } from '$lib/utils/streamText';
+	import { CleanupScope } from '$lib/utils/cleanupScope';
 	import { io } from 'socket.io-client';
 	import { spring } from 'svelte/motion';
 	import { createPyodideWorker } from '$lib/pyodide/createPyodideWorker';
@@ -123,6 +125,8 @@
 	const bc = new BroadcastChannel('active-tab-channel');
 
 	let loaded = false;
+	/** @type {ReturnType<typeof setInterval> | null} */
+	/** @type {ReturnType<typeof setInterval> | null} */
 	let tokenTimer = null;
 	let isAuthRedirectInProgress = false;
 
@@ -131,12 +135,17 @@
 	let showSyncStatsModal = false;
 	let syncStatsEventData = null;
 
+	/** @type {ReturnType<typeof setInterval> | null} */
+	/** @type {ReturnType<typeof setInterval> | null} */
 	let heartbeatInterval = null;
+	/** @type {ReturnType<typeof setTimeout> | null} */
+	/** @type {ReturnType<typeof setTimeout> | null} */
 	let disconnectToastTimer = null;
 	let disconnectWarningShown = false;
 	let pageIsVisible = true;
 	let pageWasHidden = false;
 	let lastVisibleAt = Date.now();
+	/** @type {string | null} */
 	let disconnectReason = null;
 
 	const BREAKPOINT = 768;
@@ -154,6 +163,7 @@
 	const recentlyResumed = () =>
 		pageWasHidden && Date.now() - lastVisibleAt < RECENT_RESUME_GRACE_MS;
 
+	/** @param {string | null} reason */
 	const isLikelyResumeDisconnect = (reason) => {
 		return (!pageIsVisible || recentlyResumed()) && RESUME_DISCONNECT_REASONS.has(reason);
 	};
@@ -177,6 +187,7 @@
 		}, resumeDelay + DISCONNECT_TOAST_DELAY_MS);
 	};
 
+	/** @param {boolean} enableWebsocket */
 	const setupSocket = async (enableWebsocket) => {
 		const _socket = io(`${WEBUI_BASE_URL}` || undefined, {
 			reconnection: true,
@@ -658,7 +669,7 @@
 		// Session-targeted RPC calls (code execution, tool calls, direct completion)
 		// must ALWAYS be processed regardless of active chat or tab visibility,
 		// because the backend's sio.call blocks waiting for our callback response.
-		if (data?.session_id === $socket.id) {
+		if (data?.session_id === $socket?.id) {
 			if (type === 'execute:python') {
 				console.log('execute:python', data);
 				executePythonAsWorker(data.id, data.code, cb, data.files || []);
@@ -684,11 +695,12 @@
 				}
 				return;
 			} else if (type === 'request:chat:completion') {
-				console.log(data, $socket.id);
+				console.log(data, $socket?.id);
 				const { session_id, channel, form_data, model } = data;
 
 				try {
-					const directConnections = $settings?.directConnections ?? {};
+					const directConnections = $settings?.directConnections;
+					if (!directConnections) throw new Error('Direct connections are not configured');
 
 					if (directConnections) {
 						const urlIdx = model?.urlIdx;
@@ -722,8 +734,11 @@
 									console.log({ status: true });
 
 									// res will either be SSE or JSON
-									const reader = res.body.getReader();
-									const decoder = new TextDecoder();
+									if (!res.body) throw new Error('Empty completion response');
+									const reader = res.body
+										.pipeThrough(new TextDecoderStream())
+										.pipeThrough(splitStream('\n'))
+										.getReader();
 
 									const processStream = async () => {
 										while (true) {
@@ -734,7 +749,7 @@
 											}
 
 											// Decode the received chunk
-											const chunk = decoder.decode(value, { stream: true });
+											const chunk = value;
 
 											// Process lines within the chunk
 											const lines = chunk.split('\n').filter((line) => line.trim() !== '');
@@ -764,7 +779,7 @@
 					console.error('chatCompletion', error);
 					cb(error);
 				} finally {
-					$socket.emit(channel, {
+					$socket?.emit(channel, {
 						done: true
 					});
 				}
@@ -962,6 +977,7 @@
 	};
 
 	const TOKEN_EXPIRY_BUFFER = 60; // seconds
+	/** @param {RequestInfo | URL} input */
 	const resolveFetchUrl = (input) => {
 		if (input instanceof Request) {
 			return new URL(input.url, window.location.origin);
@@ -970,6 +986,8 @@
 		return new URL(input, window.location.origin);
 	};
 
+	/** @param {RequestInfo | URL} input
+	 * @param {RequestInit | undefined} init */
 	const resolveFetchHeaders = (input, init) => {
 		if (init?.headers) {
 			return new Headers(init.headers);
@@ -982,6 +1000,8 @@
 		return new Headers();
 	};
 
+	/** @param {RequestInfo | URL} input
+	 * @param {RequestInit | undefined} init */
 	const isAuthenticatedBackendFetch = (input, init) => {
 		try {
 			const requestUrl = resolveFetchUrl(input);
@@ -1005,7 +1025,7 @@
 			clearInterval(tokenTimer);
 			tokenTimer = null;
 		}
-		user.set(null);
+		user.set(undefined);
 		localStorage.removeItem('token');
 		// Clear the OAuth token cookie so /auth doesn't auto-login and redirect-loop
 		document.cookie = 'token=; Max-Age=0; path=/';
@@ -1016,6 +1036,7 @@
 		isAuthRedirectInProgress = false;
 	};
 
+	/** @param {typeof fetch} originalFetch */
 	const isCurrentSessionUnauthorized = async (originalFetch) => {
 		return originalFetch(`${WEBUI_API_BASE_URL}/auths/`, {
 			method: 'GET',
@@ -1131,6 +1152,7 @@
 		}
 	};
 
+	/** @param {MessageEvent} event */
 	const windowMessageEventHandler = async (event) => {
 		if (!COMMUNITY_ORIGINS.includes(event.origin)) {
 			return;
@@ -1142,313 +1164,335 @@
 		}
 	};
 
-	onMount(async () => {
-		const originalFetch = window.fetch.bind(window);
-		window.fetch = async (input, init) => {
-			const response = await originalFetch(input, init);
+	onMount(() => {
+		const cleanup = new CleanupScope();
+		const initialize = async () => {
+			const previousFetch = window.fetch;
+			const originalFetch = previousFetch.bind(window);
+			window.fetch = async (input, init) => {
+				const response = await originalFetch(input, init);
 
-			if (
-				response.status === 401 &&
-				localStorage.token &&
-				isAuthenticatedBackendFetch(input, init) &&
-				(await isCurrentSessionUnauthorized(originalFetch))
-			) {
-				clearExpiredSession();
-			}
-
-			return response;
-		};
-
-		window.addEventListener('message', windowMessageEventHandler);
-
-		let touchstartY = 0;
-
-		function isNavOrDescendant(el) {
-			const nav = document.querySelector('nav'); // change selector if needed
-			return nav && (el === nav || nav.contains(el));
-		}
-
-		const touchstartHandler = (e) => {
-			if (!isNavOrDescendant(e.target)) return;
-			touchstartY = e.touches[0].clientY;
-		};
-
-		const touchmoveHandler = (e) => {
-			if (!isNavOrDescendant(e.target)) return;
-			const touchY = e.touches[0].clientY;
-			const touchDiff = touchY - touchstartY;
-			if (touchDiff > 50 && window.scrollY === 0) {
-				showRefresh = true;
-				e.preventDefault();
-			}
-		};
-
-		const touchendHandler = (e) => {
-			if (!isNavOrDescendant(e.target)) return;
-			if (showRefresh) {
-				showRefresh = false;
-				location.reload();
-			}
-		};
-
-		document.addEventListener('touchstart', touchstartHandler);
-		document.addEventListener('touchmove', touchmoveHandler, { passive: false });
-		document.addEventListener('touchend', touchendHandler);
-
-		if (typeof window !== 'undefined') {
-			if (window.applyTheme) {
-				window.applyTheme();
-			}
-		}
-
-		if (window?.electronAPI) {
-			const info = await window.electronAPI.send({
-				type: 'app:info'
-			});
-
-			if (info) {
-				isApp.set(true);
-				appInfo.set(info);
-
-				const data = await window.electronAPI.send({
-					type: 'app:data'
-				});
-
-				if (data) {
-					appData.set(data);
+				if (
+					response.status === 401 &&
+					localStorage.token &&
+					isAuthenticatedBackendFetch(input, init) &&
+					(await isCurrentSessionUnauthorized(originalFetch))
+				) {
+					clearExpiredSession();
 				}
-			}
 
-			// Listen for desktop service lifecycle events (scalable protocol)
-			if (window.electronAPI.onEvent) {
-				window.electronAPI.onEvent(desktopEventHandler);
-			}
-		}
-
-		// Listen for messages on the BroadcastChannel
-		bc.onmessage = (event) => {
-			if (event.data === 'active') {
-				isLastActiveTab.set(false); // Another tab became active
-			}
-		};
-
-		// Set yourself as the last active tab when this tab is focused
-		const handlePageHidden = () => {
-			pageIsVisible = false;
-			pageWasHidden = true;
-			clearDisconnectToastTimer();
-		};
-
-		const handlePageVisible = () => {
-			pageIsVisible = true;
-			lastVisibleAt = Date.now();
-
-			isLastActiveTab.set(true); // This tab is now the active tab
-			bc.postMessage('active'); // Notify other tabs that this tab is active
-
-			// Check token expiry when the tab becomes active
-			checkTokenExpiry();
-
-			if ($socket && !$socket.connected) {
-				scheduleDisconnectToast();
-			}
-		};
-
-		const handleVisibilityChange = () => {
-			if (document.visibilityState === 'visible') {
-				handlePageVisible();
-			} else {
-				handlePageHidden();
-			}
-		};
-
-		// Add event listener for visibility state changes
-		document.addEventListener('visibilitychange', handleVisibilityChange);
-		window.addEventListener('pagehide', handlePageHidden);
-		window.addEventListener('pageshow', handlePageVisible);
-
-		// Call visibility change handler initially to set state on load
-		handleVisibilityChange();
-
-		theme.set(localStorage.theme);
-
-		mobile.set(window.innerWidth < BREAKPOINT);
-
-		const onResize = () => {
-			if (window.innerWidth < BREAKPOINT) {
-				mobile.set(true);
-			} else {
-				mobile.set(false);
-			}
-		};
-		window.addEventListener('resize', onResize);
-
-		let queueUserId = $user?.id;
-		const unsubscribeQueueUser = user.subscribe(async (value) => {
-			if (queueUserId !== value?.id) {
-				channelRequestQueues.set({});
-				queueUserId = value?.id;
-			}
-			if (value) {
-				$socket?.off('events', chatEventHandler);
-				$socket?.off('events:channel', channelEventHandler);
-
-				$socket?.on('events', chatEventHandler);
-				$socket?.on('events:channel', channelEventHandler);
-
-				// Set up the token expiry check
-				if (tokenTimer) {
-					clearInterval(tokenTimer);
-				}
-				tokenTimer = setInterval(checkTokenExpiry, 15000);
-			} else {
-				$socket?.off('events', chatEventHandler);
-				$socket?.off('events:channel', channelEventHandler);
-			}
-		});
-
-		/** @param {BeforeUnloadEvent} event */
-		const beforeUnloadHandler = (event) => {
-			if (Object.values($channelRequestQueues).some((queue) => queue.length)) {
-				event.preventDefault();
-				event.returnValue = '';
-			}
-		};
-		window.addEventListener('beforeunload', beforeUnloadHandler);
-
-		let backendConfig = null;
-		try {
-			backendConfig = await getBackendConfig();
-			console.log('Backend config:', backendConfig);
-		} catch (error) {
-			if (error?.authRedirect) {
-				// Forward-auth proxy is redirecting to an external login page.
-				// Full-page navigation lets the browser follow the redirect natively.
-				window.location.href = '/';
-				return;
-			}
-			console.error('Error loading backend config:', error);
-		}
-		// Initialize i18n even if we didn't get a backend config,
-		// so `/error` can show something that's not `undefined`.
-
-		await initI18n(backendConfig?.default_locale, backendConfig?.i18n ?? {});
-		if (!localStorage.locale) {
-			const languages = await getLanguages();
-			const browserLanguages = navigator.languages
-				? navigator.languages
-				: [navigator.language || navigator.userLanguage];
-			const lang = backendConfig?.default_locale
-				? backendConfig.default_locale
-				: bestMatchingLanguage(languages, browserLanguages, 'en-US');
-			await changeLanguage(lang);
-		}
-
-		if (backendConfig) {
-			// Save Backend Status to Store
-			await config.set(backendConfig);
-			// LICENSE covers this Open ANSWERAI branding surface, including name, logo,
-			// visual, textual, symbolic identifiers, metadata, and surrounding UI.
-			// Do not alter, remove, obscure, or replace it except as LICENSE permits:
-			// https://docs.openwebui.com/license.
-			await WEBUI_NAME.set(backendConfig.name);
-
-			if ($config) {
-				await setupSocket($config.features?.enable_websocket ?? true);
-
-				if (localStorage.token) {
-					// Get Session User Info
-					const sessionUser = await getSessionUser(localStorage.token).catch((error) => {
-						toast.error(`${error}`);
-						return null;
-					});
-
-					if (sessionUser) {
-						await user.set(sessionUser);
-						try {
-							await config.set(await getBackendConfig());
-						} catch (error) {
-							console.error('Error refreshing backend config:', error);
-						}
-
-						// Keep user timezone in sync on every app load/refresh
-						const timezone = getUserTimezone();
-						if (timezone) {
-							updateUserTimezone(localStorage.token, timezone);
-						}
-
-						// Relay auth token to desktop app for API access
-						if (window.electronAPI?.send) {
-							window.electronAPI
-								.send({
-									type: 'token:update',
-									token: localStorage.token
-								})
-								.catch(() => {});
-						}
-					} else {
-						localStorage.removeItem('token');
-						await user.set(null);
-					}
-				}
-			}
-		} else {
-			// Redirect to /error when Backend Not Detected
-			await goto(`/error`);
-		}
-
-		await tick();
-
-		if (
-			document.documentElement.classList.contains('her') &&
-			document.getElementById('progress-bar')
-		) {
-			loadingProgress.subscribe((value) => {
-				const progressBar = document.getElementById('progress-bar');
-
-				if (progressBar) {
-					progressBar.style.width = `${value}%`;
-				}
-			});
-
-			await loadingProgress.set(100);
-
-			document.getElementById('splash-screen')?.remove();
-
-			const audio = new Audio(`/audio/greeting.mp3`);
-			const playAudio = () => {
-				audio.play();
-				document.removeEventListener('click', playAudio);
+				return response;
 			};
 
-			document.addEventListener('click', playAudio);
+			const wrappedFetch = window.fetch;
+			cleanup.add(() => {
+				if (window.fetch === wrappedFetch) window.fetch = previousFetch;
+			});
+			window.addEventListener('message', windowMessageEventHandler);
+			cleanup.add(() => window.removeEventListener('message', windowMessageEventHandler));
 
-			loaded = true;
-		} else {
-			document.getElementById('splash-screen')?.remove();
-			loaded = true;
-		}
+			let touchstartY = 0;
 
-		// Auto-show SyncStatsModal when opened with ?sync=true (from community)
-		if (
-			(window.opener ?? false) &&
-			$page.url.searchParams.get('sync') === 'true' &&
-			($config?.features?.enable_community_sharing ?? false)
-		) {
-			showSyncStatsModal = true;
-		}
+			/** @param {EventTarget | null} el */
+			function isNavOrDescendant(el) {
+				const nav = document.querySelector('nav'); // change selector if needed
+				return nav && (el === nav || (el instanceof Node && nav.contains(el)));
+			}
 
+			/** @param {TouchEvent} e */
+			const touchstartHandler = (e) => {
+				if (!isNavOrDescendant(e.target)) return;
+				touchstartY = e.touches[0].clientY;
+			};
+
+			/** @param {TouchEvent} e */
+			const touchmoveHandler = (e) => {
+				if (!isNavOrDescendant(e.target)) return;
+				const touchY = e.touches[0].clientY;
+				const touchDiff = touchY - touchstartY;
+				if (touchDiff > 50 && window.scrollY === 0) {
+					showRefresh = true;
+					e.preventDefault();
+				}
+			};
+
+			/** @param {TouchEvent} e */
+			const touchendHandler = (e) => {
+				if (!isNavOrDescendant(e.target)) return;
+				if (showRefresh) {
+					showRefresh = false;
+					location.reload();
+				}
+			};
+
+			document.addEventListener('touchstart', touchstartHandler);
+			cleanup.add(() => document.removeEventListener('touchstart', touchstartHandler));
+			document.addEventListener('touchmove', touchmoveHandler, { passive: false });
+			cleanup.add(() => document.removeEventListener('touchmove', touchmoveHandler));
+			document.addEventListener('touchend', touchendHandler);
+			cleanup.add(() => document.removeEventListener('touchend', touchendHandler));
+
+			if (typeof window !== 'undefined') {
+				if (window.applyTheme) {
+					window.applyTheme();
+				}
+			}
+
+			if (window?.electronAPI) {
+				const info = await window.electronAPI.send({
+					type: 'app:info'
+				});
+				if (cleanup.disposed) return;
+
+				if (info) {
+					isApp.set(true);
+					appInfo.set(info);
+
+					const data = await window.electronAPI.send({
+						type: 'app:data'
+					});
+
+					if (data) {
+						appData.set(data);
+					}
+				}
+
+				// Listen for desktop service lifecycle events (scalable protocol)
+				if (window.electronAPI.onEvent) {
+					window.electronAPI.onEvent(desktopEventHandler);
+				}
+			}
+
+			// Listen for messages on the BroadcastChannel
+			bc.onmessage = (event) => {
+				if (event.data === 'active') {
+					isLastActiveTab.set(false); // Another tab became active
+				}
+			};
+
+			// Set yourself as the last active tab when this tab is focused
+			const handlePageHidden = () => {
+				pageIsVisible = false;
+				pageWasHidden = true;
+				clearDisconnectToastTimer();
+			};
+
+			const handlePageVisible = () => {
+				pageIsVisible = true;
+				lastVisibleAt = Date.now();
+
+				isLastActiveTab.set(true); // This tab is now the active tab
+				bc.postMessage('active'); // Notify other tabs that this tab is active
+
+				// Check token expiry when the tab becomes active
+				checkTokenExpiry();
+
+				if ($socket && !$socket.connected) {
+					scheduleDisconnectToast();
+				}
+			};
+
+			const handleVisibilityChange = () => {
+				if (document.visibilityState === 'visible') {
+					handlePageVisible();
+				} else {
+					handlePageHidden();
+				}
+			};
+
+			// Add event listener for visibility state changes
+			document.addEventListener('visibilitychange', handleVisibilityChange);
+			cleanup.add(() => document.removeEventListener('visibilitychange', handleVisibilityChange));
+			window.addEventListener('pagehide', handlePageHidden);
+			cleanup.add(() => window.removeEventListener('pagehide', handlePageHidden));
+			window.addEventListener('pageshow', handlePageVisible);
+			cleanup.add(() => window.removeEventListener('pageshow', handlePageVisible));
+
+			// Call visibility change handler initially to set state on load
+			handleVisibilityChange();
+
+			theme.set(localStorage.theme);
+
+			mobile.set(window.innerWidth < BREAKPOINT);
+
+			const onResize = () => {
+				if (window.innerWidth < BREAKPOINT) {
+					mobile.set(true);
+				} else {
+					mobile.set(false);
+				}
+			};
+			window.addEventListener('resize', onResize);
+			cleanup.add(() => window.removeEventListener('resize', onResize));
+
+			let queueUserId = $user?.id;
+			const unsubscribeQueueUser = user.subscribe(async (value) => {
+				if (queueUserId !== value?.id) {
+					channelRequestQueues.set({});
+					queueUserId = value?.id;
+				}
+				if (value) {
+					$socket?.off('events', chatEventHandler);
+					$socket?.off('events:channel', channelEventHandler);
+
+					$socket?.on('events', chatEventHandler);
+					$socket?.on('events:channel', channelEventHandler);
+
+					// Set up the token expiry check
+					if (tokenTimer) {
+						clearInterval(tokenTimer);
+					}
+					tokenTimer = setInterval(checkTokenExpiry, 15000);
+				} else {
+					$socket?.off('events', chatEventHandler);
+					$socket?.off('events:channel', channelEventHandler);
+				}
+			});
+
+			cleanup.add(unsubscribeQueueUser);
+			/** @param {BeforeUnloadEvent} event */
+			const beforeUnloadHandler = (event) => {
+				if (Object.values($channelRequestQueues).some((queue) => queue.length)) {
+					event.preventDefault();
+					event.returnValue = '';
+				}
+			};
+			window.addEventListener('beforeunload', beforeUnloadHandler);
+			cleanup.add(() => window.removeEventListener('beforeunload', beforeUnloadHandler));
+
+			let backendConfig = null;
+			try {
+				backendConfig = await getBackendConfig();
+				console.log('Backend config:', backendConfig);
+			} catch (error) {
+				if (error && typeof error === 'object' && 'authRedirect' in error && error.authRedirect) {
+					// Forward-auth proxy is redirecting to an external login page.
+					// Full-page navigation lets the browser follow the redirect natively.
+					window.location.href = '/';
+					return;
+				}
+				console.error('Error loading backend config:', error);
+			}
+			if (cleanup.disposed) return;
+			// Initialize i18n even if we didn't get a backend config,
+			// so `/error` can show something that's not `undefined`.
+
+			await initI18n(backendConfig?.default_locale, backendConfig?.i18n ?? {});
+			if (cleanup.disposed) return;
+			if (!localStorage.locale) {
+				const languages = await getLanguages();
+				const browserLanguages = navigator.languages ? navigator.languages : [navigator.language];
+				const lang = backendConfig?.default_locale
+					? backendConfig.default_locale
+					: bestMatchingLanguage(languages, browserLanguages, 'en-US');
+				await changeLanguage(lang);
+			}
+
+			if (cleanup.disposed) return;
+			if (backendConfig) {
+				// Save Backend Status to Store
+				await config.set(backendConfig);
+				// LICENSE covers this Open ANSWERAI branding surface, including name, logo,
+				// visual, textual, symbolic identifiers, metadata, and surrounding UI.
+				// Do not alter, remove, obscure, or replace it except as LICENSE permits:
+				// https://docs.openwebui.com/license.
+				await WEBUI_NAME.set(backendConfig.name);
+
+				if ($config) {
+					await setupSocket($config.features?.enable_websocket ?? true);
+
+					if (localStorage.token) {
+						// Get Session User Info
+						const sessionUser = await getSessionUser(localStorage.token).catch((error) => {
+							toast.error(`${error}`);
+							return null;
+						});
+
+						if (sessionUser) {
+							await user.set(sessionUser);
+							try {
+								await config.set(await getBackendConfig());
+							} catch (error) {
+								console.error('Error refreshing backend config:', error);
+							}
+
+							// Keep user timezone in sync on every app load/refresh
+							const timezone = getUserTimezone();
+							if (timezone) {
+								updateUserTimezone(localStorage.token, timezone);
+							}
+
+							// Relay auth token to desktop app for API access
+							if (window.electronAPI?.send) {
+								window.electronAPI
+									.send({
+										type: 'token:update',
+										token: localStorage.token
+									})
+									.catch(() => {});
+							}
+						} else {
+							localStorage.removeItem('token');
+							await user.set(undefined);
+						}
+					}
+				}
+			} else {
+				// Redirect to /error when Backend Not Detected
+				await goto(`/error`);
+			}
+
+			await tick();
+
+			if (
+				document.documentElement.classList.contains('her') &&
+				document.getElementById('progress-bar')
+			) {
+				cleanup.add(
+					loadingProgress.subscribe((value) => {
+						const progressBar = document.getElementById('progress-bar');
+
+						if (progressBar) {
+							progressBar.style.width = `${value}%`;
+						}
+					})
+				);
+
+				await loadingProgress.set(100);
+
+				document.getElementById('splash-screen')?.remove();
+
+				const audio = new Audio(`/audio/greeting.mp3`);
+				const playAudio = () => {
+					audio.play();
+					document.removeEventListener('click', playAudio);
+				};
+
+				document.addEventListener('click', playAudio);
+				cleanup.add(() => document.removeEventListener('click', playAudio));
+
+				loaded = true;
+			} else {
+				document.getElementById('splash-screen')?.remove();
+				loaded = true;
+			}
+
+			// Auto-show SyncStatsModal when opened with ?sync=true (from community)
+			if (
+				(window.opener ?? false) &&
+				$page.url.searchParams.get('sync') === 'true' &&
+				($config?.features?.enable_community_sharing ?? false)
+			) {
+				showSyncStatsModal = true;
+			}
+		};
+		void initialize().catch((error) => console.error('Application initialization failed', error));
 		return () => {
-			window.removeEventListener('resize', onResize);
-			window.removeEventListener('message', windowMessageEventHandler);
-			document.removeEventListener('touchstart', touchstartHandler);
-			document.removeEventListener('touchmove', touchmoveHandler);
-			document.removeEventListener('touchend', touchendHandler);
-			document.removeEventListener('visibilitychange', handleVisibilityChange);
-			window.removeEventListener('pagehide', handlePageHidden);
-			window.removeEventListener('pageshow', handlePageVisible);
-			window.removeEventListener('beforeunload', beforeUnloadHandler);
-			unsubscribeQueueUser();
+			cleanup.dispose();
+			if (tokenTimer) clearInterval(tokenTimer);
+			if (heartbeatInterval) clearInterval(heartbeatInterval);
+			clearDisconnectToastTimer();
+			$socket?.disconnect();
 		};
 	});
 

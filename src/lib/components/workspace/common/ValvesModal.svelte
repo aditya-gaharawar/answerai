@@ -31,15 +31,15 @@
 	import Valves from '$lib/components/common/Valves.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
 
-	const i18n = getContext('i18n');
+	const i18n = getContext<typeof import('$lib/i18n').default>('i18n');
 	const dispatch = createEventDispatcher();
 
 	export let show = false;
 
 	export let type = 'tool';
-	export let id = null;
+	export let id: string | null = null;
 	export let userValves = false;
-	export let meta = null;
+	export let meta: import('$lib/types/plugins').PluginMeta | null | undefined = null;
 	$: resourceMeta =
 		meta ?? (type === 'tool' ? $tools : $functions)?.find((item) => item.id === id)?.meta ?? {};
 

@@ -421,7 +421,7 @@ export const chatCompletion = async (
 		throw error;
 	}
 
-	return [res, controller];
+	return [res, controller] as const;
 };
 
 export const generateOpenAIChatCompletion = async (

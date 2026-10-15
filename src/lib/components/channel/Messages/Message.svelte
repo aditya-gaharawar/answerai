@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { chatDirection } from '$lib/stores';
 	// Keep keys in nested template expressions visible to i18next-parser.
 	// $i18n.t("and");
 	// $i18n.t("and {{COUNT}} others");
@@ -405,7 +406,7 @@
 			<div
 				class=" flex w-full message-{message.id} "
 				id="message-{renderedMessageId}"
-				dir={$settings.chatDirection}
+				dir={$chatDirection}
 			>
 				<div class="w-6 shrink-0">
 					{#if showUserProfile}
@@ -519,10 +520,7 @@
 							<Skeleton />
 						</div>
 					{:else if (message?.data?.files ?? []).length > 0}
-						<div
-							class="my-2.5 w-full flex overflow-x-auto gap-2 flex-wrap"
-							dir={$settings?.chatDirection ?? 'auto'}
-						>
+						<div class="my-2.5 w-full flex overflow-x-auto gap-2 flex-wrap" dir={$chatDirection}>
 							{#each message?.data?.files as file}
 								{@const fileUrl =
 									file.url.startsWith('data') || file.url.startsWith('http')

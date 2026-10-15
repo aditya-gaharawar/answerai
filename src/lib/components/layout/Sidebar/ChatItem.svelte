@@ -80,7 +80,7 @@
 	export let ownerName: string | null = null;
 	export let ownerUserId: string | null = null;
 	export let participants: ChatParticipant[] = [];
-	export let onReadStateChange: (data: Record<string, unknown>) => void = () => {};
+	export let onReadStateChange: (data: import('$lib/types/chat').ChatReadState) => void = () => {};
 
 	export let onDragEnd = () => {};
 

@@ -612,7 +612,7 @@
 		}
 	};
 
-	let debounceTimeout = null;
+	let debounceTimeout: ReturnType<typeof setTimeout> | null = null;
 
 	let dragged = false;
 

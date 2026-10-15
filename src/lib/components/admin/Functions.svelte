@@ -1,4 +1,5 @@
 <script lang="ts">
+	import type { FunctionSummary } from '$lib/types/plugins';
 	import { resolveLocalizedResource } from '$lib/utils/localizedContent';
 	import dayjs from 'dayjs';
 	import relativeTime from 'dayjs/plugin/relativeTime';
@@ -52,7 +53,7 @@
 	let shiftKey = false;
 
 	let functionsImportInputElement: HTMLInputElement;
-	let importFiles;
+	let importFiles: FileList | null = null;
 
 	let tagsContainerElement: HTMLDivElement;
 	let viewOption = '';
@@ -71,13 +72,13 @@
 
 	let showManifestModal = false;
 	let showValvesModal = false;
-	let selectedFunction = null;
+	let selectedFunction: FunctionSummary | null = null;
 
 	let showDeleteConfirm = false;
 
 	let loaded = false;
-	let functions = null;
-	let filteredItems = [];
+	let functions: FunctionSummary[] = [];
+	let filteredItems: FunctionSummary[] = [];
 
 	const handleSearchInput = () => {
 		clearTimeout(searchDebounceTimer);
@@ -148,14 +149,14 @@
 		}
 	};
 
-	const openFunction = (func) => {
+	const openFunction = (func: FunctionSummary) => {
 		goto(`/admin/functions/edit?id=${encodeURIComponent(func.id)}`);
 	};
 
 	const shouldIgnoreRowClick = (target: EventTarget | null) => {
 		return target instanceof Element && !!target.closest('button, a, input, [role="menu"]');
 	};
-	const shareHandler = async (func) => {
+	const shareHandler = async (func: FunctionSummary) => {
 		const item = await getFunctionById(localStorage.token, func.id).catch((error) => {
 			toast.error(`${error}`);
 			return null;
@@ -168,13 +169,14 @@
 
 		const url = 'https://answerai.in';
 
-		const tab = await window.open(`${url}/functions/create`, '_blank');
+		const tab = window.open(`${url}/functions/create`, '_blank');
+		if (!tab || !item) return;
 
 		// Define the event handler function
-		const messageHandler = (event) => {
-			if (event.origin !== url) return;
+		const messageHandler = (event: MessageEvent) => {
+			if (event.origin !== url || event.source !== tab) return;
 			if (event.data === 'loaded') {
-				tab.postMessage(JSON.stringify(item), '*');
+				tab.postMessage(JSON.stringify(item), url);
 
 				// Remove the event listener after handling the message
 				window.removeEventListener('message', messageHandler);
@@ -182,10 +184,9 @@
 		};
 
 		window.addEventListener('message', messageHandler, false);
-		console.log(item);
 	};
 
-	const cloneHandler = async (func) => {
+	const cloneHandler = async (func: FunctionSummary) => {
 		const _function = await getFunctionById(localStorage.token, func.id).catch((error) => {
 			toast.error(`${error}`);
 			return null;
@@ -201,7 +202,7 @@
 		}
 	};
 
-	const exportHandler = async (func) => {
+	const exportHandler = async (func: FunctionSummary) => {
 		const _function = await getFunctionById(localStorage.token, func.id).catch((error) => {
 			toast.error(`${error}`);
 			return null;
@@ -215,7 +216,8 @@
 		}
 	};
 
-	const deleteHandler = async (func) => {
+	const deleteHandler = async (func: FunctionSummary | null) => {
+		if (!func) return;
 		const res = await deleteFunctionById(localStorage.token, func.id).catch((error) => {
 			toast.error(`${error}`);
 			return null;
@@ -229,7 +231,9 @@
 			models.set(
 				await getModels(
 					localStorage.token,
-					$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null),
+					$config?.features?.enable_direct_connections
+						? ($settings?.directConnections ?? null)
+						: null,
 					false,
 					true
 				)
@@ -237,7 +241,37 @@
 		}
 	};
 
-	const toggleGlobalHandler = async (func) => {
+	const toggleActiveHandler = async (func: FunctionSummary) => {
+		const requested = func.is_active;
+		let updated;
+		try {
+			updated = await toggleFunctionById(localStorage.token, func.id);
+			if (!updated) throw new Error($i18n.t('Failed to update function'));
+		} catch (error) {
+			func.is_active = !requested;
+			functions = [...functions];
+			toast.error(`${error}`);
+			return;
+		}
+		func.is_active = updated.is_active;
+		functions = [...functions];
+		try {
+			models.set(
+				await getModels(
+					localStorage.token,
+					$config?.features?.enable_direct_connections
+						? ($settings?.directConnections ?? null)
+						: null,
+					false,
+					true
+				)
+			);
+		} catch (error) {
+			toast.error(`${error}`);
+		}
+	};
+
+	const toggleGlobalHandler = async (func: FunctionSummary) => {
 		const res = await toggleGlobalById(localStorage.token, func.id).catch((error) => {
 			toast.error(`${error}`);
 		});
@@ -257,7 +291,9 @@
 			models.set(
 				await getModels(
 					localStorage.token,
-					$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null),
+					$config?.features?.enable_direct_connections
+						? ($settings?.directConnections ?? null)
+						: null,
 					false,
 					true
 				)
@@ -265,23 +301,26 @@
 		}
 	};
 
-	onMount(async () => {
-		viewOption = localStorage?.workspaceViewOption || '';
-		functions = await getFunctionList(localStorage.token).catch((error) => {
-			toast.error(`${error}`);
-			return [];
-		});
+	onMount(() => {
+		let disposed = false;
+		void (async () => {
+			viewOption = localStorage?.workspaceViewOption || '';
+			functions = await getFunctionList(localStorage.token).catch((error) => {
+				toast.error(`${error}`);
+				return [];
+			});
 
-		await tick();
-		loaded = true;
+			await tick();
+			if (!disposed) loaded = true;
+		})();
 
-		const onKeyDown = (event) => {
+		const onKeyDown = (event: KeyboardEvent) => {
 			if (event.key === 'Shift') {
 				shiftKey = true;
 			}
 		};
 
-		const onKeyUp = (event) => {
+		const onKeyUp = (event: KeyboardEvent) => {
 			if (event.key === 'Shift') {
 				shiftKey = false;
 			}
@@ -296,6 +335,7 @@
 		window.addEventListener('blur', onBlur);
 
 		return () => {
+			disposed = true;
 			window.removeEventListener('keydown', onKeyDown);
 			window.removeEventListener('keyup', onKeyUp);
 			window.removeEventListener('blur', onBlur);
@@ -318,7 +358,7 @@
 
 <ImportModal
 	bind:show={showImportModal}
-	loadUrlHandler={async (url) => {
+	loadUrlHandler={async (url: string) => {
 		return await loadFunctionByUrl(localStorage.token, url);
 	}}
 	onImport={(func) => {
@@ -539,14 +579,14 @@
 												{/if}
 
 												<Tooltip
-													content={dayjs(func.updated_at * 1000)
+													content={dayjs((func.updated_at ?? 0) * 1000)
 														.locale($i18n.language)
 														.format('LLLL')}
 												>
 													<div
 														class="shrink-0 truncate text-[0.6875rem] leading-5 text-gray-400 dark:text-gray-600"
 													>
-														{dayjs(func.updated_at * 1000)
+														{dayjs((func.updated_at ?? 0) * 1000)
 															.locale($i18n.language)
 															.fromNow()}
 													</div>
@@ -708,18 +748,7 @@
 											<Tooltip content={func.is_active ? $i18n.t('Enabled') : $i18n.t('Disabled')}>
 												<Switch
 													bind:state={func.is_active}
-													on:change={async () => {
-														toggleFunctionById(localStorage.token, func.id);
-														models.set(
-															await getModels(
-																localStorage.token,
-																$config?.features?.enable_direct_connections &&
-																	($settings?.directConnections ?? null),
-																false,
-																true
-															)
-														);
-													}}
+													on:change={() => toggleActiveHandler(func)}
 												/>
 											</Tooltip>
 										</button>
@@ -781,7 +810,9 @@
 			models.set(
 				await getModels(
 					localStorage.token,
-					$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null),
+					$config?.features?.enable_direct_connections
+						? ($settings?.directConnections ?? null)
+						: null,
 					false,
 					true
 				)
@@ -791,40 +822,42 @@
 
 	<ConfirmDialog
 		bind:show={showConfirm}
-		on:confirm={() => {
-			const reader = new FileReader();
-			reader.onload = async (event) => {
-				const _functions = JSON.parse(event.target.result);
-				console.log(_functions);
-
-				for (let func of _functions) {
-					if ('function' in func) {
-						// Required for Community JSON import
-						func = func.function;
+		on:confirm={async () => {
+			const file = importFiles?.[0];
+			if (!file) return;
+			try {
+				const parsed: unknown = JSON.parse(await file.text());
+				if (!Array.isArray(parsed)) throw new Error($i18n.t('Invalid JSON file'));
+				let imported = 0;
+				for (const entry of parsed) {
+					const func: unknown =
+						entry && typeof entry === 'object' && 'function' in entry ? entry.function : entry;
+					if (!func || typeof func !== 'object' || Array.isArray(func)) {
+						throw new Error($i18n.t('Invalid JSON file'));
 					}
-
-					const res = await createNewFunction(localStorage.token, func).catch((error) => {
-						toast.error(`${error}`);
-						return null;
-					});
+					const result = await createNewFunction(localStorage.token, func);
+					if (!result) throw new Error($i18n.t('Failed to import function'));
+					imported += 1;
 				}
-
-				toast.success($i18n.t('Functions imported successfully'));
-				functions = await getFunctionList(localStorage.token);
-				_functions.set(await getFunctions(localStorage.token));
+				if (imported) toast.success($i18n.t('Functions imported successfully'));
+			} catch (error) {
+				toast.error(`${error}`);
+			} finally {
+				importFiles = null;
+				functionsImportInputElement.value = '';
+				functions = await getFunctionList(localStorage.token).catch(() => []);
+				_functions.set(await getFunctions(localStorage.token).catch(() => []));
 				models.set(
 					await getModels(
 						localStorage.token,
-						$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null),
+						$config?.features?.enable_direct_connections
+							? ($settings?.directConnections ?? null)
+							: null,
 						false,
 						true
-					)
+					).catch(() => [])
 				);
-				importFiles = null;
-				functionsImportInputElement.value = '';
-			};
-
-			reader.readAsText(importFiles[0]);
+			}
 		}}
 	>
 		<div class="text-sm text-gray-500">

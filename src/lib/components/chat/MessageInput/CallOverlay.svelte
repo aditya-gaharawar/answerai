@@ -15,6 +15,8 @@
 	import VideoInputMenu from './CallOverlay/VideoInputMenu.svelte';
 	import { KokoroWorker } from '$lib/workers/KokoroWorker';
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
+	import type { Model } from '$lib/stores';
+	import type { NoteAttachment } from '$lib/types/notes';
 	import type { RealtimeCall } from '$lib/utils/realtime';
 	import VoiceAvatar from './CallOverlay/VoiceAvatar.svelte';
 	import type { AvatarAnimationCommand } from '$lib/utils/voice-avatar';
@@ -24,12 +26,12 @@
 	export let eventTarget: EventTarget;
 	export let submitPrompt: Function;
 	export let stopResponse: Function;
-	export let files;
-	export let chatId;
-	export let modelId;
+	export let files: Pick<NoteAttachment, 'type' | 'url'>[] = [];
+	export let chatId = '';
+	export let modelId = '';
 	export let bridge: RealtimeCall | undefined = undefined;
 
-	let model = null;
+	let model: Model | null | undefined = null;
 
 	let loading = false;
 	let confirmed = false;
@@ -37,16 +39,17 @@
 	let assistantSpeaking = false;
 	let muted = false;
 
-	let emoji = null;
+	let emoji: string | null = null;
 	let camera = false;
-	let cameraStream = null;
+	let cameraStream: MediaStream | null = null;
+	let videoRequestVersion = 0;
 
 	let chatStreaming = false;
 	let rmsLevel = 0;
 	let hasStartedSpeaking = false;
-	let mediaRecorder;
-	let audioStream = null;
-	let audioChunks = [];
+	let mediaRecorder: MediaRecorder | null = null;
+	let audioStream: MediaStream | null = null;
+	let audioChunks: Blob[] = [];
 	let destroyed = false;
 	let avatarView: VoiceAvatar | undefined;
 	let failedAvatar = '';
@@ -127,8 +130,8 @@
 		}
 	};
 
-	let videoInputDevices = [];
-	let selectedVideoInputDeviceId = null;
+	let videoInputDevices: Pick<MediaDeviceInfo, 'deviceId' | 'label'>[] = [];
+	let selectedVideoInputDeviceId: string | null = null;
 
 	$: if (bridge) {
 		assistantSpeaking = bridge.speaking;
@@ -177,21 +180,30 @@
 	};
 
 	const startVideoStream = async () => {
+		const version = ++videoRequestVersion;
 		const video = document.getElementById('camera-feed');
-		if (video) {
+		if (video instanceof HTMLVideoElement) {
 			if (selectedVideoInputDeviceId === 'screen') {
-				cameraStream = await navigator.mediaDevices.getDisplayMedia({
-					video: {
-						cursor: 'always'
-					},
+				const captured = await navigator.mediaDevices.getDisplayMedia({
+					video: true,
 					audio: false
 				});
+				if (destroyed || version !== videoRequestVersion) {
+					captured.getTracks().forEach((t) => t.stop());
+					return;
+				}
+				cameraStream = captured;
 			} else {
-				cameraStream = await navigator.mediaDevices.getUserMedia({
+				const captured = await navigator.mediaDevices.getUserMedia({
 					video: {
 						deviceId: selectedVideoInputDeviceId ? { exact: selectedVideoInputDeviceId } : undefined
 					}
 				});
+				if (destroyed || version !== videoRequestVersion) {
+					captured.getTracks().forEach((t) => t.stop());
+					return;
+				}
+				cameraStream = captured;
 			}
 
 			if (cameraStream) {
@@ -203,6 +215,7 @@
 	};
 
 	const stopVideoStream = async () => {
+		videoRequestVersion++;
 		if (cameraStream) {
 			const tracks = cameraStream.getTracks();
 			tracks.forEach((track) => track.stop());
@@ -215,11 +228,12 @@
 		const video = document.getElementById('camera-feed');
 		const canvas = document.getElementById('camera-canvas');
 
-		if (!canvas) {
+		if (!(video instanceof HTMLVideoElement) || !(canvas instanceof HTMLCanvasElement)) {
 			return;
 		}
 
 		const context = canvas.getContext('2d');
+		if (!context || !video.videoWidth || !video.videoHeight) return;
 
 		// Make the canvas match the video dimensions
 		canvas.width = video.videoWidth;
@@ -230,7 +244,6 @@
 
 		// Convert the canvas to a data base64 URL and console log it
 		const dataURL = canvas.toDataURL('image/png');
-		console.log(dataURL);
 
 		return dataURL;
 	};
@@ -243,7 +256,7 @@
 	const MIN_DECIBELS = -55;
 	const VISUALIZER_BUFFER_LENGTH = 300;
 
-	const transcribeHandler = async (audioBlob) => {
+	const transcribeHandler = async (audioBlob: Blob) => {
 		// Create a blob from the audio chunks
 		if (!audioBlob || audioBlob.size < 100) {
 			console.log('Audio blob too small or empty, skipping transcription');
@@ -281,7 +294,7 @@
 			const _audioChunks = audioChunks.slice(0);
 
 			audioChunks = [];
-			mediaRecorder = false;
+			mediaRecorder = null;
 
 			if (_continue) {
 				startRecording();
@@ -294,12 +307,13 @@
 				if (cameraStream) {
 					const imageUrl = takeScreenshot();
 
-					files = [
-						{
-							type: 'image',
-							url: imageUrl
-						}
-					];
+					if (imageUrl)
+						files = [
+							{
+								type: 'image',
+								url: imageUrl
+							}
+						];
 				}
 
 				const audioBlob = new Blob(_audioChunks, { type: 'audio/wav' });
@@ -310,7 +324,7 @@
 			}
 		} else {
 			audioChunks = [];
-			mediaRecorder = false;
+			mediaRecorder = null;
 
 			if (audioStream) {
 				const tracks = audioStream.getTracks();
@@ -323,20 +337,30 @@
 	const startRecording = async () => {
 		if ($showCallOverlay && !destroyed) {
 			if (!audioStream) {
-				audioStream = await navigator.mediaDevices.getUserMedia({
+				const acquired = await navigator.mediaDevices.getUserMedia({
 					audio: {
 						echoCancellation: true,
 						noiseSuppression: true,
 						autoGainControl: true
 					}
 				});
+				if (destroyed || !$showCallOverlay) {
+					acquired.getTracks().forEach((t) => t.stop());
+					return;
+				}
+				audioStream = acquired;
 			}
 
 			if (audioStream) {
 				// hardware track muting disabled to prevent backend translation errors with malformed WebM files
 			}
 
-			mediaRecorder = new MediaRecorder(audioStream);
+			try {
+				mediaRecorder = new MediaRecorder(audioStream);
+			} catch (error) {
+				await stopAudioStream();
+				throw error;
+			}
 
 			mediaRecorder.onstart = () => {
 				console.log('Recording started');
@@ -359,6 +383,7 @@
 	};
 
 	const stopAudioStream = async () => {
+		stopAnalysis();
 		try {
 			if (mediaRecorder) {
 				mediaRecorder.stop();
@@ -386,8 +411,19 @@
 		return Math.sqrt(sumSquares / data.length);
 	};
 
-	const analyseAudio = (stream) => {
+	let analysisContext: AudioContext | undefined;
+	let analysisFrame = 0;
+	const stopAnalysis = () => {
+		cancelAnimationFrame(analysisFrame);
+		analysisFrame = 0;
+		const context = analysisContext;
+		analysisContext = undefined;
+		if (context && context.state !== 'closed') void context.close().catch(console.error);
+	};
+	const analyseAudio = (stream: MediaStream) => {
+		stopAnalysis();
 		const audioContext = new AudioContext();
+		analysisContext = audioContext;
 		const audioStreamSource = audioContext.createMediaStreamSource(stream);
 
 		const analyser = audioContext.createAnalyser();
@@ -459,16 +495,16 @@
 					}
 				}
 
-				window.requestAnimationFrame(processFrame);
+				analysisFrame = window.requestAnimationFrame(processFrame);
 			};
 
-			window.requestAnimationFrame(processFrame);
+			analysisFrame = window.requestAnimationFrame(processFrame);
 		};
 
 		detectSound();
 	};
 
-	let finishedMessages = {};
+	let finishedMessages: Record<string, boolean> = Object.create(null);
 	let failedMessages: Record<string, boolean> = {};
 	let currentMessageId = '';
 	let currentUtterance: SpeechSynthesisUtterance | null = null;
@@ -480,13 +516,13 @@
 			return model.info.meta.tts.voice;
 		}
 		// Fall back to user settings or config default
-		if ($settings?.audio?.tts?.defaultVoice === $config.audio.tts.voice) {
+		if ($settings?.audio?.tts?.defaultVoice === $config?.audio?.tts?.voice) {
 			return $settings?.audio?.tts?.voice ?? $config?.audio?.tts?.voice;
 		}
 		return $config?.audio?.tts?.voice;
 	};
 
-	const speakSpeechSynthesisHandler = (content) => {
+	const speakSpeechSynthesisHandler = (content: string) => {
 		if (!$showCallOverlay) return Promise.resolve();
 		const signal = audioAbortController.signal;
 		return new Promise<void>((resolve) => {
@@ -598,10 +634,10 @@
 	let audioAbortController = new AbortController();
 
 	// Audio cache map where key is the content and value is the Audio object.
-	const audioCache = new Map();
-	const emojiCache = new Map();
+	const audioCache = new Map<string, HTMLAudioElement | true>();
+	const emojiCache = new Map<string, string>();
 
-	const fetchAudio = async (content) => {
+	const fetchAudio = async (content: string) => {
 		const id = currentMessageId;
 
 		if (!audioCache.has(content) && !failedMessages[id]) {
@@ -620,10 +656,12 @@
 				}
 
 				if ($settings.audio?.tts?.engine === 'browser-kokoro') {
-					const url = await $TTSWorker
+					const worker = $TTSWorker;
+					if (!worker) throw new Error('Speech worker is unavailable');
+					const url = await worker
 						.generate({
 							text: content,
-							voice: getVoiceId()
+							voice: getVoiceId() ?? 'af_heart'
 						})
 						.catch((error) => {
 							console.error(error);
@@ -633,7 +671,7 @@
 					if (url) {
 						audioCache.set(content, new Audio(url));
 					}
-				} else if ($config.audio.tts.engine !== '') {
+				} else if ($config?.audio?.tts?.engine !== '') {
 					const res = await synthesizeOpenAISpeech(localStorage.token, getVoiceId(), content).catch(
 						(error) => {
 							console.error(error);
@@ -665,20 +703,21 @@
 		return audioCache.get(content);
 	};
 
-	let messages = {};
+	let messages: Record<string, string[]> = Object.create(null);
 
-	const monitorAndPlayAudio = async (id, signal) => {
+	const monitorAndPlayAudio = async (id: string, signal: AbortSignal) => {
 		while (!signal.aborted) {
 			if (messages[id] && messages[id].length > 0) {
 				// Retrieve the next content string from the queue
-				const content = messages[id].shift(); // Dequeues the content for playing
+				const content = messages[id].shift();
+				if (content === undefined) continue; // Dequeues the content for playing
 
 				if (audioCache.has(content)) {
 					// If content is available in the cache, play it
 
 					// Set the emoji for the content if available
 					if (($settings?.showEmojiInCall ?? false) && emojiCache.has(content)) {
-						emoji = emojiCache.get(content);
+						emoji = emojiCache.get(content) ?? null;
 					} else {
 						emoji = null;
 					}
@@ -692,7 +731,7 @@
 							);
 
 							const audio = audioCache.get(content);
-							await playAudio(audio); // Here ensure that playAudio is indeed correct method to execute
+							if (audio instanceof HTMLAudioElement) await playAudio(audio); // Here ensure that playAudio is indeed correct method to execute
 							console.log(`Played audio for content: ${content}`);
 							await new Promise((resolve) => setTimeout(resolve, 200)); // Wait before retrying to reduce tight loop
 						} catch (error) {
@@ -719,8 +758,8 @@
 		console.log(`Audio monitoring and playing stopped for message ID ${id}`);
 	};
 
-	const chatStartHandler = async (e) => {
-		const { id } = e.detail;
+	const chatStartHandler = async (e: Event) => {
+		const { id } = (e as CustomEvent<{ id: string }>).detail;
 
 		chatStreaming = true;
 
@@ -738,8 +777,8 @@
 		}
 	};
 
-	const chatEventHandler = async (e) => {
-		const { id, content } = e.detail;
+	const chatEventHandler = async (e: Event) => {
+		const { id, content } = (e as CustomEvent<{ id: string; content: string }>).detail;
 		// "id" here is message id
 		// if "id" is not the same as "currentMessageId" then do not process
 		// "content" here is a sentence from the assistant,
@@ -764,8 +803,8 @@
 		}
 	};
 
-	const chatFinishHandler = async (e) => {
-		const { id, content } = e.detail;
+	const chatFinishHandler = async (e: Event) => {
+		const { id, content } = (e as CustomEvent<{ id: string; content: string }>).detail;
 		// "content" here is the entire message from the assistant
 		finishedMessages[id] = true;
 
@@ -823,7 +862,7 @@
 		};
 	});
 
-	onMount(async () => {
+	const initializeCall = async () => {
 		if (bridge) {
 			document.addEventListener('keydown', handleKeydown);
 			return;
@@ -832,50 +871,41 @@
 
 		if ($settings.audio?.tts?.engine === 'browser-kokoro' && !$TTSWorker) {
 			try {
-				await TTSWorker.set(
-					new KokoroWorker({
-						dtype: $settings.audio?.tts?.engineConfig?.dtype ?? 'fp32'
-					})
-				);
-
-				await $TTSWorker.init();
+				const worker = new KokoroWorker($settings.audio?.tts?.engineConfig?.dtype ?? 'fp32');
+				TTSWorker.set(worker);
+				await worker.init();
 			} catch (error) {
 				console.error(error);
 				toast.error(`${error}`);
 			}
 		}
 
-		startRecording();
+		if (destroyed) return;
+		await startRecording();
+		if (destroyed) return;
 
 		eventTarget.addEventListener('chat:start', chatStartHandler);
 		eventTarget.addEventListener('chat', chatEventHandler);
 		eventTarget.addEventListener('chat:finish', chatFinishHandler);
 
 		document.addEventListener('keydown', handleKeydown);
+	};
 
-		return async () => {
-			await stopAllAudio();
-
-			stopAudioStream();
-
-			eventTarget.removeEventListener('chat:start', chatStartHandler);
-			eventTarget.removeEventListener('chat', chatEventHandler);
-			eventTarget.removeEventListener('chat:finish', chatFinishHandler);
-
-			document.removeEventListener('keydown', handleKeydown);
-
-			audioAbortController.abort();
-			await tick();
-
-			await stopAllAudio();
-
-			await stopRecordingCallback(false);
-			await stopCamera();
-		};
+	onMount(() => {
+		void initializeCall().catch((error) => {
+			console.error(error);
+			toast.error(String(error));
+		});
 	});
 
 	onDestroy(async () => {
+		destroyed = true;
+		resetAvatarPlayback();
 		if (bridge) {
+			await stopCamera();
+			playbackSource?.disconnect();
+			playbackAnalyser?.disconnect();
+			void playbackContext?.close();
 			document.removeEventListener('keydown', handleKeydown);
 			return;
 		}

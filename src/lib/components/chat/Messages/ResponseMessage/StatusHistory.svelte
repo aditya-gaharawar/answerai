@@ -4,6 +4,7 @@
 
 	import StatusItem from './StatusHistory/StatusItem.svelte';
 	import equal from 'fast-deep-equal';
+	/** @type {import('$lib/types/messages').MessageStatus[]} */
 	export let statusHistory = [];
 	export let expand = false;
 
@@ -15,7 +16,9 @@
 		showHistory = false;
 	}
 
+	/** @type {import('$lib/types/messages').MessageStatus[]} */
 	let history = [];
+	/** @type {import('$lib/types/messages').MessageStatus | null | undefined} */
 	let status = null;
 
 	$: if (history && history.length > 0) {

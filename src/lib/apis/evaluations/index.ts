@@ -162,7 +162,7 @@ export const getFeedbackItems = async (
 	token: string = '',
 	orderBy: string,
 	direction: string,
-	page,
+	page: number,
 	modelId: string = ''
 ) => {
 	let error = null;

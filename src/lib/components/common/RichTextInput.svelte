@@ -1,4 +1,7 @@
 <script lang="ts">
+	import { normalizeSuggestionCommand } from '$lib/utils/editorSuggestions';
+	import type { Range } from '@tiptap/core';
+	import type { MentionNodeAttrs } from '@tiptap/extension-mention';
 	import { selectedHtml, commandTextNodes } from './RichTextInput/editorUtils';
 	import { replaceInputVariables, type InputVariableValues } from '$lib/utils/inputVariables';
 	import type { Placement } from 'tippy.js';
@@ -140,7 +143,13 @@
 	import { createEventDispatcher } from 'svelte';
 
 	const i18n = getContext<typeof import('$lib/i18n').default>('i18n');
-	const eventDispatch = createEventDispatcher();
+	const eventDispatch = createEventDispatcher<{
+		focus: { event: FocusEvent };
+		keyup: { event: KeyboardEvent };
+		keydown: { event: KeyboardEvent };
+		paste: { event: ClipboardEvent };
+		pasted: void;
+	}>();
 
 	import { Fragment, DOMParser, Slice, type Node, type Schema } from 'prosemirror-model';
 	import {
@@ -272,7 +281,7 @@
 	export let link = false;
 	export let image = false;
 	export let fileHandler = false;
-	export let suggestions = null;
+	export let suggestions: import('$lib/types/editor').EditorSuggestion[] | null = null;
 
 	export let onFileDrop = (currentEditor: Editor, files: File[], pos: number) => {
 		files.forEach((file) => {
@@ -925,7 +934,23 @@
 									options.HTMLAttributes,
 									getMentionText({ node, suggestion })
 								],
-								suggestions: suggestions
+								suggestions: suggestions.map((entry) => ({
+									...entry,
+									command: entry.command
+										? ({
+												editor,
+												range,
+												props
+											}: {
+												editor: Editor;
+												range: Range;
+												props: MentionNodeAttrs;
+											}) => {
+												const command = normalizeSuggestionCommand(props);
+												if (command) entry.command?.({ editor, range, props: command });
+											}
+										: undefined
+								}))
 							})
 						]
 					: []),

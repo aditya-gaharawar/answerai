@@ -45,13 +45,13 @@
 	export let callEnabled = true;
 
 	export let atSelectedModel: Model | undefined;
-	export let selectedModels: [''];
+	export let selectedModels: string[] = [];
 
 	export let history;
 
 	export let prompt = '';
 	export let files = [];
-	export let messageInput = null;
+	export let messageInput: InstanceType<typeof MessageInput> | undefined = undefined;
 
 	export let selectedToolIds = [];
 	export let selectedSkillIds = [];
@@ -69,14 +69,14 @@
 
 	export let onUpload: Function = (e) => {};
 	export let onUpdate: (data?: { file?: any }) => void = () => {};
-	export let onSelect = (e) => {};
+	export let onSelect: (selection: import('$lib/types/chat').PromptSelection) => void = () => {};
 	export let onChange = (e) => {};
 	export let onWebSearchToggle: Function = () => {};
 	export let messageQueue: { id: string; prompt: string; files: any[] }[] = [];
 	export let onQueueSendNow: (id: string) => void = () => {};
 	export let onQueueEdit: (id: string) => void = () => {};
 	export let onQueueDelete: (id: string) => void = () => {};
-	export let askUser = {
+	export let askUser: import('svelte').ComponentProps<typeof MessageInput>['askUser'] = {
 		show: false,
 		questions: [],
 		allowOther: true,

@@ -1,20 +1,21 @@
 <script lang="ts">
+	import type { FolderRecord, FolderRegistry } from '$lib/types/folders';
 	import { getContext, createEventDispatcher } from 'svelte';
 	const i18n = getContext('i18n');
 	const dispatch = createEventDispatcher();
 
 	import RecursiveFolder from './RecursiveFolder.svelte';
 
-	export let folderRegistry = {};
+	export let folderRegistry: FolderRegistry = {};
 
-	export let folders = {};
+	export let folders: Record<string, FolderRecord> = {};
 	export let shiftKey = false;
 
-	export let onDelete = () => {};
-	export let onFolderUnreadCounts = () => {};
+	export let onDelete: (id: string) => void = () => {};
+	export let onFolderUnreadCounts: (counts: Record<string, number>) => void = () => {};
 
-	let ownedList = [];
-	let sharedList = [];
+	let ownedList: string[] = [];
+	let sharedList: string[] = [];
 
 	$: {
 		const rootKeys = Object.keys(folders)
@@ -37,9 +38,9 @@
 		sharedList = rootKeys.filter((key) => folders[key].shared);
 	}
 
-	const onItemMove = (e) => {
+	const onItemMove = (e: { originFolderId: string | null }) => {
 		if (e.originFolderId) {
-			folderRegistry[e.originFolderId]?.setFolderItems();
+			folderRegistry[e.originFolderId]?.setFolderItems?.();
 		}
 	};
 </script>

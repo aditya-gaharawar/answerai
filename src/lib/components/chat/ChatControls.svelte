@@ -33,8 +33,8 @@
 	export let history;
 	export let models = [];
 
-	export let chatId = null;
-	export let chatUser = null;
+	export let chatId: string | null = null;
+	export let chatUser: (Partial<import('$lib/stores').SessionUser> & { id: string }) | null = null;
 
 	export let chatFiles = [];
 	export let params = {};

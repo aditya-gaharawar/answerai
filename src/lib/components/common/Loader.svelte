@@ -4,8 +4,8 @@
 
 	let loaderElement: HTMLElement;
 
-	let observer;
-	let intervalId;
+	let observer: IntersectionObserver | undefined;
+	let intervalId: ReturnType<typeof setInterval> | undefined;
 
 	onMount(() => {
 		observer = new IntersectionObserver(

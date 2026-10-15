@@ -15,3 +15,13 @@ export interface OpenAIConnections {
 	OPENAI_API_KEYS: string[];
 	OPENAI_API_CONFIGS: Record<string, OpenAIConnectionOptions>;
 }
+
+export type ToolServerData = {
+	url: string;
+	id?: string;
+	openapi?: Record<string, unknown>;
+	info?: { name?: string; title?: string; description?: string; version?: string };
+	specs?: import('$lib/utils/openApiSchema').ToolPayload[];
+	system_prompt?: string;
+	error?: unknown;
+};

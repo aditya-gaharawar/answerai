@@ -1,5 +1,6 @@
 import { get } from 'svelte/store';
 import type { Model, ServerConnection } from '$lib/stores';
+import type { ToolServerData } from '$lib/types/connections';
 import type { OpenAIConnections } from '$lib/types/connections';
 import { normalizeDirectModels } from '$lib/utils/directModels';
 import { config } from '$lib/stores';
@@ -245,8 +246,19 @@ export const chatCompleted = async (token: string, body: ChatCompletedForm) => {
 
 type ChatActionForm = {
 	model: string;
-	messages: string[];
+	messages: {
+		id: string;
+		role: string;
+		content: string;
+		info?: unknown;
+		timestamp?: number;
+		sources?: unknown;
+	}[];
 	chat_id: string;
+	session_id?: string;
+	id?: string;
+	event?: unknown;
+	model_item?: Model;
 };
 
 export const chatAction = async (token: string, action_id: string, body: ChatActionForm) => {
@@ -422,7 +434,9 @@ export const getToolServerData = async (token: string, url: string) => {
 	return res;
 };
 
-export const getToolServersData = async (servers: ServerConnection[]) => {
+export const getToolServersData = async (
+	servers: ServerConnection[]
+): Promise<ToolServerData[]> => {
 	if (!get(config)?.features?.enable_tool_servers) return [];
 	return (
 		await Promise.all(
@@ -447,9 +461,9 @@ export const getToolServersData = async (servers: ServerConnection[]) => {
 
 					if (specType === 'url') {
 						res = await getToolServerData(
-							toolServerToken,
+							toolServerToken ?? '',
 							(server?.path ?? '').includes('://')
-								? server?.path
+								? (server.path ?? '')
 								: `${server?.url}${(server?.path ?? '').startsWith('/') ? '' : '/'}${server?.path}`
 						).catch((err) => {
 							error = err;
@@ -457,7 +471,7 @@ export const getToolServersData = async (servers: ServerConnection[]) => {
 						});
 					} else if ((specType === 'json' && server?.spec) ?? null) {
 						try {
-							res = JSON.parse(server?.spec);
+							res = typeof server.spec === 'string' ? JSON.parse(server.spec) : server.spec;
 						} catch (e) {
 							error = 'Failed to parse JSON spec';
 						}
@@ -477,7 +491,7 @@ export const getToolServersData = async (servers: ServerConnection[]) => {
 							specs: convertOpenApiToToolPayload(res)
 						};
 
-						const result: Record<string, any> = {
+						const result: ToolServerData = {
 							url: server?.url,
 							openapi: openapi,
 							info: info,
@@ -524,7 +538,7 @@ export const getToolServersData = async (servers: ServerConnection[]) => {
 					}
 				})
 		)
-	).filter((server) => server);
+	).filter((server): server is ToolServerData => server !== null);
 };
 
 export const executeToolServer = async (
@@ -673,7 +687,7 @@ export const executeToolServer = async (
 		}
 
 		// make a clone of res and extract headers
-		const responseHeaders = {};
+		const responseHeaders: Record<string, string> = {};
 		res.headers.forEach((value, key) => {
 			responseHeaders[key] = value;
 		});
@@ -1135,7 +1149,7 @@ export const generateMoACompletion = async (
 		throw error;
 	}
 
-	return [res, controller];
+	return [res, controller] as const;
 };
 
 export const getPipelinesList = async (token: string = '') => {

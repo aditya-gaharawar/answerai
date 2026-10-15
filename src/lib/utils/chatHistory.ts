@@ -6,12 +6,19 @@ export interface HistoryNode {
 	childrenIds: string[];
 	role: string;
 	content: string;
-	annotation?: { rating?: number; type?: string };
+	annotation?: import('$lib/types/messages').MessageAnnotation;
 	output?: import('$lib/components/chat/Messages/structuredOutput').OutputItem[];
-	files?: import('$lib/types/notes').NoteAttachment[];
+	files?: (Omit<import('$lib/types/notes').NoteAttachment, 'id'> & { id?: string | null })[];
 	timestamp?: number;
 	model?: string;
+	modelIdx?: number;
+	models?: string[];
+	selectedModelId?: string;
+	merged?: { status: boolean; content: string; timestamp?: number };
 	usage?: unknown;
+	info?: { usage?: unknown; [key: string]: unknown };
+	error?: unknown;
+	ttsSentContentPartCount?: number;
 	done?: boolean;
 	[key: string]: unknown;
 }

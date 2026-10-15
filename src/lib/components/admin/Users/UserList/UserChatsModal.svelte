@@ -40,7 +40,7 @@
 	let allChatsLoaded = false;
 	let chatListLoading = false;
 
-	let searchDebounceTimeout;
+	let searchDebounceTimeout: ReturnType<typeof setTimeout> | undefined;
 
 	const searchHandler = async () => {
 		if (!show) {

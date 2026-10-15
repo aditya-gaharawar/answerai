@@ -1,106 +1,94 @@
 import WorkerInstance from '$lib/workers/kokoro.worker?worker';
-
+type SpeechRequest = {
+	text: string;
+	voice: string;
+	resolve: (url: string) => void;
+	reject: (reason: Error) => void;
+};
+type WorkerResult = { status?: string; error?: string; audioUrl?: string };
 export class KokoroWorker {
 	private worker: Worker | null = null;
-	private initialized: boolean = false;
+	private initialized = false;
+	private initialization: Promise<void> | null = null;
+	private resolveInitialization: (() => void) | null = null;
+	private rejectInitialization: ((reason: Error) => void) | null = null;
+	private requestQueue: SpeechRequest[] = [];
+	private processing = false;
 	private dtype: string;
-	private requestQueue: Array<{
-		text: string;
-		voice: string;
-		resolve: (value: string) => void;
-		reject: (reason: any) => void;
-	}> = [];
-	private processing = false; // To track if a request is being processed
-
-	constructor(dtype: string = 'fp32') {
-		this.dtype = dtype;
+	constructor(options: string | { dtype?: string } = 'fp32') {
+		this.dtype = typeof options === 'string' ? options : (options.dtype ?? 'fp32');
 	}
-
-	public async init() {
-		if (this.worker) {
-			console.warn('KokoroWorker is already initialized.');
-			return;
-		}
-
-		this.worker = new WorkerInstance();
-
-		// Handle worker messages
-		this.worker.onmessage = (event) => {
+	public init(): Promise<void> {
+		if (this.initialized) return Promise.resolve();
+		if (this.initialization) return this.initialization;
+		const worker = new WorkerInstance();
+		this.worker = worker;
+		this.initialization = new Promise<void>((resolve, reject) => {
+			this.resolveInitialization = resolve;
+			this.rejectInitialization = reject;
+		});
+		const pending = this.initialization;
+		worker.onmessage = (event: MessageEvent<WorkerResult>) => {
+			if (this.worker !== worker) return;
 			const { status, error, audioUrl } = event.data;
-
 			if (status === 'init:complete') {
 				this.initialized = true;
-			} else if (status === 'init:error') {
-				console.error(error);
-				this.initialized = false;
-			} else if (status === 'generate:complete') {
-				// Resolve promise from queue
+				this.resolveInitialization?.();
+				this.resolveInitialization = null;
+				this.rejectInitialization = null;
+			} else if (status === 'init:error')
+				this.fail(new Error(error ?? 'Speech initialization failed'));
+			else if (status === 'generate:complete' || status === 'generate:error') {
 				const request = this.requestQueue.shift();
 				if (request) {
-					request.resolve(audioUrl);
-					this.processNextRequest(); // Process next request in queue
+					if (status === 'generate:complete' && typeof audioUrl === 'string')
+						request.resolve(audioUrl);
+					else request.reject(new Error(error ?? 'Speech generation failed'));
 				}
-			} else if (status === 'generate:error') {
-				const request = this.requestQueue.shift();
-				if (request) {
-					request.reject(new Error(error));
-					this.processNextRequest(); // Continue processing next in queue
-				}
-			}
-		};
-
-		return new Promise<void>((resolve, reject) => {
-			this.worker!.postMessage({
-				type: 'init',
-				payload: { dtype: this.dtype }
-			});
-
-			const handleMessage = (event: MessageEvent) => {
-				if (event.data.status === 'init:complete') {
-					this.worker!.removeEventListener('message', handleMessage);
-					this.initialized = true;
-					resolve();
-				} else if (event.data.status === 'init:error') {
-					this.worker!.removeEventListener('message', handleMessage);
-					reject(new Error(event.data.error));
-				}
-			};
-
-			this.worker!.addEventListener('message', handleMessage);
-		});
-	}
-
-	public async generate({ text, voice }: { text: string; voice: string }): Promise<string> {
-		if (!this.initialized || !this.worker) {
-			throw new Error('KokoroTTS Worker is not initialized yet.');
-		}
-
-		return new Promise<string>((resolve, reject) => {
-			this.requestQueue.push({ text, voice, resolve, reject });
-			if (!this.processing) {
+				this.processing = false;
 				this.processNextRequest();
 			}
+		};
+		worker.onerror = (event) => {
+			if (this.worker === worker) this.fail(new Error(event.message || 'Speech worker failed'));
+		};
+		try {
+			worker.postMessage({ type: 'init', payload: { dtype: this.dtype } });
+		} catch (error) {
+			this.fail(error instanceof Error ? error : new Error(String(error)));
+		}
+		return pending;
+	}
+	public async generate({ text, voice }: { text: string; voice: string }): Promise<string> {
+		await this.init();
+		if (!this.initialized || !this.worker) throw new Error('Speech worker has stopped');
+		return new Promise<string>((resolve, reject) => {
+			this.requestQueue.push({ text, voice, resolve, reject });
+			this.processNextRequest();
 		});
 	}
-
-	private processNextRequest() {
-		if (this.requestQueue.length === 0) {
-			this.processing = false;
-			return;
-		}
-
+	private processNextRequest(): void {
+		if (this.processing || !this.worker || !this.requestQueue.length) return;
 		this.processing = true;
-		const { text, voice } = this.requestQueue[0]; // Get first request but don't remove yet
-		this.worker!.postMessage({ type: 'generate', payload: { text, voice } });
-	}
-
-	public terminate() {
-		if (this.worker) {
-			this.worker.terminate();
-			this.worker = null;
-			this.initialized = false;
-			this.requestQueue = [];
-			this.processing = false;
+		const { text, voice } = this.requestQueue[0];
+		try {
+			this.worker.postMessage({ type: 'generate', payload: { text, voice } });
+		} catch (error) {
+			this.fail(error instanceof Error ? error : new Error(String(error)));
 		}
+	}
+	private fail(error: Error): void {
+		this.worker?.terminate();
+		this.worker = null;
+		this.initialized = false;
+		this.processing = false;
+		this.rejectInitialization?.(error);
+		this.resolveInitialization = null;
+		this.rejectInitialization = null;
+		this.initialization = null;
+		for (const request of this.requestQueue.splice(0)) request.reject(error);
+	}
+	public terminate(): void {
+		this.fail(new Error('Speech worker terminated'));
 	}
 }

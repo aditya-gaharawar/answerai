@@ -18,6 +18,7 @@ export interface PluginMeta {
 	[key: string]: unknown;
 }
 export interface PluginOwner {
+	username?: string;
 	id: string;
 	name: string;
 	email?: string;

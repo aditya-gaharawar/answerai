@@ -16,9 +16,9 @@ export const getModelItems = async (
 	query: string,
 	viewOption: string,
 	selectedTag: string,
-	orderBy: string,
-	direction: string,
-	page,
+	orderBy: string | null,
+	direction: string | null,
+	page: number,
 	signal?: AbortSignal
 ) => {
 	let error = null;

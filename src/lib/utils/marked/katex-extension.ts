@@ -1,3 +1,4 @@
+import type { Token, TokenizerExtension, RendererExtension } from 'marked';
 const DELIMITER_LIST = [
 	{ left: '$$', right: '$$', display: true },
 	{ left: '$', right: '$', display: false },
@@ -34,7 +35,7 @@ function escapeRegex(string: string) {
 	return string.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
 }
 
-function generateRegexRules(delimiters) {
+function generateRegexRules(delimiters: typeof DELIMITER_LIST) {
 	delimiters.forEach((delimiter) => {
 		const { left, right, display } = delimiter;
 		// Ensure regex-safe delimiters
@@ -144,7 +145,7 @@ function katexStart(src: string, displayMode: boolean) {
 	}
 }
 
-function katexTokenizer(src, tokens, displayMode: boolean) {
+function katexTokenizer(src: string, displayMode: boolean) {
 	if (src.startsWith('$$')) {
 		const displayToken = tokenizeDisplayMath(
 			src,
@@ -170,13 +171,13 @@ function katexTokenizer(src, tokens, displayMode: boolean) {
 		return {
 			type,
 			raw: match[0],
-			text: text,
+			text: text ?? '',
 			displayMode
 		};
 	}
 }
 
-function inlineKatex(options) {
+function inlineKatex(_options: object): TokenizerExtension & RendererExtension {
 	return {
 		name: 'inlineKatex',
 		level: 'inline',
@@ -184,7 +185,7 @@ function inlineKatex(options) {
 			return katexStart(src, false);
 		},
 		tokenizer(src, tokens) {
-			return katexTokenizer(src, tokens, false);
+			return katexTokenizer(src, false);
 		},
 		renderer(token) {
 			return `${token?.text ?? ''}`;
@@ -192,7 +193,7 @@ function inlineKatex(options) {
 	};
 }
 
-function blockKatex(options) {
+function blockKatex(_options: object): TokenizerExtension & RendererExtension {
 	return {
 		name: 'blockKatex',
 		level: 'block',
@@ -200,7 +201,7 @@ function blockKatex(options) {
 			return katexStart(src, true);
 		},
 		tokenizer(src, tokens) {
-			return katexTokenizer(src, tokens, true);
+			return katexTokenizer(src, true);
 		},
 		renderer(token) {
 			return `${token?.text ?? ''}`;

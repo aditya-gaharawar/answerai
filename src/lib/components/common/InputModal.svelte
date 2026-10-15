@@ -10,13 +10,13 @@
 	export let id = 'input-modal';
 
 	export let show = false;
-	export let value = null;
-	export let inputContent = null;
+	export let value: string = '';
+	export let inputContent: import('$lib/types/editor').EditorContent | null = null;
 
 	export let autocomplete = false;
 	export let generateAutoCompletion = null;
 
-	export let onChange = () => {};
+	export let onChange: (content: import('$lib/types/editor').EditorContent) => void = () => {};
 	export let oninput: ((event: Event) => void) | undefined = undefined;
 	export let onClose = () => {};
 

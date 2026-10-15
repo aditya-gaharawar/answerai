@@ -1,10 +1,7 @@
 import { get, readonly, writable } from 'svelte/store';
 import { getChatList, getPinnedChatList } from '$lib/apis/chats';
 
-type ChatListItem = {
-	id: string;
-	[key: string]: unknown;
-};
+type ChatListItem = import('$lib/types/chat').ChatSummary;
 
 const chatsStore = writable<ChatListItem[] | null>(null);
 const pinnedChatsStore = writable<ChatListItem[]>([]);

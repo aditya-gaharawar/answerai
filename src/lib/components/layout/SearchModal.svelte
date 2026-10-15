@@ -1,4 +1,7 @@
 <script lang="ts">
+	import type { ChatSummary } from '$lib/types/chat';
+	import type { ChatHistory, HistoryNode } from '$lib/utils/chatHistory';
+	type ChatPreview = { id: string; chat: { history?: ChatHistory; models?: string[] | string } };
 	import { toast } from 'svelte-sonner';
 	import { getContext, onDestroy, onMount, tick } from 'svelte';
 	const i18n: any = getContext('i18n');
@@ -51,21 +54,21 @@
 	let menuChatId = '';
 	let menuChatTitle = '';
 
-	let editingChatId = null;
+	let editingChatId: string | null = null;
 	let editingChatTitle = '';
 
 	let shiftKey = false;
 
-	const onShiftKeyDown = (e) => {
+	const onShiftKeyDown = (e: KeyboardEvent) => {
 		if (e.key === 'Shift') shiftKey = true;
 	};
 
-	const onShiftKeyUp = (e) => {
+	const onShiftKeyUp = (e: KeyboardEvent) => {
 		if (e.key === 'Shift') shiftKey = false;
 	};
 	let generating = false;
 
-	const cloneChatHandler = async (id) => {
+	const cloneChatHandler = async (id: string) => {
 		const chat = chatList?.find((c) => c.id === id);
 		const res = await cloneChatById(
 			localStorage.token,
@@ -84,7 +87,7 @@
 		}
 	};
 
-	const markUnreadHandler = async (id) => {
+	const markUnreadHandler = async (id: string) => {
 		const res = await markChatUnreadById(localStorage.token, id).catch((error) => {
 			toast.error(`${error}`);
 			return null;
@@ -95,7 +98,7 @@
 		}
 	};
 
-	const archiveChatHandler = async (id) => {
+	const archiveChatHandler = async (id: string) => {
 		try {
 			const res = await archiveChatById(localStorage.token, id);
 
@@ -113,7 +116,7 @@
 		}
 	};
 
-	const deleteChatHandler = async (id) => {
+	const deleteChatHandler = async (id: string) => {
 		const res = await deleteChatById(localStorage.token, id).catch((error) => {
 			toast.error(`${error}`);
 			return null;
@@ -132,7 +135,7 @@
 		}
 	};
 
-	const moveChatHandler = async (chatId, folderId) => {
+	const moveChatHandler = async (chatId: string, folderId: string | null) => {
 		if (chatId && folderId) {
 			const res = await updateChatFolderIdById(localStorage.token, chatId, folderId).catch(
 				(error) => {
@@ -149,13 +152,13 @@
 		}
 	};
 
-	const renameHandler = async (id) => {
+	const renameHandler = async (id: string) => {
 		editingChatId = id;
 		editingChatTitle = chatList?.find((c) => c.id === id)?.title ?? '';
 
 		await tick();
 		const input = document.getElementById(`search-chat-title-input-${id}`);
-		if (input) {
+		if (input instanceof HTMLInputElement) {
 			input.focus();
 			input.select();
 		}
@@ -280,19 +283,21 @@
 	let query = '';
 	let page = 1;
 
-	let chatList = null;
+	let chatList: ChatSummary[] | null = null;
 
 	let chatListLoading = false;
 	let allChatsLoaded = false;
 
-	let searchDebounceTimeout;
+	let searchDebounceTimeout: ReturnType<typeof setTimeout> | undefined;
+	let searchVersion = 0;
+	let previewVersion = 0;
 
-	let selectedIdx = null;
-	let selectedChat = null;
+	let selectedIdx: number | null = null;
+	let selectedChat: ChatPreview | null = null;
 
 	let selectedModels = [''];
-	let history = null;
-	let messages = null;
+	let history: ChatHistory = { messages: Object.create(null), currentId: null };
+	let messages: HistoryNode[] | null = null;
 	let messagesContainerElement: HTMLElement | null = null;
 	const messagesContainerId = 'chat-preview';
 
@@ -355,11 +360,12 @@
 		}, 80);
 	};
 
-	const loadChatPreview = async (selectedIdx) => {
+	const loadChatPreview = async (selectedIdx: number | null) => {
+		const version = ++previewVersion;
 		if (!chatList || chatList.length === 0 || selectedIdx === null) {
 			selectedChat = null;
 			messages = null;
-			history = null;
+			history = { messages: Object.create(null), currentId: null };
 			selectedModels = [''];
 			return;
 		}
@@ -368,7 +374,7 @@
 		if (selectedChatIdx < 0 || selectedChatIdx >= chatList.length) {
 			selectedChat = null;
 			messages = null;
-			history = null;
+			history = { messages: Object.create(null), currentId: null };
 			selectedModels = [''];
 			return;
 		}
@@ -379,14 +385,17 @@
 			return null;
 		});
 
+		if (version !== previewVersion || !show) return;
 		if (chat) {
 			selectedChat = chat;
 
 			if (chat?.chat?.history) {
-				selectedModels =
-					(chat?.chat?.models ?? undefined) !== undefined
-						? chat?.chat?.models
-						: [chat?.chat?.models ?? ''];
+				const chatModels: unknown = chat.chat.models;
+				selectedModels = Array.isArray(chatModels)
+					? chatModels.filter((model): model is string => typeof model === 'string')
+					: typeof chatModels === 'string'
+						? [chatModels]
+						: [''];
 
 				history = chat?.chat?.history;
 				messages = [];
@@ -398,82 +407,81 @@
 			toast.error($i18n.t('Failed to load chat preview'));
 			selectedChat = null;
 			messages = null;
-			history = null;
+			history = { messages: Object.create(null), currentId: null };
 			selectedModels = [''];
 			return;
 		}
 	};
 
 	const searchHandler = async () => {
-		if (!show) {
-			return;
-		}
-
-		if (searchDebounceTimeout) {
-			clearTimeout(searchDebounceTimeout);
-		}
-
+		if (!show) return;
+		const version = ++searchVersion;
+		previewVersion++;
+		clearTimeout(searchDebounceTimeout);
 		page = 1;
 		chatList = null;
-		if (query === '') {
-			chatList = await getChatList(localStorage.token, page);
-		} else {
-			searchDebounceTimeout = setTimeout(async () => {
-				chatList = await getChatListBySearchText(localStorage.token, query, page);
-
-				if ((chatList ?? []).length === 0) {
-					allChatsLoaded = true;
-				} else {
-					allChatsLoaded = false;
-				}
-			}, 500);
-		}
-
+		chatListLoading = false;
 		selectedChat = null;
 		messages = null;
-		history = null;
+		history = { messages: Object.create(null), currentId: null };
 		selectedModels = [''];
-
-		if ((chatList ?? []).length === 0) {
-			allChatsLoaded = true;
-		} else {
-			allChatsLoaded = false;
-		}
+		const requestedQuery = query;
+		const load = async () => {
+			try {
+				const result: ChatSummary[] = requestedQuery
+					? await getChatListBySearchText(localStorage.token, requestedQuery, 1)
+					: await getChatList(localStorage.token, 1);
+				if (!show || version !== searchVersion) return;
+				chatList = result;
+				allChatsLoaded = result.length === 0;
+			} catch (error) {
+				if (!show || version !== searchVersion) return;
+				chatList = [];
+				allChatsLoaded = true;
+				toast.error(String(error));
+			}
+		};
+		if (requestedQuery)
+			searchDebounceTimeout = setTimeout(() => {
+				void load();
+			}, 500);
+		else await load();
 	};
 
 	const loadMoreChats = async () => {
+		if (chatListLoading || allChatsLoaded || !show) return;
+		const version = searchVersion;
+		const nextPage = page + 1;
+		const requestedQuery = query;
 		chatListLoading = true;
-		page += 1;
-
-		let newChatList = [];
-
-		if (query) {
-			newChatList = await getChatListBySearchText(localStorage.token, query, page);
-		} else {
-			newChatList = await getChatList(localStorage.token, page);
+		try {
+			const result: ChatSummary[] = requestedQuery
+				? await getChatListBySearchText(localStorage.token, requestedQuery, nextPage)
+				: await getChatList(localStorage.token, nextPage);
+			if (!show || version !== searchVersion) return;
+			page = nextPage;
+			allChatsLoaded = result.length === 0;
+			const existingIds = new Set((chatList ?? []).map((chat) => chat.id));
+			chatList = [...(chatList ?? []), ...result.filter((chat) => !existingIds.has(chat.id))];
+		} catch (error) {
+			if (show && version === searchVersion) toast.error(String(error));
+		} finally {
+			if (version === searchVersion) chatListLoading = false;
 		}
-
-		// once the bottom of the list has been reached (no results) there is no need to continue querying
-		allChatsLoaded = newChatList.length === 0;
-
-		if (newChatList.length > 0) {
-			const existingIds = new Set(chatList.map((c) => c.id));
-			const uniqueNewChats = newChatList.filter((c) => !existingIds.has(c.id));
-			chatList = [...chatList, ...uniqueNewChats];
-		}
-
-		chatListLoading = false;
 	};
 
 	$: if (show) {
 		searchHandler();
 	} else {
+		searchVersion++;
+		previewVersion++;
+		clearTimeout(searchDebounceTimeout);
 		editingChatId = null;
 		editingChatTitle = '';
 		generating = false;
 	}
 
-	const onKeyDown = (e) => {
+	const onKeyDown = (e: KeyboardEvent) => {
 		// Ignore keydown fired while confirming an IME composition (e.g. Japanese/Chinese/Korean)
 		// so confirming the composition with Enter doesn't trigger search actions (#26172).
 		if (e.isComposing || e.keyCode === 229) {
@@ -494,7 +502,7 @@
 			show = false;
 			onClose();
 		} else if (e.code === 'Enter') {
-			const item = document.querySelector(`[data-arrow-selected="true"]`);
+			const item = document.querySelector<HTMLElement>(`[data-arrow-selected="true"]`);
 			if (item) {
 				(item.querySelector('a') ?? item).click();
 				show = false;
@@ -513,7 +521,7 @@
 				}
 			}
 
-			selectedIdx = Math.min(selectedIdx + 1, (chatList ?? []).length - 1 + actions.length);
+			selectedIdx = Math.min((selectedIdx ?? -1) + 1, (chatList ?? []).length - 1 + actions.length);
 		} else if (e.code === 'ArrowUp') {
 			if (selectedIdx === 0) {
 				const searchInput = document.getElementById('search-input');
@@ -528,10 +536,10 @@
 				}
 			}
 
-			selectedIdx = Math.max(selectedIdx - 1, 0);
+			selectedIdx = Math.max((selectedIdx ?? 1) - 1, 0);
 		}
 
-		const item = document.querySelector(`[data-arrow-selected="true"]`);
+		const item = document.querySelector<HTMLElement>(`[data-arrow-selected="true"]`);
 		item?.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'instant' });
 	};
 
@@ -542,6 +550,8 @@
 	});
 
 	onDestroy(() => {
+		searchVersion++;
+		previewVersion++;
 		if (searchDebounceTimeout) {
 			clearTimeout(searchDebounceTimeout);
 		}
@@ -579,7 +589,7 @@
 				}}
 				onKeydown={(e) => {
 					if (e.code === 'Enter' && (chatList ?? []).length > 0) {
-						const item = document.querySelector(`[data-arrow-selected="true"]`);
+						const item = document.querySelector<HTMLElement>(`[data-arrow-selected="true"]`);
 						if (item) {
 							(item.querySelector('a') ?? item).click();
 						}
@@ -587,14 +597,17 @@
 						show = false;
 						return;
 					} else if (e.code === 'ArrowDown') {
-						selectedIdx = Math.min(selectedIdx + 1, (chatList ?? []).length - 1 + actions.length);
+						selectedIdx = Math.min(
+							(selectedIdx ?? -1) + 1,
+							(chatList ?? []).length - 1 + actions.length
+						);
 					} else if (e.code === 'ArrowUp') {
-						selectedIdx = Math.max(selectedIdx - 1, 0);
+						selectedIdx = Math.max((selectedIdx ?? 1) - 1, 0);
 					} else {
 						selectedIdx = 0;
 					}
 
-					const item = document.querySelector(`[data-arrow-selected="true"]`);
+					const item = document.querySelector<HTMLElement>(`[data-arrow-selected="true"]`);
 					item?.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'instant' });
 				}}
 			/>
@@ -908,6 +921,8 @@
 							sendMessage={() => {}}
 							continueResponse={() => {}}
 							regenerateResponse={() => {}}
+							mergeResponses={async () => {}}
+							chatActionHandler={() => {}}
 						/>
 					</div>
 				{/if}

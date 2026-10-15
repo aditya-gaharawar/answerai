@@ -25,7 +25,7 @@
 	export let models = [];
 	export let atSelectedModel;
 
-	export let onSelect = (e) => {};
+	export let onSelect: (selection: import('$lib/types/chat').PromptSelection) => void = () => {};
 
 	let mounted = false;
 	let selectedModelIdx = 0;

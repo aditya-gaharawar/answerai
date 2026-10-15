@@ -7,7 +7,7 @@
 	export let value = '';
 
 	/** Items array: { value: string, label: string }[] */
-	export let items = [];
+	export let items: { value: string; label: string }[] = [];
 
 	/** Placeholder text when no value is selected */
 	export let placeholder = '';
@@ -48,7 +48,7 @@
 	$: selectedLabel = items.find((i) => i.value === value)?.label ?? placeholder;
 
 	/** Svelte action: moves the node to document.body (portal) */
-	function portal(node) {
+	function portal(node: HTMLElement) {
 		document.body.appendChild(node);
 		return {
 			destroy() {
@@ -113,22 +113,22 @@
 		}
 	}
 
-	function handleWindowClick(event) {
-		if (!open) return;
+	function handleWindowClick(event: MouseEvent) {
+		if (!open || !(event.target instanceof Node)) return;
 		if (triggerEl?.contains(event.target)) return;
 		if (contentEl?.contains(event.target)) return;
 		open = false;
 		onClose();
 	}
 
-	function handleKeydown(event) {
+	function handleKeydown(event: KeyboardEvent) {
 		if (event.key === 'Escape' && open) {
 			open = false;
 			onClose();
 		}
 	}
 
-	export function selectItem(item) {
+	export function selectItem(item: { value: string; label: string }) {
 		value = item.value;
 		open = false;
 		onChange(value);

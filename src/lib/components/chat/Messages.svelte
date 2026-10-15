@@ -25,7 +25,8 @@
 	export let className = 'h-full flex pt-18';
 
 	export let chatId = '';
-	export let user = $_user;
+	export let user: (Partial<import('$lib/stores').SessionUser> & { id: string }) | undefined =
+		$_user;
 
 	export let prompt = '';
 	export let history: ChatHistory = { messages: {}, currentId: null };
@@ -59,7 +60,7 @@
 	export let autoScroll = false;
 	export let messagesContainerId = 'messages-container';
 
-	export let onSelect: (prompt: string) => void = () => {};
+	export let onSelect: (prompt: import('$lib/types/chat').PromptSelection) => void = () => {};
 	export let onInsertToNote: ((content: string) => void) | null = null;
 
 	export let messagesCount: number | null = 8;

@@ -24,24 +24,26 @@
 	export let className = ' p-2.5 w-full max-w-full';
 
 	export let onCancel = () => {};
-	export let onConfirm = (data) => {};
+	export let onConfirm: (data: { text?: string; file?: File; blob?: Blob }) => void = () => {};
 
 	let loading = false;
 	let confirmed = false;
 
 	let durationSeconds = 0;
-	let durationCounter = null;
+	let durationCounter: ReturnType<typeof setInterval> | null = null;
 
 	let transcription = '';
 
 	const startDurationCounter = () => {
+		stopDurationCounter();
 		durationCounter = setInterval(() => {
 			durationSeconds++;
 		}, 1000);
 	};
 
 	const stopDurationCounter = () => {
-		clearInterval(durationCounter);
+		if (durationCounter !== null) clearInterval(durationCounter);
+		durationCounter = null;
 		durationSeconds = 0;
 	};
 
@@ -58,12 +60,17 @@
 		return `${minutes}:${formattedSeconds}`;
 	};
 
-	let wakeLock = null;
+	let wakeLock: WakeLockSentinel | null = null;
 
 	const requestWakeLock = async () => {
 		if ('wakeLock' in navigator) {
 			try {
-				wakeLock = await navigator.wakeLock.request('screen');
+				const acquired = await navigator.wakeLock.request('screen');
+				if (destroyed || !recording) {
+					await acquired.release();
+					return;
+				}
+				wakeLock = acquired;
 				console.log('Wake Lock acquired');
 
 				wakeLock.addEventListener('release', () => {
@@ -86,11 +93,14 @@
 		}
 	};
 
-	let stream;
-	let speechRecognition;
+	let stream: MediaStream | null = null;
+	let destroyed = false;
+	let recordingVersion = 0;
+	let recognitionTimeout: ReturnType<typeof setTimeout> | undefined;
+	let speechRecognition: SpeechRecognition | null = null;
 
-	let mediaRecorder;
-	let audioChunks = [];
+	let mediaRecorder: MediaRecorder | null = null;
+	let audioChunks: Blob[] = [];
 
 	const MIN_DECIBELS = -45;
 	let VISUALIZER_BUFFER_LENGTH = 300;
@@ -116,8 +126,19 @@
 		return Math.min(1.0, Math.max(0.01, scaledRMS));
 	};
 
-	const analyseAudio = (stream) => {
+	let analysisContext: AudioContext | undefined;
+	let analysisFrame = 0;
+	const stopAnalysis = () => {
+		cancelAnimationFrame(analysisFrame);
+		analysisFrame = 0;
+		const context = analysisContext;
+		analysisContext = undefined;
+		if (context && context.state !== 'closed') void context.close().catch(console.error);
+	};
+	const analyseAudio = (stream: MediaStream) => {
+		stopAnalysis();
 		const audioContext = new AudioContext();
+		analysisContext = audioContext;
 		const audioStreamSource = audioContext.createMediaStreamSource(stream);
 
 		const analyser = audioContext.createAnalyser();
@@ -162,16 +183,16 @@
 					// }
 				}
 
-				window.requestAnimationFrame(processFrame);
+				analysisFrame = window.requestAnimationFrame(processFrame);
 			};
 
-			window.requestAnimationFrame(processFrame);
+			analysisFrame = window.requestAnimationFrame(processFrame);
 		};
 
 		detectSound();
 	};
 
-	const onStopHandler = async (audioBlob, ext: string = 'wav') => {
+	const onStopHandler = async (audioBlob: Blob, ext: string = 'wav') => {
 		// Create a blob from the audio chunks
 
 		await tick();
@@ -181,7 +202,10 @@
 		);
 
 		if (transcribe) {
-			if ($config.audio.stt.engine === 'web' || ($settings?.audio?.stt?.engine ?? '') === 'web') {
+			if (
+				$config?.audio?.stt?.engine === 'web' ||
+				($settings?.audio?.stt?.engine ?? '') === 'web'
+			) {
 				// with web stt, we don't need to send the file to the server
 				return;
 			}
@@ -208,7 +232,9 @@
 	};
 
 	const startRecording = async () => {
+		const version = ++recordingVersion;
 		loading = true;
+		let acquired: MediaStream;
 
 		try {
 			if (displayMedia) {
@@ -216,16 +242,16 @@
 					audio: true
 				});
 
-				stream = new MediaStream();
+				acquired = new MediaStream();
 				for (const track of mediaStream.getAudioTracks()) {
-					stream.addTrack(track);
+					acquired.addTrack(track);
 				}
 
 				for (const track of mediaStream.getVideoTracks()) {
 					track.stop();
 				}
 			} else {
-				stream = await navigator.mediaDevices.getUserMedia({
+				acquired = await navigator.mediaDevices.getUserMedia({
 					audio: {
 						echoCancellation: echoCancellation,
 						noiseSuppression: noiseSuppression,
@@ -241,6 +267,11 @@
 			return;
 		}
 
+		if (destroyed || version !== recordingVersion || !recording) {
+			acquired.getTracks().forEach((t) => t.stop());
+			return;
+		}
+		stream = acquired;
 		const mineTypes = [
 			'audio/webm; codecs=opus',
 			'audio/webm',
@@ -249,9 +280,17 @@
 			'audio/wav'
 		];
 
-		mediaRecorder = new MediaRecorder(stream, {
-			mimeType: mineTypes.find((type) => MediaRecorder.isTypeSupported(type))
-		});
+		try {
+			mediaRecorder = new MediaRecorder(stream, {
+				mimeType: mineTypes.find((type) => MediaRecorder.isTypeSupported(type))
+			});
+		} catch (error) {
+			loading = false;
+			recording = false;
+			await stopRecording();
+			toast.error($i18n.t('Error starting recording.'));
+			return;
+		}
 
 		mediaRecorder.onstart = async () => {
 			console.log('Recording started');
@@ -259,9 +298,10 @@
 			startDurationCounter();
 
 			await requestWakeLock();
+			if (destroyed || version !== recordingVersion) return;
 
 			audioChunks = [];
-			analyseAudio(stream);
+			analyseAudio(acquired);
 		};
 		mediaRecorder.ondataavailable = (event) => audioChunks.push(event.data);
 		mediaRecorder.onstop = async () => {
@@ -269,7 +309,7 @@
 
 			if (confirmed) {
 				// Use the actual type provided by MediaRecorder
-				let type = audioChunks[0]?.type || mediaRecorder.mimeType || 'audio/webm';
+				let type = audioChunks[0]?.type || mediaRecorder?.mimeType || 'audio/webm';
 
 				// split `/` and `;` to get the extension
 				let ext = type.split('/')[1].split(';')[0] || 'webm';
@@ -294,6 +334,7 @@
 			mediaRecorder.start();
 		} catch (error) {
 			console.error('Error starting recording:', error);
+			await stopRecording();
 			toast.error($i18n.t('Error starting recording.'));
 			loading = false;
 			recording = false;
@@ -301,7 +342,10 @@
 		}
 
 		if (transcribe) {
-			if ($config.audio.stt.engine === 'web' || ($settings?.audio?.stt?.engine ?? '') === 'web') {
+			if (
+				$config?.audio?.stt?.engine === 'web' ||
+				($settings?.audio?.stt?.engine ?? '') === 'web'
+			) {
 				if ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window) {
 					// reset accumulated transcription from previous sessions
 					transcription = '';
@@ -317,14 +361,13 @@
 					// Set the timeout for turning off the recognition after inactivity (in milliseconds)
 					const inactivityTimeout = 2000; // 3 seconds
 
-					let timeoutId;
 					// Start recognition
 					speechRecognition.start();
 
 					// Event triggered when speech is recognized
 					speechRecognition.onresult = async (event) => {
 						// Clear the inactivity timeout
-						clearTimeout(timeoutId);
+						clearTimeout(recognitionTimeout);
 
 						// Handle recognized speech
 						console.log(event);
@@ -338,9 +381,9 @@
 						document.getElementById('chat-input')?.focus();
 
 						// Restart the inactivity timeout
-						timeoutId = setTimeout(() => {
+						recognitionTimeout = setTimeout(() => {
 							console.log('Speech recognition turned off due to inactivity.');
-							speechRecognition.stop();
+							speechRecognition?.stop();
 						}, inactivityTimeout);
 					};
 
@@ -379,12 +422,15 @@
 	};
 
 	const stopRecording = async () => {
-		if (recording && mediaRecorder) {
+		stopAnalysis();
+		recordingVersion++;
+		clearTimeout(recognitionTimeout);
+		if (mediaRecorder && mediaRecorder.state !== 'inactive') {
 			await mediaRecorder.stop();
 		}
 
 		if (speechRecognition) {
-			speechRecognition.stop();
+			speechRecognition?.stop();
 		}
 
 		await releaseWakeLock();
@@ -405,10 +451,11 @@
 		loading = true;
 		confirmed = true;
 
-		if (recording && mediaRecorder) {
+		if (mediaRecorder && mediaRecorder.state !== 'inactive') {
 			await mediaRecorder.stop();
 		}
-		clearInterval(durationCounter);
+		if (durationCounter !== null) clearInterval(durationCounter);
+		durationCounter = null;
 
 		await releaseWakeLock();
 
@@ -420,13 +467,13 @@
 		stream = null;
 	};
 
-	let resizeObserver;
-	let containerWidth;
+	let resizeObserver: ResizeObserver | undefined;
+	let containerWidth = 0;
 
 	let maxVisibleItems = 300;
 	$: maxVisibleItems = Math.floor(containerWidth / 5); // 2px width + 0.5px gap
 
-	const handleKeyDown = (e) => {
+	const handleKeyDown = (e: KeyboardEvent) => {
 		if (recording && e.key === 'Escape') {
 			e.preventDefault();
 			cancelRecording();
@@ -460,11 +507,19 @@
 	});
 
 	onDestroy(() => {
+		destroyed = true;
+		confirmed = false;
+		if (speechRecognition) {
+			speechRecognition.onend = null;
+			speechRecognition.onresult = null;
+			speechRecognition.onerror = null;
+		}
+		void stopRecording();
 		window.removeEventListener('keydown', handleKeyDown);
 		document.removeEventListener('visibilitychange', handleVisibilityChange);
 		releaseWakeLock();
 		// remove resize observer
-		resizeObserver.disconnect();
+		resizeObserver?.disconnect();
 	});
 </script>
 

@@ -1,4 +1,11 @@
 <script lang="ts">
+	import { get } from 'svelte/store';
+	import {
+		updateModelDownload,
+		removeModelDownload,
+		cancelModelDownload
+	} from '$lib/stores/modelDownloads';
+
 	import type { Model } from '$lib/stores';
 	import { marked } from 'marked';
 	import Fuse from 'fuse.js';
@@ -185,12 +192,12 @@
 		}
 	};
 
-	let tags = [];
+	let tags: string[] = [];
 
-	let selectedModel = '';
+	let selectedModel: (typeof items)[number] | null = null;
 	$: selectedValues = values ?? (value ? [value] : []);
 	$: primaryValue = selectedValues[0] ?? value ?? '';
-	$: selectedModel = items.find((item) => item.value === primaryValue) ?? '';
+	$: selectedModel = items.find((item) => item.value === primaryValue) ?? null;
 	$: selectedCount = selectedValues.filter(Boolean).length;
 	$: triggerLabel = selectedModel
 		? compareEnabled && selectedCount > 1
@@ -205,8 +212,9 @@
 	let selectedFilter = '';
 	let modelFilterItems = [];
 
-	let ollamaVersion = null;
-	let providerDownloadConnections = [];
+	let ollamaVersion: string | false | null = null;
+	type ProviderConnection = { provider: string; idx: number; url: string };
+	let providerDownloadConnections: ProviderConnection[] = [];
 	let selectedModelIdx = 0;
 
 	const MANAGEMENT_PROVIDERS = new Set(['llama.cpp', 'lmstudio']);
@@ -224,7 +232,7 @@
 		return provider;
 	};
 
-	const getProviderPoolKey = (connection, model: string) =>
+	const getProviderPoolKey = (connection: ProviderConnection, model: string) =>
 		`${connection.provider}:${connection.idx}:${model}`;
 
 	$: fuse = new Fuse(
@@ -408,7 +416,7 @@
 		}
 	};
 
-	const selectItem = (item, index: number) => {
+	const selectItem = (item: (typeof items)[number], index: number) => {
 		selectedModelIdx = index;
 
 		if (values) {
@@ -459,14 +467,14 @@
 			return;
 		}
 
-		const [res, controller] = await pullModel(localStorage.token, sanitizedModelTag, '0').catch(
+		const [res, controller] = await pullModel(localStorage.token, sanitizedModelTag, 0).catch(
 			(error) => {
 				toast.error(`${error}`);
-				return null;
+				return [null, null] as const;
 			}
 		);
 
-		if (res) {
+		if (res?.body) {
 			const reader = res.body
 				.pipeThrough(new TextDecoderStream())
 				.pipeThrough(splitStream('\n'))
@@ -475,7 +483,6 @@
 			MODEL_DOWNLOAD_POOL.set({
 				...$MODEL_DOWNLOAD_POOL,
 				[sanitizedModelTag]: {
-					...$MODEL_DOWNLOAD_POOL[sanitizedModelTag],
 					abortController: controller,
 					reader,
 					model: sanitizedModelTag,
@@ -510,23 +517,15 @@
 										downloadProgress = 100;
 									}
 
-									MODEL_DOWNLOAD_POOL.set({
-										...$MODEL_DOWNLOAD_POOL,
-										[sanitizedModelTag]: {
-											...$MODEL_DOWNLOAD_POOL[sanitizedModelTag],
-											pullProgress: downloadProgress,
-											digest: data.digest
-										}
+									updateModelDownload(sanitizedModelTag, controller, {
+										pullProgress: downloadProgress,
+										digest: data.digest
 									});
 								} else {
 									toast.success(data.status);
 
-									MODEL_DOWNLOAD_POOL.set({
-										...$MODEL_DOWNLOAD_POOL,
-										[sanitizedModelTag]: {
-											...$MODEL_DOWNLOAD_POOL[sanitizedModelTag],
-											done: data.status === 'success'
-										}
+									updateModelDownload(sanitizedModelTag, controller, {
+										done: data.status === 'success'
 									});
 								}
 							}
@@ -534,9 +533,7 @@
 					}
 				} catch (error) {
 					console.log(error);
-					if (typeof error !== 'string') {
-						error = error.message;
-					}
+					if (error instanceof Error) error = error.message;
 
 					toast.error(getErrorMessage(error));
 					// opts.callback({ success: false, error, modelName: opts.modelName });
@@ -544,7 +541,7 @@
 				}
 			}
 
-			if ($MODEL_DOWNLOAD_POOL[sanitizedModelTag].done) {
+			if (get(MODEL_DOWNLOAD_POOL)[sanitizedModelTag]?.done) {
 				toast.success(
 					$i18n.t(`Model '{{modelName}}' has been successfully downloaded.`, {
 						modelName: sanitizedModelTag
@@ -554,14 +551,16 @@
 				models.set(
 					await getModels(
 						localStorage.token,
-						$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
+						$config?.features?.enable_direct_connections
+							? ($settings?.directConnections ?? null)
+							: null
 					)
 				);
 			} else {
 				toast.error($i18n.t('Download canceled'));
 			}
 
-			delete $MODEL_DOWNLOAD_POOL[sanitizedModelTag];
+			removeModelDownload(sanitizedModelTag, controller);
 
 			MODEL_DOWNLOAD_POOL.set({
 				...$MODEL_DOWNLOAD_POOL
@@ -573,7 +572,7 @@
 		ollamaVersion = await getOllamaVersion(localStorage.token).catch((error) => false);
 	};
 
-	const downloadProviderModelHandler = async (connection) => {
+	const downloadProviderModelHandler = async (connection: ProviderConnection) => {
 		const model = sanitizedSearchValue;
 		const poolKey = getProviderPoolKey(connection, model);
 
@@ -613,13 +612,9 @@
 			const jobId = res?.job_id;
 
 			if (res?.status) {
-				MODEL_DOWNLOAD_POOL.set({
-					...$MODEL_DOWNLOAD_POOL,
-					[poolKey]: {
-						...$MODEL_DOWNLOAD_POOL[poolKey],
-						digest: res.status,
-						done: ['completed', 'already_downloaded'].includes(res.status)
-					}
+				updateModelDownload(poolKey, controller, {
+					digest: res.status,
+					done: ['completed', 'already_downloaded'].includes(res.status)
 				});
 			}
 
@@ -638,42 +633,21 @@
 					const downloaded = status?.downloaded_bytes ?? 0;
 					const pullProgress = total ? Math.round((downloaded / total) * 1000) / 10 : undefined;
 
-					MODEL_DOWNLOAD_POOL.set({
-						...$MODEL_DOWNLOAD_POOL,
-						[poolKey]: {
-							...$MODEL_DOWNLOAD_POOL[poolKey],
-							...(pullProgress !== undefined ? { pullProgress } : {}),
-							digest: status?.status ?? ''
-						}
-					});
+					updateModelDownload(poolKey, controller, { digest: status?.status ?? '' });
 
 					if (status?.status === 'completed') {
-						MODEL_DOWNLOAD_POOL.set({
-							...$MODEL_DOWNLOAD_POOL,
-							[poolKey]: {
-								...$MODEL_DOWNLOAD_POOL[poolKey],
-								pullProgress: 100,
-								done: true
-							}
-						});
+						updateModelDownload(poolKey, controller, { pullProgress: 100, done: true });
 						break;
 					}
 					if (status?.status === 'failed') {
 						throw status?.error ?? 'Download failed';
 					}
 				}
-			} else if (!$MODEL_DOWNLOAD_POOL[poolKey]?.done) {
-				MODEL_DOWNLOAD_POOL.set({
-					...$MODEL_DOWNLOAD_POOL,
-					[poolKey]: {
-						...$MODEL_DOWNLOAD_POOL[poolKey],
-						pullProgress: 100,
-						done: true
-					}
-				});
+			} else if (!get(MODEL_DOWNLOAD_POOL)[poolKey]?.done) {
+				updateModelDownload(poolKey, controller, { pullProgress: 100, done: true });
 			}
 
-			if ($MODEL_DOWNLOAD_POOL[poolKey]?.done) {
+			if (get(MODEL_DOWNLOAD_POOL)[poolKey]?.done) {
 				toast.success(
 					$i18n.t(`Model '{{modelName}}' has been successfully downloaded.`, {
 						modelName: model
@@ -682,7 +656,9 @@
 				models.set(
 					await getModels(
 						localStorage.token,
-						$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
+						$config?.features?.enable_direct_connections
+							? ($settings?.directConnections ?? null)
+							: null
 					)
 				);
 			}
@@ -692,19 +668,24 @@
 			}
 		}
 
-		delete $MODEL_DOWNLOAD_POOL[poolKey];
+		removeModelDownload(poolKey, controller);
 		MODEL_DOWNLOAD_POOL.set({
 			...$MODEL_DOWNLOAD_POOL
 		});
 	};
 
-	const downloadModelHandler = (target) => {
+	const downloadModelHandler = (target: { type: string } & Partial<ProviderConnection>) => {
 		if (target.type === 'ollama') {
 			pullModelHandler();
 			return;
 		}
 
-		downloadProviderModelHandler(target);
+		if (target.provider !== undefined && target.idx !== undefined && target.url !== undefined)
+			void downloadProviderModelHandler({
+				provider: target.provider,
+				idx: target.idx,
+				url: target.url
+			});
 	};
 
 	const setProviderDownloadConnections = async () => {
@@ -729,7 +710,7 @@
 							provider: normalizeProvider(config?.provider ?? '')
 						};
 					})
-					.filter((connection) => MANAGEMENT_PROVIDERS.has(connection.provider))
+					.filter((connection: ProviderConnection) => MANAGEMENT_PROVIDERS.has(connection.provider))
 			: [];
 	};
 
@@ -745,31 +726,13 @@
 	});
 
 	const cancelModelPullHandler = async (model: string) => {
-		const { reader, abortController, providerLabel } = $MODEL_DOWNLOAD_POOL[model];
-		if (abortController) {
-			abortController.abort();
-		}
-		if (reader) {
-			await reader.cancel();
-			delete $MODEL_DOWNLOAD_POOL[model];
-			MODEL_DOWNLOAD_POOL.set({
-				...$MODEL_DOWNLOAD_POOL
-			});
-			toast.success($i18n.t('{{model}} download has been canceled', { model: model }));
-		} else {
-			const displayModel = $MODEL_DOWNLOAD_POOL[model]?.model ?? model;
-			delete $MODEL_DOWNLOAD_POOL[model];
-			MODEL_DOWNLOAD_POOL.set({
-				...$MODEL_DOWNLOAD_POOL
-			});
-			toast.success(
-				$i18n.t('{{model}} download has been canceled', {
-					model: providerLabel ? `${displayModel} (${providerLabel})` : displayModel
-				})
-			);
-		}
+		const download = await cancelModelDownload(model);
+		if (!download) return;
+		const displayModel = download.providerLabel
+			? `${download.model} (${download.providerLabel})`
+			: download.model;
+		toast.success($i18n.t('{{model}} download has been canceled', { model: displayModel }));
 	};
-
 	const unloadModelHandler = async (model: string) => {
 		const res = await unloadModel(localStorage.token, model).catch((error) => {
 			toast.error($i18n.t('Error unloading model: {{error}}', { error }));
@@ -780,7 +743,9 @@
 			models.set(
 				await getModels(
 					localStorage.token,
-					$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
+					$config?.features?.enable_direct_connections
+						? ($settings?.directConnections ?? null)
+						: null
 				)
 			);
 		}
@@ -830,7 +795,9 @@
 			models.set(
 				await getModels(
 					localStorage.token,
-					$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
+					$config?.features?.enable_direct_connections
+						? ($settings?.directConnections ?? null)
+						: null
 				)
 			);
 		}
@@ -911,7 +878,9 @@
 				models.set(
 					await getModels(
 						localStorage.token,
-						$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
+						$config?.features?.enable_direct_connections
+							? ($settings?.directConnections ?? null)
+							: null
 					)
 				);
 			}}
@@ -1209,7 +1178,7 @@
 											? ` ${$i18n.t('from {{provider}}', { provider: download.providerLabel })}`
 											: ''}
 									</div>
-									{#if 'pullProgress' in download}
+									{#if download && 'pullProgress' in download}
 										<div
 											class="shrink-0 text-[0.6875rem] tabular-nums text-gray-500 dark:text-gray-400"
 										>
