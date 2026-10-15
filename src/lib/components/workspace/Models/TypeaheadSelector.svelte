@@ -12,9 +12,9 @@
 		id: string;
 		is_global?: boolean;
 		name?: string;
-		description?: string;
+		description?: string | null;
 		meta?: {
-			description?: string;
+			description?: string | null;
 			toggle?: boolean;
 		};
 	};

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import type { ModelConfig, AccessGrant, ModelKnowledgeReference } from '$lib/apis';
 	import ModelSettingsLabel from './ModelSettingsLabel.svelte';
 	import { toast } from 'svelte-sonner';
 	import { v4 as uuidv4 } from 'uuid';
@@ -124,7 +125,7 @@
 	let success = false;
 
 	let filesInputElement: HTMLInputElement;
-	let inputFiles;
+	let inputFiles: FileList | null = null;
 
 	let showSystemPrompt = true;
 	let showAdvanced = false;
@@ -183,7 +184,7 @@
 		system = content;
 		showSystemPrompt = true;
 	};
-	let info = {
+	let info: ModelConfig = {
 		id: '',
 		base_model_id: null,
 		name: '',
@@ -217,20 +218,20 @@
 		return count + (value != null && value !== '' ? 1 : 0);
 	}, 0);
 
-	let knowledge = [];
-	let toolIds = [];
-	let skillIds = [];
-	let skillsList = [];
+	let knowledge: ModelKnowledgeReference[] = [];
+	let toolIds: string[] = [];
+	let skillIds: string[] = [];
+	let skillsList: { id: string; name: string; description?: string }[] = [];
 
-	let filterIds = [];
-	let defaultFilterIds = [];
+	let filterIds: string[] = [];
+	let defaultFilterIds: string[] = [];
 
 	let capabilities = { ...DEFAULT_CAPABILITIES };
-	let defaultFeatureIds = [];
+	let defaultFeatureIds: string[] = [];
 	let builtinTools = {};
 
-	let actionIds = [];
-	let accessGrants = [];
+	let actionIds: string[] = [];
+	let accessGrants: AccessGrant[] = [];
 	let terminalId = '';
 	let tts = { voice: '' };
 	let voice = { voice: '' };
@@ -467,7 +468,7 @@
 		}
 
 		modelInfo.meta.i18n = pruneEmptyLocaleEntries(modelInfo.meta.i18n);
-		if (Object.keys(modelInfo.meta.i18n).length === 0) {
+		if (Object.keys(modelInfo.meta.i18n ?? {}).length === 0) {
 			delete modelInfo.meta.i18n;
 		}
 
@@ -606,7 +607,7 @@
 			backgroundFile = null;
 			avatarFile = null;
 			animationFiles = {};
-			voiceAvatar = info.meta.voice_avatar;
+			voiceAvatar = info.meta.voice_avatar ?? null;
 			clearBackgroundPreview();
 			await tick();
 			savedDraft = JSON.stringify(modelInfo);
@@ -674,7 +675,7 @@
 					)
 				: null;
 
-			knowledge = (model?.meta?.knowledge ?? []).map((item) => {
+			knowledge = (model?.meta?.knowledge ?? []).map((item: ModelKnowledgeReference) => {
 				if (item?.collection_name && item?.type !== 'file') {
 					return {
 						id: item.collection_name,
@@ -914,7 +915,7 @@
 						let originalImageUrl = `${event.target?.result}`;
 
 						// For animated formats (gif, webp), skip resizing to preserve animation
-						const fileType = (inputFiles[0] as any)?.['type'];
+						const fileType = inputFiles?.[0]?.type;
 						if (fileType === 'image/gif' || fileType === 'image/webp') {
 							info.meta.profile_image_url = originalImageUrl;
 							inputFiles = null;
@@ -928,6 +929,7 @@
 						img.onload = function () {
 							const canvas = document.createElement('canvas');
 							const ctx = canvas.getContext('2d');
+							if (!ctx) return;
 
 							// Calculate the aspect ratio of the image
 							const aspectRatio = img.width / img.height;
@@ -968,12 +970,12 @@
 						inputFiles &&
 						inputFiles.length > 0 &&
 						['image/gif', 'image/webp', 'image/jpeg', 'image/png', 'image/svg+xml'].includes(
-							(inputFiles[0] as any)?.['type']
+							inputFiles?.[0]?.type
 						)
 					) {
 						reader.readAsDataURL(inputFiles[0]);
 					} else {
-						console.log(`Unsupported File Type '${(inputFiles[0] as any)?.['type']}'.`);
+						console.log(`Unsupported File Type '${inputFiles?.[0]?.type}'.`);
 						inputFiles = null;
 					}
 				}}
@@ -1249,7 +1251,10 @@
 											className="w-full resize-none overflow-y-hidden bg-transparent py-1 text-[0.8125rem] outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700 font-normal text-gray-900 dark:text-gray-100"
 											placeholder={$i18n.t('Add a short description about what this model does')}
 											minSize={32}
-											bind:value={info.meta.description}
+											value={info.meta.description ?? ''}
+											onInput={(event) => {
+												info.meta.description = event.currentTarget.value;
+											}}
 										/>
 									{/if}
 								</div>
@@ -1300,14 +1305,16 @@
 												{suggestionTags}
 												on:delete={(e) => {
 													const tagName = e.detail;
-													info.meta.tags = info.meta.tags.filter((tag) => tag.name !== tagName);
+													info.meta.tags = (info.meta.tags ?? []).filter(
+														(tag) => tag.name !== tagName
+													);
 												}}
 												on:add={(e) => {
 													const tagName = e.detail;
 													if (!(info?.meta?.tags ?? null)) {
 														info.meta.tags = [{ name: tagName }];
 													} else {
-														info.meta.tags = [...info.meta.tags, { name: tagName }];
+														info.meta.tags = [...(info.meta.tags ?? []), { name: tagName }];
 													}
 												}}
 											/>
@@ -1568,7 +1575,9 @@
 													type="button"
 													class="hover:text-gray-900 disabled:opacity-40 dark:hover:text-gray-100"
 													on:click={() => {
-														customPromptDraft = structuredClone(info.meta.suggestion_prompts);
+														customPromptDraft = structuredClone(
+															info.meta.suggestion_prompts ?? null
+														);
 														info.meta.suggestion_prompts = null;
 													}}>{$i18n.t('Use default')}</button
 												>

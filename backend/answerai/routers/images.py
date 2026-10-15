@@ -321,13 +321,18 @@ async def update_config(request: Request, form_data: ImagesConfig, user=Depends(
 
 
 def get_automatic1111_api_auth(image_config):
-    if image_config.AUTOMATIC1111_API_AUTH is None:
+    credentials = image_config.AUTOMATIC1111_API_AUTH
+    if credentials is None:
         return ''
-    else:
-        auth1111_byte_string = image_config.AUTOMATIC1111_API_AUTH.encode('utf-8')
-        auth1111_base64_encoded_bytes = base64.b64encode(auth1111_byte_string)
-        auth1111_base64_encoded_string = auth1111_base64_encoded_bytes.decode('utf-8')
-        return f'Basic {auth1111_base64_encoded_string}'
+    if isinstance(credentials, dict):
+        username, password = credentials.get('username'), credentials.get('password')
+        if not isinstance(username, str) or not isinstance(password, str):
+            raise HTTPException(400, 'AUTOMATIC1111 credentials need a username and password.')
+        credentials = f'{username}:{password}'
+    if not isinstance(credentials, str):
+        raise HTTPException(400, 'Invalid AUTOMATIC1111 credentials.')
+    encoded = base64.b64encode(credentials.encode('utf-8')).decode('ascii')
+    return f'Basic {encoded}'
 
 
 class ConnectionVerificationForm(BaseModel):

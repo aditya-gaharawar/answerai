@@ -3,6 +3,7 @@
 	const i18n = getContext('i18n');
 
 	import Markdown from './Markdown.svelte';
+	import { collectSourceIds } from '$lib/utils/sourceIds';
 	import StructuredOutputRenderer from './StructuredOutputRenderer.svelte';
 	import {
 		artifactCode,
@@ -103,34 +104,13 @@
 	let floatingButtonsElement;
 	let floatingButtonsRange = null;
 
+	/** @type {string[]} */
 	let sourceIds = [];
 	$: getSourceIds(sources);
 
+	/** @param {unknown} sources */
 	const getSourceIds = (sources) => {
-		const result = [];
-		const seenIds = new Set();
-		for (const source of sources ?? []) {
-			for (let index = 0; index < (source.document ?? []).length; index++) {
-				if (model?.info?.meta?.capabilities?.citations == false) {
-					result.push('N/A');
-					continue;
-				}
-				const metadata = source.metadata?.[index];
-				const id = metadata?.source ?? source?.source?.id ?? 'N/A';
-				if (seenIds.has(id)) {
-					continue;
-				}
-				seenIds.add(id);
-				if (metadata?.name) {
-					result.push(metadata.name);
-				} else if (id.startsWith('http://') || id.startsWith('https://')) {
-					result.push(id);
-				} else {
-					result.push(source?.source?.name ?? id);
-				}
-			}
-		}
-		sourceIds = result;
+		sourceIds = collectSourceIds(sources, model?.info?.meta?.capabilities?.citations !== false);
 	};
 
 	/** @param {string} messageContent */

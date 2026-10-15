@@ -5,10 +5,6 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock, Mock
 
 import pytest
-from fastapi import Depends, HTTPException
-from pydantic import ValidationError
-from sqlalchemy import select
-
 from answerai.internal.db import get_async_db
 from answerai.models.auths import Auths
 from answerai.models.billing import BillingAccount, UsageBucket
@@ -18,6 +14,9 @@ from answerai.utils import payments, plans
 from answerai.utils.auth import get_current_user, get_verified_user
 from answerai.utils.email_verification import EmailSettings
 from answerai.utils.security_policy import validate_speech_input
+from fastapi import Depends, HTTPException
+from pydantic import ValidationError
+from sqlalchemy import select
 from test_security_rescan import controller
 
 pytest_plugins = ['test_email_verification']
@@ -154,3 +153,94 @@ def test_webhook_invalid_signature_is_client_error(provider, signature):
     with pytest.raises(HTTPException) as exc:
         payments.verify_signature(provider, b'{}', signature)
     assert exc.value.status_code == 400
+
+
+def transcription_controller(permission=True):
+    import ast
+    import asyncio
+    from pathlib import Path
+    from typing import Optional
+
+    from fastapi import Request
+
+    source = Path(__file__).parents[1] / 'answerai/routers/audio/__init__.py'
+    node = next(
+        n for n in ast.parse(source.read_text()).body if isinstance(n, ast.AsyncFunctionDef) and n.name == 'transcribe'
+    )
+    provider = AsyncMock(return_value={'text': 'hello'})
+    namespace = {
+        'Request': Request,
+        'Optional': Optional,
+        'HTTPException': HTTPException,
+        'Config': Config,
+        'has_permission': AsyncMock(return_value=permission),
+        'ERROR_MESSAGES': SimpleNamespace(ACCESS_PROHIBITED='Speech recognition disabled'),
+        'BYPASS_PYDUB_PREPROCESSING': True,
+        'transcription_handler': provider,
+        'asyncio': asyncio,
+        'log': Mock(),
+    }
+    exec(compile(ast.Module(body=[node], type_ignores=[]), str(source), 'exec'), namespace)
+    return namespace['transcribe'], provider
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize('path', ['/api/v1/audio/transcriptions', '/api/v1/files/mock-audio'])
+async def test_upload_transcription_cannot_bypass_audio_limit_or_double_charge(harness, path):
+    from fastapi import Request
+
+    client, _, _, app, _ = harness
+    user = await configure_member(app, requests_per_minute=10, audio_requests_per_day=1)
+    transcribe, provider = transcription_controller()
+
+    async def accepted(request: Request, current=Depends(get_verified_user)):
+        return await transcribe(request, '/not-read-by-mocked-provider.wav', user=current)
+
+    app.add_api_route(path, accepted, methods=['POST'])
+    assert (await client.post(path)).status_code == 200
+    assert (await client.post(path)).status_code == 429
+    provider.assert_awaited_once()
+    async with get_async_db() as db:
+        rows = (await db.scalars(select(UsageBucket).where(UsageBucket.user_id == user.id))).all()
+        usage = {row.metric: row.used for row in rows}
+        assert usage['audio'] == 1
+        # The upload attempt is rate-limited once by its outer feature route.
+        assert usage['requests'] == (2 if '/files/' in path else 1)
+
+
+@pytest.mark.asyncio
+async def test_upload_transcription_respects_speech_permission(harness):
+    from fastapi import Request
+
+    client, _, _, app, _ = harness
+    await configure_member(app, requests_per_minute=10, audio_requests_per_day=1)
+    transcribe, provider = transcription_controller(permission=False)
+
+    async def accepted(request: Request, current=Depends(get_verified_user)):
+        return await transcribe(request, '/not-read.wav', user=current)
+
+    app.add_api_route('/api/v1/files/mock-audio', accepted, methods=['POST'])
+    assert (await client.post('/api/v1/files/mock-audio')).status_code == 403
+    provider.assert_not_awaited()
+
+
+def test_automatic1111_auth_supports_configured_credential_objects():
+    import ast
+    import base64
+    from pathlib import Path
+
+    source = Path(__file__).parents[1] / 'answerai/routers/images.py'
+    node = next(
+        n
+        for n in ast.parse(source.read_text()).body
+        if isinstance(n, ast.FunctionDef) and n.name == 'get_automatic1111_api_auth'
+    )
+    namespace = {'base64': base64, 'HTTPException': HTTPException}
+    exec(compile(ast.Module(body=[node], type_ignores=[]), str(source), 'exec'), namespace)
+    auth = namespace['get_automatic1111_api_auth']
+    for value in ['user:password', {'username': 'user', 'password': 'password'}]:
+        assert auth(SimpleNamespace(AUTOMATIC1111_API_AUTH=value)) == 'Basic dXNlcjpwYXNzd29yZA=='
+    assert auth(SimpleNamespace(AUTOMATIC1111_API_AUTH=None)) == ''
+    with pytest.raises(HTTPException) as error:
+        auth(SimpleNamespace(AUTOMATIC1111_API_AUTH={'invalid': 'configuration'}))
+    assert error.value.status_code == 400

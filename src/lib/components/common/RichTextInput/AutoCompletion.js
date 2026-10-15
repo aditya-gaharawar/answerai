@@ -15,23 +15,30 @@ import { Extension } from '@tiptap/core';
 import { Plugin, PluginKey } from 'prosemirror-state';
 import { Decoration, DecorationSet } from 'prosemirror-view';
 
+/** @type {PluginKey<string>} */
 const aiAutocompletionKey = new PluginKey('aiAutocompletion');
 
+/** @param {import('prosemirror-state').EditorState} state */
 const getFollowUpSuggestion = (state) => {
 	const { doc } = state;
 	const isEmpty =
 		doc.childCount === 1 &&
-		doc.firstChild.type.name === 'paragraph' &&
-		doc.firstChild.content.size === 0;
+		doc.firstChild?.type.name === 'paragraph' &&
+		doc.firstChild?.content.size === 0;
 	return isEmpty ? aiAutocompletionKey.getState(state) : '';
 };
 
+/**
+ * @param {import('prosemirror-view').EditorView} view
+ * @param {string} suggestion
+ */
 export const setFollowUpSuggestion = (view, suggestion) => {
 	const current = aiAutocompletionKey.getState(view.state);
 	if (current === undefined || current === suggestion) return;
 	view.dispatch(view.state.tr.setMeta(aiAutocompletionKey, suggestion));
 };
 
+/** @param {import('prosemirror-view').EditorView} view */
 const acceptFollowUpSuggestion = (view) => {
 	const suggestion = getFollowUpSuggestion(view.state);
 	if (!suggestion) return false;
@@ -84,6 +91,7 @@ export const AIAutocompletion = Extension.create({
 	},
 
 	addProseMirrorPlugins() {
+		/** @type {ReturnType<typeof setTimeout> | null} */
 		let debounceTimer = null;
 		let loading = false;
 
@@ -92,6 +100,7 @@ export const AIAutocompletion = Extension.create({
 
 		let isComposing = false;
 
+		/** @param {import('prosemirror-view').EditorView} view */
 		const handleAICompletion = (view) => {
 			const { state, dispatch } = view;
 			const { selection } = state;
@@ -101,7 +110,7 @@ export const AIAutocompletion = Extension.create({
 			if (selection.empty && $head.pos === $head.end()) {
 				// Set up debounce for AI generation
 				if (this.options.debounceTime !== null) {
-					clearTimeout(debounceTimer);
+					if (debounceTimer !== null) clearTimeout(debounceTimer);
 
 					// Capture current position
 					const currentPos = $head.before();
@@ -167,7 +176,7 @@ export const AIAutocompletion = Extension.create({
 						const suggestion = getFollowUpSuggestion(state);
 						if (!suggestion) return null;
 						return DecorationSet.create(state.doc, [
-							Decoration.node(0, state.doc.firstChild.nodeSize, {
+							Decoration.node(0, state.doc.firstChild?.nodeSize ?? 0, {
 								class: 'ai-autocompletion',
 								'data-suggestion': suggestion
 							})
@@ -291,7 +300,7 @@ export const AIAutocompletion = Extension.create({
 						// 	const node = $head.parent;
 
 						// 	// Reset debounce timer on mouse click
-						// 	clearTimeout(debounceTimer);
+						// 	if (debounceTimer !== null) clearTimeout(debounceTimer);
 
 						// 	// If a suggestion exists and the cursor moves, remove the suggestion
 						// 	if (
@@ -315,7 +324,7 @@ export const AIAutocompletion = Extension.create({
 							const { state, dispatch } = view;
 
 							// Reset debounce timer on mouse click
-							clearTimeout(debounceTimer);
+							if (debounceTimer !== null) clearTimeout(debounceTimer);
 
 							// Iterate over all nodes in the document
 							const tr = state.tr;

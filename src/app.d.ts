@@ -25,3 +25,10 @@ export {};
 declare module 'svelte' {
 	export function getContext(key: 'i18n'): typeof import('$lib/i18n').i18n;
 }
+
+// Files shared by the editor's image node views and collaboration updates.
+declare module '@tiptap/core' {
+	interface Storage {
+		files?: import('$lib/types/notes').NoteAttachment[];
+	}
+}

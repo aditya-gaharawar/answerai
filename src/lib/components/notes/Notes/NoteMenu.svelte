@@ -22,19 +22,19 @@
 	export let show = false;
 	export let className = 'max-w-[11.25rem]';
 
-	export let onDownload = (type) => {};
+	export let onDownload: (type: string) => void | Promise<void> = () => {};
 	export let onAccess: (() => void) | null = null;
 	export let onDelete = () => {};
-	export let onPin = null;
+	export let onPin: (() => void | Promise<void>) | null = null;
 	export let isPinned = false;
-	export let onUploadFiles = null;
+	export let onUploadFiles: (() => void | Promise<void>) | null = null;
 	export let showAutoFormat = false;
 	export let autoFormat = true;
 
-	export let onCopyLink = null;
-	export let onCopyToClipboard = null;
+	export let onCopyLink: (() => void | Promise<void>) | null = null;
+	export let onCopyToClipboard: (() => void | Promise<void>) | null = null;
 
-	export let onChange = () => {};
+	export let onChange: (open: boolean) => void = () => {};
 </script>
 
 <Dropdown

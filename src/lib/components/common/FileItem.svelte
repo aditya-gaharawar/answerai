@@ -23,7 +23,7 @@
 	export let modal = false;
 	export let loading = false;
 
-	export let item = null;
+	export let item: Record<string, unknown> | null = null;
 	export let edit = false;
 	export let small = false;
 
@@ -45,6 +45,15 @@
 			return str;
 		}
 	};
+	const hasEmbeddedContent = (file: unknown): boolean => {
+		if (!file || typeof file !== 'object' || !('data' in file)) return false;
+		return !!(
+			file.data &&
+			typeof file.data === 'object' &&
+			'content' in file.data &&
+			file.data.content
+		);
+	};
 </script>
 
 {#if item}
@@ -59,20 +68,20 @@
 	on:click={async () => {
 		const filesystemPath = item?.type === 'filesystem' ? (item.path ?? item.url ?? item.id) : null;
 
-		if (filesystemPath) {
+		if (typeof filesystemPath === 'string' && filesystemPath) {
 			showFileNavPath.set(filesystemPath);
-		} else if (item?.file?.data?.content || item?.type === 'file' || item?.content || modal) {
+		} else if (hasEmbeddedContent(item?.file) || item?.type === 'file' || item?.content || modal) {
 			showModal = !showModal;
 		} else {
 			if (url) {
 				if (type === 'file') {
 					if (url.startsWith('http')) {
-						window.open(`${url}/content`, '_blank').focus();
+						window.open(`${url}/content`, '_blank')?.focus();
 					} else {
-						window.open(`${WEBUI_API_BASE_URL}/files/${url}/content`, '_blank').focus();
+						window.open(`${WEBUI_API_BASE_URL}/files/${url}/content`, '_blank')?.focus();
 					}
 				} else if (safeLinkUrl(url)) {
-					window.open(`${url}`, '_blank').focus();
+					window.open(`${url}`, '_blank')?.focus();
 				}
 			}
 		}

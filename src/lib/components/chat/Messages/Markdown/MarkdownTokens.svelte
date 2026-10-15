@@ -34,7 +34,7 @@
 	export let tokens: Token[];
 	export let top = true;
 	export let attributes = {};
-	export let sourceIds = [];
+	export let sourceIds: string[] = [];
 
 	export let done = true;
 

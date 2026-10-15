@@ -1,4 +1,7 @@
 <script lang="ts">
+	import { selectedHtml, commandTextNodes } from './RichTextInput/editorUtils';
+	import { replaceInputVariables, type InputVariableValues } from '$lib/utils/inputVariables';
+	import type { Placement } from 'tippy.js';
 	import { marked } from 'marked';
 	import DOMPurify from 'dompurify';
 	import { equalEditorJSON } from '$lib/utils/editorJson';
@@ -66,6 +69,7 @@
 		filter: 'table',
 		replacement: function (content, node) {
 			// Extract rows
+			if (!(node instanceof HTMLTableElement)) return content;
 			const rows = Array.from(node.rows);
 			if (rows.length === 0) return content;
 
@@ -139,9 +143,27 @@
 	const eventDispatch = createEventDispatcher();
 
 	import { Fragment, DOMParser, Slice, type Node, type Schema } from 'prosemirror-model';
-	import { EditorState, Plugin, PluginKey, TextSelection, Selection } from 'prosemirror-state';
+	import {
+		EditorState,
+		Plugin,
+		PluginKey,
+		TextSelection,
+		Selection,
+		type Transaction
+	} from 'prosemirror-state';
 	import { Decoration, DecorationSet } from 'prosemirror-view';
-	import { Editor, Extension, markInputRule, mergeAttributes } from '@tiptap/core';
+	import {
+		Editor,
+		Extension,
+		markInputRule,
+		mergeAttributes,
+		type JSONContent,
+		type Content,
+		type EditorEvents
+	} from '@tiptap/core';
+	import type { SessionUser } from '$lib/stores';
+	import type { Socket } from 'socket.io-client';
+	import type { NoteAttachment } from '$lib/types/notes';
 
 	import { AIAutocompletion, setFollowUpSuggestion } from './RichTextInput/AutoCompletion.js';
 
@@ -202,9 +224,13 @@
 
 	import type { SocketIOCollaborationProvider } from './RichTextInput/Collaboration';
 
-	export let oncompositionstart = (e) => {};
-	export let oncompositionend = (e) => {};
-	export let onChange = (e) => {};
+	export let oncompositionstart: (event: CompositionEvent) => void = () => {};
+	export let oncompositionend: (event: CompositionEvent) => void = () => {};
+	export let onChange: (value: {
+		html: string;
+		json: JSONContent | '';
+		md: string;
+	}) => void = () => {};
 
 	// create a lowlight instance with all languages loaded
 	const lowlight = createLowlight(
@@ -219,9 +245,9 @@
 
 	export let editor: Editor | null = null;
 
-	export let socket = null;
-	export let user = null;
-	export let files = [];
+	export let socket: Socket | null = null;
+	export let user: SessionUser | null | undefined = null;
+	export let files: NoteAttachment[] = [];
 
 	export let documentId = '';
 
@@ -248,7 +274,7 @@
 	export let fileHandler = false;
 	export let suggestions = null;
 
-	export let onFileDrop = (currentEditor, files, pos) => {
+	export let onFileDrop = (currentEditor: Editor, files: File[], pos: number) => {
 		files.forEach((file) => {
 			const fileReader = new FileReader();
 
@@ -268,7 +294,7 @@
 		});
 	};
 
-	export let onFilePaste = (currentEditor, files, htmlContent) => {
+	export let onFilePaste = (currentEditor: Editor, files: File[], htmlContent?: string) => {
 		files.forEach((file) => {
 			if (htmlContent) {
 				// if there is htmlContent, stop manual insertion & let other extensions handle insertion via inputRule
@@ -295,7 +321,13 @@
 		});
 	};
 
-	const getMentionText = ({ node, suggestion }) => {
+	const getMentionText = ({
+		node,
+		suggestion
+	}: {
+		node: Node;
+		suggestion?: { char?: string } | null;
+	}) => {
 		const id = node.attrs.id ?? '';
 		const label = node.attrs.label ?? id;
 		const ch = node.attrs.mentionSuggestionChar ?? suggestion?.char ?? '@';
@@ -324,10 +356,10 @@
 		return hasMention ? Fragment.fromArray(nodes) : null;
 	};
 
-	export let onSelectionUpdate = (e) => {};
+	export let onSelectionUpdate: (event: EditorEvents['selectionUpdate']) => void = () => {};
 
 	export let id = '';
-	export let value = '';
+	export let value: string | JSONContent | null = '';
 	export let html = '';
 
 	export let json = false;
@@ -350,14 +382,15 @@
 	export let shiftEnter = false;
 	export let largeTextAsFile = false;
 	export let insertPromptAsRichText = false;
-	export let floatingMenuPlacement = 'bottom-start';
+	export let floatingMenuPlacement: Exclude<Placement, 'auto' | 'auto-start' | 'auto-end'> =
+		'bottom-start';
 
 	// Keep focus off the chat input during a call so the call overlay's M shortcut works
 	$: suppressAutoFocus = messageInput && $showCallOverlay;
 
-	let content = null;
+	let content: Content | null = null;
 	let htmlValue = '';
-	let jsonValue = '';
+	let jsonValue: JSONContent | '' = '';
 	let mdValue = '';
 
 	const serializeContent = (richText: boolean) => {
@@ -394,11 +427,11 @@
 
 	let provider: SocketIOCollaborationProvider | null = null;
 
-	let floatingMenuElement: Element | null = null;
-	let bubbleMenuElement: Element | null = null;
-	let element: Element | null = null;
+	let floatingMenuElement: HTMLDivElement | null = null;
+	let bubbleMenuElement: HTMLDivElement | null = null;
+	let element: HTMLDivElement | null = null;
 
-	let pendingUpdate = null;
+	let pendingUpdate: number | null = null;
 	let destroyed = false;
 
 	const options = {
@@ -437,7 +470,7 @@
 	};
 
 	// Returns {start, end} of the word at pos
-	function getWordBoundsAtPos(doc, pos) {
+	function getWordBoundsAtPos(doc: Node, pos: number) {
 		const resolvedPos = doc.resolve(pos);
 		const textBlock = resolvedPos.parent;
 		const paraStart = resolvedPos.start();
@@ -455,6 +488,7 @@
 	}
 
 	export const replaceCommandWithText = async (text: string) => {
+		if (!editor) return;
 		const { state, dispatch } = editor.view;
 		const { selection } = state;
 		const pos = selection.from;
@@ -486,7 +520,7 @@
 
 			// Extract just the content, not the wrapper paragraphs
 			const content = fragment.content;
-			let nodesToInsert = [];
+			let nodesToInsert: Node[] = [];
 
 			content.forEach((node) => {
 				if (node.type.name === 'paragraph') {
@@ -505,12 +539,7 @@
 			if (text.includes('\n')) {
 				// Split the text into lines and create a <p> node for each line
 				const lines = text.split('\n');
-				const nodes = lines.map(
-					(line, index) =>
-						index === 0
-							? state.schema.text(line ? line : []) // First line is plain text
-							: state.schema.nodes.paragraph.create({}, line ? state.schema.text(line) : undefined) // Subsequent lines are paragraphs
-				);
+				const nodes = commandTextNodes(state.schema, text);
 
 				// Build and dispatch the transaction to replace the word at cursor
 				tr = tr.replaceWith(start, end, nodes);
@@ -533,9 +562,7 @@
 					text !== '' ? state.schema.text(text) : []
 				);
 
-				tr = tr.setSelection(
-					state.selection.constructor.near(tr.doc.resolve(start + text.length + 1))
-				);
+				tr = tr.setSelection(Selection.near(tr.doc.resolve(start + text.length + 1)));
 			}
 		}
 
@@ -596,7 +623,7 @@
 		}
 	};
 
-	export const insertContent = (content) => {
+	export const insertContent = (content: string) => {
 		if (!editor || !editor.view) return;
 		const { state, view } = editor;
 		const { schema, tr } = state;
@@ -611,9 +638,9 @@
 	};
 
 	// Convert text to ProseMirror nodes, using hardBreak for newlines
-	const textToNodes = (state, text) => {
+	const textToNodes = (state: EditorState, text: string) => {
 		if (!text.includes('\n')) return state.schema.text(text);
-		const nodes = [];
+		const nodes: Node[] = [];
 		text.split('\n').forEach((line, i) => {
 			if (i > 0) nodes.push(state.schema.nodes.hardBreak.create());
 			if (line) nodes.push(state.schema.text(line));
@@ -621,7 +648,7 @@
 		return nodes;
 	};
 
-	export const replaceVariables = (variables) => {
+	export const replaceVariables = (variables: InputVariableValues) => {
 		if (!editor || !editor.view) return;
 		const { state, view } = editor;
 		const { doc } = state;
@@ -631,17 +658,12 @@
 		let offset = 0; // Track position changes due to text length differences
 
 		// Collect all replacements first to avoid position conflicts
-		const replacements = [];
+		const replacements: { from: number; to: number; text: string }[] = [];
 
 		doc.descendants((node, pos) => {
 			if (node.isText && node.text) {
 				const text = node.text;
-				const replacedText = text.replace(/{{\s*([^|}]+)(?:\|[^}]*)?\s*}}/g, (match, varName) => {
-					const trimmedVarName = varName.trim();
-					return variables.hasOwnProperty(trimmedVarName)
-						? String(variables[trimmedVarName])
-						: match;
-				});
+				const replacedText = replaceInputVariables(text, variables);
 
 				if (replacedText !== text) {
 					replacements.push({
@@ -687,14 +709,14 @@
 	};
 
 	// Function to find the next template in the document
-	function findNextTemplate(doc, from = 0) {
+	function findNextTemplate(doc: Node, from = 0): { from: number; to: number } | null {
 		const patterns = [{ start: '{{', end: '}}' }];
 
-		let result = null;
+		let result: { from: number; to: number } | null = null;
 
 		doc.nodesBetween(from, doc.content.size, (node, pos) => {
 			if (result) return false; // Stop if we've found a match
-			if (node.isText) {
+			if (node.isText && node.text) {
 				const text = node.text;
 				let index = Math.max(0, from - pos);
 				while (index < text.length) {
@@ -719,7 +741,7 @@
 	}
 
 	// Function to select the next template in the document
-	function selectNextTemplate(state, dispatch) {
+	function selectNextTemplate(state: EditorState, dispatch?: (transaction: Transaction) => void) {
 		const { doc, selection } = state;
 		const from = selection.to;
 		let template = findNextTemplate(doc, from);
@@ -732,7 +754,6 @@
 		if (template) {
 			if (dispatch) {
 				const tr = state.tr.setSelection(TextSelection.create(doc, template.from, template.to));
-				dispatch(tr);
 
 				// Scroll to the selected template
 				dispatch(
@@ -744,14 +765,15 @@
 		return false;
 	}
 
-	export const setContent = (content) => {
-		editor.commands.setContent(content);
+	export const setContent = (content: Content) => {
+		editor?.commands.setContent(content);
 	};
 
 	const selectTemplate = () => {
 		if (value !== '') {
 			// After updating the state, try to find and select the next template
 			setTimeout(() => {
+				if (!editor || editor.isDestroyed) return;
 				const templateFound = selectNextTemplate(editor.view.state, editor.view.dispatch);
 				if (!templateFound && !suppressAutoFocus) {
 					editor.commands.focus('end');
@@ -837,7 +859,7 @@
 				}
 
 				// Usage example
-				content = await tryParse(value);
+				content = await tryParse(typeof value === 'string' ? value : '');
 			}
 		}
 
@@ -921,7 +943,7 @@
 				...(autocomplete || messageInput
 					? [
 							AIAutocompletion.configure({
-								generateCompletion: async (text) => {
+								generateCompletion: async (text: string) => {
 									if (!autocomplete || text.trim().length === 0) {
 										return null;
 									}
@@ -1103,7 +1125,7 @@
 						}
 
 						const lines = plainText.split('\n');
-						const nodes = [];
+						const nodes: Node[] = [];
 
 						lines.forEach((line, index) => {
 							if (index > 0) {
@@ -1147,7 +1169,7 @@
 							const { state, dispatch } = view;
 							const { from, to } = state.selection;
 							const lines = event.data.split('\n');
-							const nodes = [];
+							const nodes: Node[] = [];
 
 							lines.forEach((line, index) => {
 								if (index > 0) {
@@ -1173,6 +1195,7 @@
 						return false;
 					},
 					keydown: (view, event) => {
+						if (!editor) return false;
 						if (messageInput) {
 							// Check if the current selection is inside a structured block (like codeBlock or list)
 							const { state } = view;
@@ -1292,7 +1315,7 @@
 									const { from, to } = state.selection;
 
 									const lines = plainText.split('\n');
-									const nodes = [];
+									const nodes: Node[] = [];
 
 									lines.forEach((line, index) => {
 										if (index > 0) {
@@ -1343,8 +1366,7 @@
 
 						// Only take the selected text & HTML, not the full doc
 						const plain = state.doc.textBetween(from, to, '\n');
-						const slice = state.doc.cut(from, to);
-						const html = editor.schema ? editor.getHTML(slice) : editor.getHTML(); // depending on your editor API
+						const html = selectedHtml(state);
 
 						event.clipboardData.setData('text/plain', plain);
 						event.clipboardData.setData('text/html', html);
@@ -1403,7 +1425,7 @@
 	}
 
 	const onValueChange = () => {
-		if (!editor) return;
+		if (!editor || value === null) return;
 
 		if (value !== '' && value === jsonValue) return;
 
@@ -1431,6 +1453,7 @@
 				selectTemplate();
 			}
 		} else {
+			if (typeof value !== 'string') return;
 			if (raw) {
 				if (value !== htmlValue) {
 					editor.commands.setContent(value);

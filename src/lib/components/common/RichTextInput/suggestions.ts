@@ -1,7 +1,7 @@
 import { mount, unmount } from 'svelte';
 import { createClassComponent } from 'svelte/legacy';
 
-import tippy from 'tippy.js';
+import tippy, { type Instance as TippyInstance } from 'tippy.js';
 
 export function getSuggestionRenderer(Component: any, ComponentProps = {}) {
 	return function suggestionRenderer() {

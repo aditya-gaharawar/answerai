@@ -16,7 +16,12 @@ export default defineConfig({
 		APP_BUILD_CHANNEL: JSON.stringify(buildInfo.channel)
 	},
 	build: {
-		sourcemap: true
+		sourcemap: true,
+		rolldownOptions: {
+			treeshake: {
+				manualPureFunctions: process.env.ENV === 'dev' ? [] : ['console.log', 'console.debug']
+			}
+		}
 	},
 	server: {
 		proxy: {
@@ -46,8 +51,5 @@ export default defineConfig({
 	},
 	worker: {
 		format: 'es'
-	},
-	esbuild: {
-		pure: process.env.ENV === 'dev' ? [] : ['console.log', 'console.debug', 'console.error']
 	}
 });

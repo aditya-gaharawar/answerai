@@ -25,7 +25,7 @@
 	export let id: string;
 	export let done = true;
 	export let tokens: Token[];
-	export let sourceIds = [];
+	export let sourceIds: string[] = [];
 	export let onSourceClick: Function = () => {};
 
 	/**

@@ -68,8 +68,10 @@ export const channels = writable<ChannelListItem[]>([]);
 export const channelId = writable(null);
 
 export { chats, pinnedChats } from './chatList';
-export const pinnedNotes = writable([]);
-export const tags = writable([]);
+export const pinnedNotes = writable<
+	(Partial<import('$lib/types/notes').NoteRecord> & { id: string; title: string })[]
+>([]);
+export const tags = writable<import('$lib/utils/tags').Tag[]>([]);
 export const folders = writable([]);
 
 export const selectedFolder = writable(null);
@@ -77,10 +79,10 @@ export const selectedFolder = writable(null);
 export const models: Writable<Model[]> = writable([]);
 
 export const knowledge: Writable<null | Document[]> = writable(null);
-export const tools = writable(null);
+export const tools = writable<import('$lib/types/plugins').ToolSummary[] | null>(null);
 export const skills: Writable<null | any[]> = writable(null);
 export const terminalSkills: Writable<any[]> = writable([]);
-export const functions = writable(null);
+export const functions = writable<import('$lib/types/plugins').FunctionSummary[] | null>(null);
 
 export type WorkspaceSection = 'models' | 'knowledge' | 'prompts' | 'skills' | 'tools';
 export type WorkspaceAction = {
@@ -198,11 +200,21 @@ type BaseModel = {
 	name: string;
 	info?: ModelConfig;
 	owned_by: 'ollama' | 'openai' | 'arena';
+	preset?: boolean;
+	arena?: boolean;
+	direct?: boolean;
+	actions?: {
+		id: string;
+		name: string;
+		description?: string;
+		icon_url?: string;
+		[key: string]: unknown;
+	}[];
+	filters?: { id: string; name: string; description?: string; has_user_valves?: boolean }[];
 };
 
 export interface OpenAIModel extends BaseModel {
 	owned_by: 'openai';
-	external: boolean;
 	source?: string;
 }
 
@@ -248,10 +260,12 @@ export type ServerConnection = {
 	enabled?: boolean;
 	auth_type?: string;
 	path?: string;
+	spec_type?: string;
+	spec?: string | Record<string, unknown>;
 	config?: { enable?: boolean; [key: string]: unknown };
 };
 
-type Settings = {
+export type Settings = {
 	terminalServers?: ServerConnection[];
 	showFormattingToolbar?: boolean;
 	insertPromptAsRichText?: boolean;
@@ -308,7 +322,7 @@ type Settings = {
 	scrollOnResponseGeneration?: boolean;
 	showFilesOnTerminalSelect?: boolean;
 	terminalFileDisplay?: 'sidebar' | 'inline';
-	directConnections?: boolean;
+	directConnections?: import('$lib/types/connections').OpenAIConnections;
 	chatBubble?: boolean;
 	copyFormatted?: boolean;
 	models?: string[];
@@ -375,7 +389,7 @@ type Document = {
 	title: string;
 };
 
-type Config = {
+export type Config = {
 	onboarding?: boolean;
 	user_count?: number;
 	file?: {
@@ -386,6 +400,7 @@ type Config = {
 	};
 	code?: { engine?: string };
 	metadata?: { favicon?: string; [key: string]: unknown };
+	google_drive?: { api_key: string; client_id: string };
 	audio?: {
 		realtime?: { enabled: boolean; model: string; voice: string };
 		stt: { engine: string };
@@ -402,6 +417,23 @@ type Config = {
 	default_prompt_suggestions: PromptSuggestion[] | null;
 	default_prompt_suggestions_i18n?: Record<string, { suggestion_prompts: PromptSuggestion[] }>;
 	features: {
+		enable_password_change_form?: boolean;
+		enable_public_active_users_count?: boolean;
+		enable_easter_eggs?: boolean;
+		enable_folders?: boolean;
+		enable_channels?: boolean;
+		enable_calendar?: boolean;
+		enable_automations?: boolean;
+		enable_notes?: boolean;
+		enable_code_execution?: boolean;
+		enable_code_interpreter?: boolean;
+		enable_message_rating?: boolean;
+		enable_user_webhooks?: boolean;
+		enable_user_status?: boolean;
+		enable_onedrive_personal?: boolean;
+		enable_onedrive_business?: boolean;
+		enable_ldap?: boolean;
+
 		slim?: boolean;
 		auth: boolean;
 		auth_trusted_header: boolean;

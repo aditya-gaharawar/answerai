@@ -7,7 +7,7 @@
 		name?: string;
 		is_global?: boolean;
 		meta?: {
-			description?: string;
+			description?: string | null;
 			toggle?: boolean;
 		};
 	};

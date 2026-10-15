@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { getContext, onMount, tick } from 'svelte';
-	import { models, config } from '$lib/stores';
+	import type { InputVariables, InputVariableValues } from '$lib/utils/inputVariables';
 
 	import { toast } from 'svelte-sonner';
 	import { copyToClipboard } from '$lib/utils';
@@ -13,25 +13,33 @@
 	const i18n = getContext<typeof import('$lib/i18n').default>('i18n');
 
 	export let show = false;
-	export let variables = {};
+	export let variables: InputVariables = {};
 	export let title: string | undefined = undefined;
 
-	export let onSave = (e) => {};
+	export let onSave: (values: InputVariableValues) => void = () => {};
 
 	let loading = true;
-	let variableValues = {};
+	let variableValues: InputVariableValues = Object.create(null);
 	let variablesKey = '';
 
-	const getVariableLabel = (variable) => variables[variable]?.label ?? variable;
-	const getVariablesKey = (value) => JSON.stringify(value ?? {});
+	const getVariableLabel = (variable: string) => variables[variable]?.label ?? variable;
+	const getVariablesKey = (value: InputVariables) => JSON.stringify(value ?? {});
+
+	const getMapLocation = (value: string | number | boolean): [number, number] | null => {
+		const coords = String(value ?? '')
+			.split(',')
+			.map(Number);
+		return coords.length === 2 && coords.every(Number.isFinite) ? [coords[0], coords[1]] : null;
+	};
 
 	const submitHandler = async () => {
 		// Normalize Windows CRLF (\r\n) to LF (\n) for all string values
 		// Build a new object to avoid mutating the reactive variableValues proxy
-		const result = {};
+		const result: InputVariableValues = Object.create(null);
 		for (const key of Object.keys(variableValues)) {
-			if (typeof variableValues[key] === 'string') {
-				result[key] = variableValues[key].replace(/\r\n/g, '\n');
+			const value = variableValues[key];
+			if (typeof value === 'string') {
+				result[key] = value.replace(/\r\n/g, '\n');
 			} else {
 				result[key] = variableValues[key];
 			}
@@ -42,7 +50,7 @@
 
 	const init = async () => {
 		loading = true;
-		const newValues = {};
+		const newValues: InputVariableValues = Object.create(null);
 		const keys = Object.keys(variables ?? {});
 		for (const key of keys) {
 			const variable = variables[key];
@@ -143,7 +151,8 @@
 																type="checkbox"
 																checked={variableValues[variable] === true ||
 																	variableValues[variable] === 'true'}
-																on:change={(e) => (variableValues[variable] = e.target.checked)}
+																on:change={(e) =>
+																	(variableValues[variable] = e.currentTarget.checked)}
 																class="size-3.5 rounded cursor-pointer border border-gray-200 dark:border-gray-700"
 																id="input-variable-{idx}"
 																{...variableAttributes}
@@ -169,11 +178,11 @@
 															<input
 																type="color"
 																class="size-6 rounded cursor-pointer border border-gray-200 dark:border-gray-700"
-																value={variableValues[variable]}
+																value={String(variableValues[variable] ?? '')}
 																id="input-variable-{idx}"
 																on:input={(e) => {
 																	// Convert the color value to uppercase immediately
-																	variableValues[variable] = e.target.value.toUpperCase();
+																	variableValues[variable] = e.currentTarget.value.toUpperCase();
 																}}
 																{...variableAttributes}
 															/>
@@ -322,10 +331,7 @@
 													<!-- EXPERIMENTAL INPUT TYPE, DO NOT USE IN PRODUCTION -->
 													<div class="flex flex-col items-center gap-1">
 														<MapSelector
-															setViewLocation={((variableValues[variable] ?? '').includes(',') ??
-															false)
-																? variableValues[variable].split(',')
-																: null}
+															setViewLocation={getMapLocation(variableValues[variable])}
 															onClick={(value) => {
 																variableValues[variable] = value;
 															}}

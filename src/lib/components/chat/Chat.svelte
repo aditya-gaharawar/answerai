@@ -1,4 +1,14 @@
 <script lang="ts">
+	import type {
+		ContextUsage,
+		ChatTask,
+		PendingOAuthTool,
+		TokenEstimateMessage
+	} from '$lib/types/chat';
+	import type { NoteChatSummary, NoteAttachment } from '$lib/types/notes';
+	import type { ModelParams } from '$lib/apis';
+	import type { SessionUser } from '$lib/stores';
+	import type { ChatHistory, HistoryNode } from '$lib/utils/chatHistory';
 	import { v4 as uuidv4 } from 'uuid';
 	import { toast } from 'svelte-sonner';
 
@@ -13,6 +23,8 @@
 	import type { i18n as i18nType } from 'i18next';
 	import { WEBUI_BASE_URL } from '$lib/constants';
 	import equal from 'fast-deep-equal';
+	import { getChatVariablesForm } from '$lib/utils/chatVariables';
+	import type { InputVariableValues } from '$lib/utils/inputVariables';
 
 	import {
 		chatId,
@@ -144,9 +156,9 @@
 	export let chatIdProp = '';
 	export let embedded = false;
 	export let embeddedTitle = '';
-	export let embeddedChats = [];
+	export let embeddedChats: NoteChatSummary[] = [];
 	export let embeddedDraftKey = '';
-	export let suggestedPrompts = [];
+	export let suggestedPrompts: string[] = [];
 	export let selectedText = '';
 	export let onInsertToNote: ((content: string) => void) | null = null;
 	export let onCloseEmbedded: (() => void) | null = null;
@@ -226,8 +238,8 @@
 	} else {
 		selectedModelIds = selectedModels;
 	}
-	let serverContextUsage = null;
-	let contextUsage = null;
+	let serverContextUsage: ContextUsage | null = null;
+	let contextUsage: ContextUsage | null = null;
 
 	const normalizeSelectedModels = (modelIds: string[] = []) => {
 		const selected = resolveDefaultModelIds(
@@ -256,7 +268,7 @@
 		}
 	}
 
-	const estimateTokens = (value) => {
+	const estimateTokens = (value: unknown) => {
 		if (value === null || value === undefined || value === '') {
 			return 0;
 		}
@@ -267,10 +279,10 @@
 				value = String(value);
 			}
 		}
-		return Math.max(1, Math.floor(value.length / 4));
+		return Math.max(1, Math.floor(String(value ?? '').length / 4));
 	};
 
-	const estimateMessagesTokens = (messages) =>
+	const estimateMessagesTokens = (messages: TokenEstimateMessage[]) =>
 		messages.reduce((total, message) => {
 			let next = total + 4 + estimateTokens(message.content);
 			next += estimateTokens(message.output);
@@ -340,7 +352,10 @@
 			tokens: estimatedTokens,
 			estimated_tokens: estimatedTokens,
 			threshold,
-			percent: threshold > 0 ? Math.max(0, Math.round((estimatedTokens / threshold) * 100)) : null,
+			percent:
+				threshold !== null && threshold > 0
+					? Math.max(0, Math.round((estimatedTokens / threshold) * 100))
+					: null,
 			source: 'estimated'
 		};
 	};
@@ -351,7 +366,7 @@
 	let selectedToolIds: string[] = [];
 	let selectedSkillIds: string[] = [];
 	let selectedFilterIds: string[] = [];
-	let pendingOAuthTools = [];
+	let pendingOAuthTools: PendingOAuthTool[] = [];
 
 	let imageGenerationEnabled = false;
 	let webSearchEnabled = false;
@@ -404,8 +419,8 @@
 
 	let generating = false;
 	let dragged = false;
-	let generationController = null;
-	let contextCompactionToastId = null;
+	let generationController: AbortController | null = null;
+	let contextCompactionToastId: string | number | null = null;
 
 	let chat: any = null;
 	let tags = [];
@@ -441,9 +456,10 @@
 		}
 	};
 
-	let chatOwner = null;
+	let chatOwner:
+		(Pick<SessionUser, 'id' | 'name' | 'profile_image_url'> & Partial<SessionUser>) | null = null;
 
-	const resolveChatOwner = async (userId) => {
+	const resolveChatOwner = async (userId: string) => {
 		if (chatOwner?.id === userId) {
 			return;
 		}
@@ -460,21 +476,21 @@
 		chatOwner = null;
 	}
 
-	let chatTasks = [];
+	let chatTasks: ChatTask[] = [];
 
 	let history: { currentId: string | null; messages: Record<string, any> } = {
 		messages: {},
 		currentId: null
 	};
 
-	let taskIds = null;
+	let taskIds: string[] | null = null;
 
 	// Chat Input
 	let prompt = '';
-	let chatFiles = [];
+	let chatFiles: NoteAttachment[] = [];
 	let files: any[] = [];
-	let params = {};
-	let chatVariables = {};
+	let params: ModelParams = {};
+	let chatVariables: InputVariableValues = {};
 	let showChatVariablesModal = false;
 	let loadedChatIdProp = '';
 	let currentDraftKey = '';
@@ -563,7 +579,7 @@
 		}
 	};
 
-	const parseToolArguments = (args) => {
+	const parseToolArguments = (args: unknown): Record<string, unknown> => {
 		if (!args) {
 			return {};
 		}
@@ -575,10 +591,12 @@
 				break;
 			}
 		}
-		return typeof value === 'object' && value !== null && !Array.isArray(value) ? value : {};
+		return typeof value === 'object' && value !== null && !Array.isArray(value)
+			? (value as Record<string, unknown>)
+			: {};
 	};
 
-	const getPendingAskUserFromMessage = (message) => {
+	const getPendingAskUserFromMessage = (message: HistoryNode | null | undefined) => {
 		if (message?.role !== 'assistant' || !Array.isArray(message.output)) {
 			return null;
 		}
@@ -598,7 +616,7 @@
 		return null;
 	};
 
-	const findPendingAskUser = (chatHistory) => {
+	const findPendingAskUser = (chatHistory: ChatHistory) => {
 		if (!chatHistory?.messages) {
 			return null;
 		}
@@ -613,7 +631,7 @@
 		return null;
 	};
 
-	const messageHasPendingAskUser = (message) => {
+	const messageHasPendingAskUser = (message: HistoryNode | null | undefined) => {
 		return !!getPendingAskUserFromMessage(message);
 	};
 
@@ -694,81 +712,7 @@
 			interaction && resolveBrowserInteraction(interaction, { status: 'cancelled', answers: {} })
 	}))(browserInteraction);
 
-	const mergeChatVariableSchemas = (modelIds = [], availableModels = []) => {
-		const byKey: Record<string, any> = {};
-		const conflicts: any[] = [];
-
-		for (const modelId of modelIds.filter(Boolean)) {
-			const fields =
-				availableModels.find((model) => model.id === modelId)?.info?.meta?.chat_variables_schema
-					?.fields ?? [];
-			for (const rawField of fields) {
-				const field = {
-					...rawField,
-					type: rawField?.type ?? 'text',
-					required: Boolean(rawField?.required)
-				};
-				if (!field?.key) continue;
-				const { required, ...shape } = field;
-
-				const existing = byKey[field.key];
-				if (!existing) {
-					byKey[field.key] = {
-						field,
-						modelIds: [modelId],
-						shape
-					};
-					continue;
-				}
-
-				if (!equal(existing.shape, shape)) {
-					conflicts.push({
-						key: field.key,
-						modelIds: [...existing.modelIds, modelId]
-					});
-					continue;
-				}
-
-				existing.field = {
-					...existing.field,
-					required: existing.field.required || field.required
-				};
-				existing.modelIds.push(modelId);
-			}
-		}
-
-		return {
-			fields: Object.values(byKey).map((item: any) => item.field),
-			conflicts
-		};
-	};
-
-	const hasValue = (value) => value !== undefined && value !== null && value !== '';
-
-	const getChatVariablesForm = (modelIds = [], values = {}, availableModels = []) => {
-		const { fields, conflicts } = mergeChatVariableSchemas(modelIds, availableModels);
-		const empty =
-			fields.length > 0 &&
-			fields.every((field) => !hasValue(values?.[field.key]) && !hasValue(field.default));
-		const missing = fields.some(
-			(field) => field.required && !hasValue(values?.[field.key]) && !hasValue(field.default)
-		);
-		const variables = fields.reduce(
-			(acc, field) => {
-				const { key, ...inputField } = field;
-				acc[key] = {
-					...inputField,
-					default: hasValue(values?.[key]) ? values[key] : inputField.default
-				};
-				return acc;
-			},
-			{} as Record<string, any>
-		);
-
-		return { conflicts, empty, missing, variables };
-	};
-
-	const saveChatVariables = async (values) => {
+	const saveChatVariables = async (values: InputVariableValues) => {
 		chatVariables = { ...chatVariables, ...values };
 		if (isShared) return;
 
@@ -1966,15 +1910,6 @@
 	// File upload functions
 
 	const uploadGoogleDriveFile = async (fileData) => {
-		console.log('Starting uploadGoogleDriveFile with:', {
-			id: fileData.id,
-			name: fileData.name,
-			url: fileData.url,
-			headers: {
-				Authorization: `Bearer ${token}`
-			}
-		});
-
 		// Validate input
 		if (!fileData?.id || !fileData?.name || !fileData?.url || !fileData?.headers?.Authorization) {
 			throw new Error('Invalid file data provided');

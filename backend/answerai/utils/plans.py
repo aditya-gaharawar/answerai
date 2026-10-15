@@ -237,6 +237,20 @@ async def reserve_generation(request, user, payload):
         request.state.billing_reserved = True
 
 
+async def reserve_audio(request, user, *, charge_request=True):
+    """Share the audio budget with internal upload processing without double charging HTTP routes."""
+    name, plan, config = await entitlement(user)
+    if name == 'blocked':
+        raise denied('audio')
+    if not config.enabled or name == 'admin' or getattr(request.state, 'billing_audio_reserved', False):
+        return
+    charges = [('audio', 86400, plan.audio_requests_per_day, 1)]
+    if charge_request:
+        charges.insert(0, ('requests', 60, plan.requests_per_minute, 1))
+    await reserve(user.id, charges)
+    request.state.billing_audio_reserved = True
+
+
 async def enforce_http(request, user):  # noqa: C901 - provider/route dispatch
     """Cover direct generation routes and feature APIs, including API-key callers."""
     path = request.url.path.rstrip('/')
@@ -277,14 +291,8 @@ async def enforce_http(request, user):  # noqa: C901 - provider/route dispatch
                 if config.enabled and user.role != 'admin':
                     raise denied('provider passthrough')
         if path in {'/openai/audio/speech', '/api/v1/audio/speech', '/api/v1/audio/transcriptions'}:
-            name, plan, config = await entitlement(user)
-            if name == 'blocked':
-                raise denied('audio')
-            if config.enabled and name != 'admin':
-                await reserve(
-                    user.id,
-                    [('requests', 60, plan.requests_per_minute, 1), ('audio', 86400, plan.audio_requests_per_day, 1)],
-                )
+            await reserve_audio(request, user)
+
         generation = path in {
             '/api/chat/completions',
             '/api/v1/chat/completions',

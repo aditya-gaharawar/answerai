@@ -1729,6 +1729,7 @@ async def get_sources_from_items(
 
 def get_model_path(model: str, update_model: bool = False):
     from huggingface_hub import snapshot_download
+    from answerai.utils.model_safety import validate_model_snapshot
 
     # Construct huggingface_hub kwargs with local_files_only to return the snapshot path
     cache_dir = os.getenv('SENTENCE_TRANSFORMERS_HOME')
@@ -1749,6 +1750,7 @@ def get_model_path(model: str, update_model: bool = False):
     # Inspiration from upstream sentence_transformers
     if os.path.exists(model) or ('\\' in model or model.count('/') > 1) and local_files_only:
         # If fully qualified path exists, return input, else set repo_id
+        validate_model_snapshot(model)
         return model
     elif '/' not in model:
         # Set valid repo_id for model short-name
@@ -1760,12 +1762,13 @@ def get_model_path(model: str, update_model: bool = False):
     try:
         model_repo_path = snapshot_download(**snapshot_kwargs)
         log.debug('model_repo_path: %s', model_repo_path)
-        return model_repo_path
     except Exception as e:
         log.exception(f'Cannot determine model snapshot path: {e}')
-        if OFFLINE_MODE:
-            raise
-        return model
+        # Never hand an unchecked remote identifier to another downloader.
+        raise RuntimeError('Unable to prepare a local model snapshot') from e
+
+    validate_model_snapshot(model_repo_path)
+    return model_repo_path
 
 
 import operator

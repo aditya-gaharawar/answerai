@@ -53,7 +53,9 @@
 	export let allowEmbeds = false;
 	export let allowHtml = true;
 
-	export let sourceIds = [];
+	/** @type {string[]} */
+	export /** @type {string[]} */
+	let sourceIds = [];
 
 	export let onSave = () => {};
 	export let onUpdate = () => {};

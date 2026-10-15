@@ -1,4 +1,7 @@
 import { get } from 'svelte/store';
+import type { Model, ServerConnection } from '$lib/stores';
+import type { OpenAIConnections } from '$lib/types/connections';
+import { normalizeDirectModels } from '$lib/utils/directModels';
 import { config } from '$lib/stores';
 import { WEBUI_BASE_URL } from '$lib/constants';
 import { convertOpenApiToToolPayload, resolveSchema } from '$lib/utils';
@@ -24,7 +27,7 @@ const OPENAPI_HTTP_METHODS = new Set([
 // the one for whom it was intended, and return answered.
 export const getModels = async (
 	token: string = '',
-	connections: object | null = null,
+	connections: OpenAIConnections | null = null,
 	base: boolean = false,
 	refresh: boolean = false
 ) => {
@@ -59,10 +62,10 @@ export const getModels = async (
 		throw error;
 	}
 
-	let models = res?.data ?? [];
+	let models: Model[] = res?.data ?? [];
 
 	if (connections && !base) {
-		let localModels = [];
+		let localModels: Model[] = [];
 
 		if (connections) {
 			const OPENAI_API_BASE_URLS = connections.OPENAI_API_BASE_URLS;
@@ -73,58 +76,56 @@ export const getModels = async (
 			for (const idx in OPENAI_API_BASE_URLS) {
 				const url = OPENAI_API_BASE_URLS[idx];
 
-				if (idx.toString() in OPENAI_API_CONFIGS) {
-					const apiConfig = OPENAI_API_CONFIGS[idx.toString()] ?? {};
+				const apiConfig = OPENAI_API_CONFIGS[idx.toString()] ?? {};
 
-					const enable = apiConfig?.enable ?? true;
-					const modelIds = apiConfig?.model_ids ?? [];
+				const enable = apiConfig?.enable ?? true;
+				const modelIds = apiConfig?.model_ids ?? [];
 
-					if (enable) {
-						if (modelIds.length > 0) {
-							const modelList = {
-								object: 'list',
-								data: modelIds.map((modelId) => ({
-									id: modelId,
-									name: modelId,
-									owned_by: 'openai',
-									openai: { id: modelId },
-									urlIdx: idx
-								}))
-							};
+				if (enable) {
+					if (modelIds.length > 0) {
+						const modelList = {
+							object: 'list',
+							data: modelIds.map((modelId) => ({
+								id: modelId,
+								name: modelId,
+								owned_by: 'openai',
+								openai: { id: modelId },
+								urlIdx: idx
+							}))
+						};
 
-							requests.push(
-								(async () => {
-									return modelList;
-								})()
-							);
-						} else {
-							requests.push(
-								(async () => {
-									return await getOpenAIModelsDirect(url, OPENAI_API_KEYS[idx])
-										.then((res) => {
-											return res;
-										})
-										.catch((err) => {
-											return {
-												object: 'list',
-												data: [],
-												urlIdx: idx
-											};
-										});
-								})()
-							);
-						}
+						requests.push(
+							(async () => {
+								return modelList;
+							})()
+						);
 					} else {
 						requests.push(
 							(async () => {
-								return {
-									object: 'list',
-									data: [],
-									urlIdx: idx
-								};
+								return await getOpenAIModelsDirect(url, OPENAI_API_KEYS[idx])
+									.then((res) => {
+										return res;
+									})
+									.catch((err) => {
+										return {
+											object: 'list',
+											data: [],
+											urlIdx: idx
+										};
+									});
 							})()
 						);
 					}
+				} else {
+					requests.push(
+						(async () => {
+							return {
+								object: 'list',
+								data: [],
+								urlIdx: idx
+							};
+						})()
+					);
 				}
 			}
 
@@ -134,23 +135,7 @@ export const getModels = async (
 				const response = responses[idx];
 				const apiConfig = OPENAI_API_CONFIGS[idx.toString()] ?? {};
 
-				let models = Array.isArray(response) ? response : (response?.data ?? []);
-				models = models.map((model) => ({ ...model, openai: { id: model.id }, urlIdx: idx }));
-
-				const prefixId = apiConfig.prefix_id;
-				if (prefixId) {
-					for (const model of models) {
-						model.id = `${prefixId}.${model.id}`;
-					}
-				}
-
-				const tags = normalizeTags(apiConfig.tags);
-				if (tags.length > 0) {
-					for (const model of models) {
-						model.tags = tags;
-					}
-				}
-
+				const models = normalizeDirectModels(response, apiConfig, idx);
 				localModels = localModels.concat(models);
 			}
 		}
@@ -164,7 +149,7 @@ export const getModels = async (
 		);
 
 		// Remove duplicates
-		const modelsMap = {};
+		const modelsMap: Record<string, Model> = Object.create(null);
 		for (const model of models) {
 			const existing = modelsMap[model.id];
 			modelsMap[model.id] = existing
@@ -437,7 +422,7 @@ export const getToolServerData = async (token: string, url: string) => {
 	return res;
 };
 
-export const getToolServersData = async (servers: object[]) => {
+export const getToolServersData = async (servers: ServerConnection[]) => {
 	if (!get(config)?.features?.enable_tool_servers) return [];
 	return (
 		await Promise.all(
@@ -1472,7 +1457,7 @@ export const getUsage = async (token: string = '') => {
 };
 
 export const getBackendConfig = async () => {
-	let error = null;
+	let error: unknown = null;
 
 	const res = await fetch(`${WEBUI_BASE_URL}/api/config`, {
 		method: 'GET',
@@ -1772,28 +1757,54 @@ export const deleteEventWebhook = async (token: string, id: string) => {
 	return res;
 };
 
+export interface AccessGrant {
+	id?: string;
+	principal_type: 'user' | 'group' | 'anyone';
+	principal_id: string;
+	permission: 'read' | 'write';
+}
+export interface ModelKnowledgeReference {
+	id?: string;
+	name?: string;
+	type?: string;
+	collection_name?: string;
+	status?: string;
+	[key: string]: unknown;
+}
 export interface ModelConfig {
 	id: string;
 	name: string;
 	meta: ModelMeta;
-	base_model_id?: string;
+	base_model_id?: string | null;
+	access_grants?: AccessGrant[];
+	user_id?: string;
+	is_active?: boolean;
+	write_access?: boolean;
+	version_id?: string | null;
 	params: ModelParams;
 }
 
 export interface ModelMeta {
 	voice_avatar?: import('$lib/utils/voice-avatar').VoiceAvatarConfig | null;
 	voice?: { voice?: string };
-	toolIds: string[];
+	toolIds?: string[];
+	filterIds?: string[];
+	actionIds?: string[];
+	builtinTools?: Record<string, boolean>;
+	knowledge?: ModelKnowledgeReference[];
+	tts?: { voice?: string };
+	chat_variables_schema?: import('$lib/types/chat').ChatVariableSchema;
+	suggestion_prompts?: { content: string; title?: string[] }[] | null;
 	skillIds?: string[];
 	defaultFeatureIds?: string[];
 	defaultFilterIds?: string[];
 	terminalId?: string;
 	tags?: { name: string }[];
 	user?: { id: string; name: string; email?: string; profile_image_url?: string };
-	description?: string;
+	description?: string | null;
 	i18n?: Record<string, Record<string, any>>;
 	hidden?: boolean;
-	capabilities?: Record<string, boolean>;
+	capabilities?: Record<string, boolean | undefined>;
 	profile_image_url?: string;
 	background_image_url?: string | null;
 }
@@ -1807,6 +1818,9 @@ export interface ModelControl {
 }
 
 export interface ModelParams {
+	system?: string | null;
+	stop?: string[] | string | null;
+	[key: string]: unknown;
 	compact_token_threshold?: number;
 	model_controls?: Record<string, ModelControl>;
 }

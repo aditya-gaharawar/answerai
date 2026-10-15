@@ -33,6 +33,7 @@ const validateCredentials = () => {
 
 let pickerApiLoaded = false;
 let oauthToken: string | null = null;
+let oauthTokenExpiresAt = 0;
 let initialized = false;
 
 export const loadGoogleDriveApi = () => {
@@ -59,7 +60,7 @@ export const loadGoogleDriveApi = () => {
 
 export const loadGoogleAuthApi = () => {
 	return new Promise((resolve, reject) => {
-		if (typeof google === 'undefined') {
+		if (typeof google === 'undefined' || !google.accounts?.oauth2) {
 			const script = document.createElement('script');
 			script.src = 'https://accounts.google.com/gsi/client';
 			script.onload = resolve;
@@ -71,21 +72,24 @@ export const loadGoogleAuthApi = () => {
 	});
 };
 
-export const getAuthToken = async () => {
-	if (!oauthToken) {
-		return new Promise((resolve, reject) => {
+export const getAuthToken = async (): Promise<string> => {
+	if (!oauthToken || Date.now() >= oauthTokenExpiresAt) {
+		return new Promise<string>((resolve, reject) => {
 			const tokenClient = google.accounts.oauth2.initTokenClient({
 				client_id: CLIENT_ID,
 				scope: SCOPE.join(' '),
-				callback: (response: any) => {
+				callback: (response) => {
 					if (response.access_token) {
 						oauthToken = response.access_token;
+						const lifetime = Number(response.expires_in);
+						oauthTokenExpiresAt =
+							Date.now() + (Number.isFinite(lifetime) ? Math.max(0, lifetime - 60) : 0) * 1000;
 						resolve(oauthToken);
 					} else {
 						reject(new Error('Failed to get access token'));
 					}
 				},
-				error_callback: (error: any) => {
+				error_callback: (error) => {
 					reject(new Error(error.message || 'OAuth error occurred'));
 				}
 			});

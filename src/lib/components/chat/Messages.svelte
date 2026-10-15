@@ -1,4 +1,8 @@
 <script lang="ts">
+	import type { Model } from '$lib/stores';
+	import type { ChatHistory, HistoryNode } from '$lib/utils/chatHistory';
+	import type { NoteAttachment } from '$lib/types/notes';
+	import type { OutputItem } from './Messages/structuredOutput';
 	import { v4 as uuidv4 } from 'uuid';
 	import { config, settings, user as _user, mobile, temporaryChatEnabled } from '$lib/stores';
 	import { refreshChatList } from '$lib/stores/chatList';
@@ -23,12 +27,12 @@
 	export let chatId = '';
 	export let user = $_user;
 
-	export let prompt;
-	export let history = {};
-	export let selectedModels;
-	export let atSelectedModel;
+	export let prompt = '';
+	export let history: ChatHistory = { messages: {}, currentId: null };
+	export let selectedModels: string[] = [];
+	export let atSelectedModel: Model | undefined = undefined;
 
-	let messages = [];
+	let messages: HistoryNode[] = [];
 
 	export let setInputText: Function = () => {};
 
@@ -52,10 +56,10 @@
 
 	export let topPadding = false;
 	export let bottomPadding = false;
-	export let autoScroll;
+	export let autoScroll = false;
 	export let messagesContainerId = 'messages-container';
 
-	export let onSelect = (e) => {};
+	export let onSelect: (prompt: string) => void = () => {};
 	export let onInsertToNote: ((content: string) => void) | null = null;
 
 	export let messagesCount: number | null = 8;
@@ -64,10 +68,11 @@
 	const getMessagesContainer = () => document.getElementById(messagesContainerId);
 
 	onDestroy(() => {
-		cancelAnimationFrame(pendingRebuild);
+		if (pendingRebuild !== null) cancelAnimationFrame(pendingRebuild);
 	});
 
 	const loadMoreMessages = async () => {
+		if (messagesCount === null) return;
 		const element = getMessagesContainer();
 		const previousScrollHeight = element?.scrollHeight ?? 0;
 
@@ -85,13 +90,15 @@
 		messagesLoading = false;
 	};
 
-	let pendingRebuild = null;
-	let lastCurrentId = null;
+	let pendingRebuild: number | null = null;
+	let lastCurrentId: string | null = null;
 
 	const buildMessages = () => {
-		let _messages = [];
+		let _messages: HistoryNode[] = [];
 
-		let message = history.messages[history.currentId];
+		let message: HistoryNode | null | undefined = history.currentId
+			? history.messages[history.currentId]
+			: undefined;
 		const visitedMessageIds = new Set();
 
 		while (message && (messagesCount !== null ? _messages.length < messagesCount : true)) {
@@ -110,7 +117,10 @@
 
 	// Throttle message list rebuilds to once per animation frame during streaming.
 	// Structural changes (currentId change) always rebuild immediately.
-	const handleHistoryChange = (currentId, _messages) => {
+	const handleHistoryChange = (
+		currentId: string | null,
+		_messages: Record<string, HistoryNode>
+	) => {
 		if (!currentId) {
 			messages = [];
 			return;
@@ -121,7 +131,7 @@
 
 		if (currentIdChanged) {
 			// Structural change: new chat, navigation, new message — rebuild immediately
-			cancelAnimationFrame(pendingRebuild);
+			if (pendingRebuild !== null) cancelAnimationFrame(pendingRebuild);
 			pendingRebuild = null;
 			buildMessages();
 		} else if (_messages) {
@@ -201,7 +211,7 @@
 		}
 	};
 
-	const gotoMessage = async (message, idx) => {
+	const gotoMessage = async (message: HistoryNode, idx: number) => {
 		// Determine the correct sibling list (either parent's children or root messages)
 		let siblings;
 		if (message.parentId !== null) {
@@ -237,7 +247,7 @@
 		}
 	};
 
-	const showPreviousMessage = async (message) => {
+	const showPreviousMessage = async (message: HistoryNode) => {
 		if (message.parentId !== null) {
 			let messageId =
 				history.messages[message.parentId].childrenIds[
@@ -272,7 +282,7 @@
 		}
 	};
 
-	const showNextMessage = async (message) => {
+	const showNextMessage = async (message: HistoryNode) => {
 		if (message.parentId !== null) {
 			let messageId =
 				history.messages[message.parentId].childrenIds[
@@ -311,7 +321,7 @@
 		}
 	};
 
-	const rateMessage = async (messageId, rating) => {
+	const rateMessage = async (messageId: string, rating: number) => {
 		history.messages[messageId].annotation = {
 			...history.messages[messageId].annotation,
 			rating: rating
@@ -320,7 +330,15 @@
 		await updateChat();
 	};
 
-	const editMessage = async (messageId, { content, files, output = undefined }, submit = true) => {
+	const editMessage = async (
+		messageId: string,
+		{
+			content,
+			files,
+			output = undefined
+		}: { content: string; files?: NoteAttachment[]; output?: OutputItem[] },
+		submit = true
+	) => {
 		if ((selectedModels ?? []).filter((id) => id).length === 0) {
 			toast.error($i18n.t('Model not selected'));
 			return;
@@ -411,11 +429,11 @@
 		}
 	};
 
-	const actionMessage = async (actionId, message, event = null) => {
+	const actionMessage = async (actionId: string, message: HistoryNode, event: unknown = null) => {
 		await chatActionHandler(chatId, actionId, message.model, message.id, event);
 	};
 
-	const saveMessage = async (messageId, message) => {
+	const saveMessage = async (messageId: string, message: HistoryNode) => {
 		if (!history.messages?.[messageId]) {
 			return;
 		}
@@ -424,7 +442,7 @@
 		await updateChat();
 	};
 
-	const deleteMessage = async (messageId) => {
+	const deleteMessage = async (messageId: string) => {
 		const messageToDelete = history.messages[messageId];
 		const parentMessageId = messageToDelete.parentId;
 		const childMessageIds = messageToDelete.childrenIds ?? [];

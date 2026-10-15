@@ -12,25 +12,24 @@
 		'w-full rounded-lg px-3.5 py-2 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden  h-full';
 	export let ariaLabel: string | null = null;
 
-	export let onInput: (event: Event) => void = () => {};
+	export let onInput: (event: Event & { currentTarget: HTMLTextAreaElement }) => void = () => {};
 	export let onBlur: (event: FocusEvent) => void = () => {};
 
 	let textareaElement: HTMLTextAreaElement | null = null;
 
 	// Adjust height on mount and after setting the element.
-	onMount(async () => {
-		await tick();
-		resize();
-
-		requestAnimationFrame(() => {
-			// setInterveal to cehck until textareaElement is set
-			const interval = setInterval(() => {
-				if (textareaElement) {
-					clearInterval(interval);
-					resize();
-				}
-			}, 100);
+	onMount(() => {
+		let destroyed = false;
+		let frame: number | null = null;
+		void tick().then(() => {
+			if (destroyed) return;
+			resize();
+			frame = requestAnimationFrame(resize);
 		});
+		return () => {
+			destroyed = true;
+			if (frame !== null) cancelAnimationFrame(frame);
+		};
 	});
 
 	const resize = () => {

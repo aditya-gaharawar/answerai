@@ -9,7 +9,7 @@
 
 	const i18n: any = getContext('i18n');
 
-	const getSrcUrl = (url: string, chatId?: string, messageId?: string, sourceId: string) => {
+	const getSrcUrl = (url: string, chatId?: string, messageId?: string, sourceId?: string) => {
 		try {
 			const parsed = new URL(url);
 
@@ -29,7 +29,7 @@
 		} catch {
 			// Fallback for relative URLs or invalid input
 			const hasQuery = url.includes('?');
-			const parts = [];
+			const parts: string[] = [];
 
 			if (chatId) parts.push(`chat_id=${encodeURIComponent(chatId)}`);
 			if (messageId) parts.push(`message_id=${encodeURIComponent(messageId)}`);

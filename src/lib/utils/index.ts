@@ -1,6 +1,6 @@
 import type { Writable } from 'svelte/store';
 import { v4 as uuidv4 } from 'uuid';
-import sha256 from 'js-sha256';
+import { sha256 } from 'js-sha256';
 import { parse as parseYaml } from 'yaml';
 import DOMPurify, { type UponSanitizeAttributeHookEvent } from 'dompurify';
 import { WEBUI_BASE_URL } from '$lib/constants';
@@ -208,114 +208,12 @@ export const splitStream = (splitOn) => {
 	});
 };
 
-export const convertMessagesToHistory = (messages) => {
-	const history = {
-		messages: {},
-		currentId: null
-	};
-
-	let parentMessageId = null;
-	let messageId = null;
-
-	for (const message of messages) {
-		messageId = message?.id ?? uuidv4();
-		const parentId = message?.parentId ?? parentMessageId;
-
-		history.messages[messageId] = {
-			...message,
-			id: messageId,
-			parentId,
-			childrenIds: []
-		};
-
-		parentMessageId = messageId;
-	}
-
-	for (const message of Object.values(history.messages)) {
-		if (message.parentId && history.messages[message.parentId]) {
-			history.messages[message.parentId].childrenIds = [
-				...history.messages[message.parentId].childrenIds,
-				message.id
-			];
-		}
-	}
-
-	history.currentId = messageId;
-	return history;
-};
-
-// Repair structurally-malformed history nodes from failed regenerations.
-// A lost assistant placeholder may exist under its map key with only
-// completion fields (content/done/error), missing id/role/parentId.
-// Reconstruct graph fields so already-corrupted chats recover on open.
-export const sanitizeHistory = (history) => {
-	if (!history?.messages || typeof history.messages !== 'object') return;
-
-	// Purge entries that aren't usable objects
-	for (const [id, message] of Object.entries(history.messages)) {
-		if (!message || typeof message !== 'object') {
-			delete history.messages[id];
-		}
-	}
-
-	// Ensure every surviving node has its canonical id and a childrenIds array
-	for (const [id, message] of Object.entries(history.messages)) {
-		if (message.id !== id) message.id = id;
-		if (!Array.isArray(message.childrenIds)) message.childrenIds = [];
-	}
-
-	// Build reverse lookup: parent, indexed by child id
-	const parentByChildId = {};
-	for (const [id, message] of Object.entries(history.messages)) {
-		for (const childId of message.childrenIds) {
-			parentByChildId[childId] = id;
-		}
-	}
-
-	// Recover currentId before role reconstruction can make a malformed node
-	// look valid.
-	const currentMessage = history.messages?.[history.currentId];
-	if (!currentMessage?.id || !currentMessage?.role) {
-		let latestLeafId = null;
-		let latestTimestamp = -1;
-
-		for (const [id, message] of Object.entries(history.messages)) {
-			if (message.childrenIds.length === 0 && (message.timestamp ?? 0) > latestTimestamp) {
-				latestLeafId = id;
-				latestTimestamp = message.timestamp ?? 0;
-			}
-		}
-
-		history.currentId = latestLeafId ?? Object.keys(history.messages)[0] ?? null;
-	}
-
-	// Reconstruct missing parentId and role
-	for (const [id, message] of Object.entries(history.messages)) {
-		// Well-formed: has role and explicit parentId (null is valid for root)
-		if (message.role && message.parentId !== undefined) continue;
-
-		if (message.parentId === undefined) {
-			message.parentId = parentByChildId[id] ?? null;
-		}
-
-		if (!message.role) {
-			const parent = message.parentId ? history.messages[message.parentId] : null;
-			message.role =
-				parent?.role === 'user'
-					? 'assistant'
-					: parent?.role === 'assistant'
-						? 'user'
-						: message.model || message.usage || message.done !== undefined
-							? 'assistant'
-							: 'user';
-		}
-	}
-
-	// Prune childrenIds referencing deleted/missing nodes
-	for (const message of Object.values(history.messages)) {
-		message.childrenIds = message.childrenIds.filter((childId) => history.messages[childId]);
-	}
-};
+export {
+	convertMessagesToHistory,
+	sanitizeHistory,
+	createMessagesList,
+	getDeepestChildId
+} from './chatHistory';
 
 export const getGravatarURL = (email) => {
 	// Trim leading and trailing whitespace from
@@ -395,7 +293,7 @@ async function resizeImageToDataURL(
 		/android|iphone|ipad|ipod/i.test(navigator?.userAgent)
 	) {
 		resizeImageWarmupDone = true;
-		return new Promise((resolve) => {
+		return new Promise<string>((resolve) => {
 			canvas.toBlob((blob) => {
 				if (!blob) {
 					resolve(toDataURL());
@@ -411,8 +309,12 @@ async function resizeImageToDataURL(
 	return Promise.resolve(toDataURL());
 }
 
-export const compressImage = async (imageUrl, maxWidth, maxHeight) => {
-	return new Promise((resolve, reject) => {
+export const compressImage = async (
+	imageUrl: string,
+	maxWidth: number | null,
+	maxHeight: number | null
+): Promise<string> => {
+	return new Promise<string>((resolve, reject) => {
 		const img = new Image();
 		img.onload = async () => {
 			let width = img.width;
@@ -538,7 +440,11 @@ export const formatMessageTimestampFull = (inputDate, locale: string) =>
 		minute: '2-digit'
 	}) ?? '';
 
-export const copyToClipboard = async (text, html = null, formatted = false) => {
+export const copyToClipboard = async (
+	text: string,
+	html: string | null = null,
+	formatted = false
+) => {
 	if (formatted) {
 		let styledHtml = '';
 		if (!html) {
@@ -1439,45 +1345,6 @@ export const getWeekday = () => {
 	return weekdays[date.getDay()];
 };
 
-export const createMessagesList = (history, messageId) => {
-	const list = [];
-	let currentId = messageId;
-
-	while (currentId !== null && currentId !== undefined) {
-		const message = history.messages[currentId];
-		if (message === undefined) {
-			break;
-		}
-		list.push(message);
-		currentId = message.parentId;
-	}
-
-	return list.reverse();
-};
-
-export const getDeepestChildId = (history, messageId) => {
-	let deepestId = messageId;
-	const visitedMessageIds = new Set([deepestId]);
-	let childrenIds =
-		deepestId === null
-			? Object.keys(history.messages).filter((id) => history.messages[id].parentId === null)
-			: (history.messages[deepestId]?.childrenIds ?? []);
-
-	while (childrenIds.length !== 0) {
-		const childId = childrenIds.at(-1);
-		if (visitedMessageIds.has(childId)) {
-			console.warn('Circular dependency detected in message history', childId);
-			break;
-		}
-
-		visitedMessageIds.add(childId);
-		deepestId = childId;
-		childrenIds = history.messages[deepestId]?.childrenIds ?? [];
-	}
-
-	return deepestId;
-};
-
 const toTokenCount = (value: unknown) => {
 	const parsed = Number(value || 0);
 	return Number.isFinite(parsed) ? Math.trunc(parsed) : 0;
@@ -1745,138 +1612,12 @@ export const nameToId = (name: string): string => {
 		.toLowerCase();
 };
 
-export const extractInputVariables = (text: string): Record<string, any> => {
-	const regex = /{{\s*([^|}\s]+)\s*\|\s*([^}]+)\s*}}/g;
-	const regularRegex = /{{\s*([^|}\s]+)\s*}}/g;
-	const variables: Record<string, any> = {};
-	let match;
-	// Use exec() loop instead of matchAll() for better compatibility
-	while ((match = regex.exec(text)) !== null) {
-		const varName = match[1].trim();
-		const definition = match[2].trim();
-		variables[varName] = parseVariableDefinition(definition);
-	}
-	// Then, extract regular variables (without pipe) - only if not already processed
-	while ((match = regularRegex.exec(text)) !== null) {
-		const varName = match[1].trim();
-		// Only add if not already processed as custom variable
-		if (!variables.hasOwnProperty(varName)) {
-			variables[varName] = { type: 'text' }; // Default type for regular variables
-		}
-	}
-	return variables;
-};
-
-export const splitProperties = (str: string, delimiter: string): string[] => {
-	const result: string[] = [];
-	let current = '';
-	let depth = 0;
-	let inString = false;
-	let escapeNext = false;
-
-	for (let i = 0; i < str.length; i++) {
-		const char = str[i];
-
-		if (escapeNext) {
-			current += char;
-			escapeNext = false;
-			continue;
-		}
-
-		if (char === '\\') {
-			current += char;
-			escapeNext = true;
-			continue;
-		}
-
-		if (char === '"' && !escapeNext) {
-			inString = !inString;
-			current += char;
-			continue;
-		}
-
-		if (!inString) {
-			if (char === '{' || char === '[') {
-				depth++;
-			} else if (char === '}' || char === ']') {
-				depth--;
-			}
-
-			if (char === delimiter && depth === 0) {
-				result.push(current.trim());
-				current = '';
-				continue;
-			}
-		}
-
-		current += char;
-	}
-
-	if (current.trim()) {
-		result.push(current.trim());
-	}
-
-	return result;
-};
-
-export const parseVariableDefinition = (definition: string): Record<string, any> => {
-	// Use splitProperties for the main colon delimiter to handle quoted strings
-	const parts = splitProperties(definition, ':');
-	const [firstPart, ...propertyParts] = parts;
-
-	// Parse type (explicit or implied)
-	const type = firstPart.startsWith('type=') ? firstPart.slice(5) : firstPart;
-
-	// Parse properties; support both key=value and bare flags (e.g., ":required")
-	const properties = propertyParts.reduce(
-		(props, part) => {
-			const trimmed = part.trim();
-			if (!trimmed) return props;
-
-			// Use splitProperties for the equals sign as well, in case there are nested quotes
-			const equalsParts = splitProperties(trimmed, '=');
-
-			if (equalsParts.length === 1) {
-				// It's a flag with no value, e.g. "required" -> true
-				const flagName = equalsParts[0].trim();
-				if (flagName.length > 0) {
-					return { ...props, [flagName]: true };
-				}
-				return props;
-			}
-
-			const [propertyName, ...valueParts] = equalsParts;
-			const propertyValueRaw = valueParts.join('='); // Handle values with extra '='
-
-			if (!propertyName || propertyValueRaw == null) return props;
-
-			return {
-				...props,
-				[propertyName.trim()]: parseJsonValue(propertyValueRaw.trim())
-			};
-		},
-		{} as Record<string, any>
-	);
-
-	return { type, ...properties };
-};
-export const parseJsonValue = (value: string): any => {
-	// Remove surrounding quotes if present (for string values)
-	if (value.startsWith('"') && value.endsWith('"')) {
-		return value.slice(1, -1);
-	}
-
-	// Check if it starts with square or curly brackets (JSON)
-	if (/^[\[{]/.test(value)) {
-		try {
-			return JSON.parse(value);
-		} catch {
-			return value; // Return as string if JSON parsing fails
-		}
-	}
-
-	return value;
-};
+export {
+	extractInputVariables,
+	splitProperties,
+	parseVariableDefinition,
+	parseJsonValue
+} from './inputVariables';
 
 type ReadableStreamWithAsyncIterator<T> = ReadableStream<T> & {
 	[Symbol.asyncIterator]?: () => AsyncIterableIterator<T>;

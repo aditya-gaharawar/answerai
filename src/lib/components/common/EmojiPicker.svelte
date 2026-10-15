@@ -185,7 +185,7 @@
 					</div>
 				{:else}
 					<div class="w-full flex ml-0.5">
-						<VirtualList rowHeight={ROW_HEIGHT} items={emojiRows} height={384} let:item>
+						<VirtualList itemHeight={ROW_HEIGHT} items={emojiRows} height="384px" let:item>
 							<div class="w-full mb-2.5">
 								{#if item.length === 1 && item[0].type === 'group'}
 									<!-- Render group header -->

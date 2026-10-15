@@ -28,7 +28,16 @@
 		"@tailwindcss/container-queries": "^0.1.1",
 		"@tailwindcss/postcss": "^4.0.0",
 		"@tailwindcss/typography": "^0.5.13",
+		"@types/file-saver": "^2.0.7",
+		"@types/gapi": "^0.0.47",
+		"@types/gapi.client.drive-v3": "^0.0.5",
+		"@types/google.accounts": "^0.0.18",
+		"@types/google.picker": "^0.0.52",
+		"@types/leaflet": "^1.9.22",
+		"@types/sortablejs": "^1.15.9",
+		"@types/sql.js": "^1.4.11",
 		"@types/three": "0.186.0",
+		"@types/turndown": "^5.0.6",
 		"@typescript-eslint/eslint-plugin": "^8.31.1",
 		"@typescript-eslint/parser": "^8.31.1",
 		"cypress": "^16.1.1",
@@ -36,6 +45,7 @@
 		"eslint-config-prettier": "^9.1.0",
 		"eslint-plugin-cypress": "^3.4.0",
 		"eslint-plugin-svelte": "^2.45.1",
+		"happy-dom": "^21.0.1",
 		"i18next-parser": "^9.0.1",
 		"postcss": "^8.4.31",
 		"prettier": "^3.3.3",
@@ -142,6 +152,7 @@
 		"shiki": "^4.0.1",
 		"socket.io-client": "^4.8.3",
 		"sortablejs": "^1.15.6",
+		"sprintf-js": "file:vendor/sprintf-js",
 		"sql.js": "^1.14.1",
 		"svelte-sonner": "^0.3.19",
 		"three": "0.186.1",
@@ -165,6 +176,7 @@
 	"overrides": {
 		"cookie": "^0.7.2",
 		"postcss-selector-parser": "^7.1.6",
-		"sharp": "^0.35.5"
+		"sharp": "^0.35.5",
+		"sprintf-js": "$sprintf-js"
 	}
 }

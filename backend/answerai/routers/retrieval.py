@@ -158,6 +158,7 @@ def get_ef(
             ef = SentenceTransformer(
                 get_model_path(embedding_model, auto_update),
                 device=DEVICE_TYPE,
+                local_files_only=True,
                 trust_remote_code=RAG_EMBEDDING_MODEL_TRUST_REMOTE_CODE,
                 backend=SENTENCE_TRANSFORMERS_BACKEND,
                 model_kwargs=SENTENCE_TRANSFORMERS_MODEL_KWARGS,
@@ -211,6 +212,7 @@ def get_rf(
                 rf = sentence_transformers.CrossEncoder(
                     get_model_path(reranking_model, auto_update),
                     device=DEVICE_TYPE,
+                    local_files_only=True,
                     trust_remote_code=RAG_RERANKING_MODEL_TRUST_REMOTE_CODE,
                     backend=SENTENCE_TRANSFORMERS_CROSS_ENCODER_BACKEND,
                     model_kwargs=SENTENCE_TRANSFORMERS_CROSS_ENCODER_MODEL_KWARGS,

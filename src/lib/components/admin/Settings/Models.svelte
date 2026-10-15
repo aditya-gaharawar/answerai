@@ -1,4 +1,7 @@
 <script lang="ts">
+	import type { ModelConfig } from '$lib/apis';
+	import type { Model } from '$lib/stores';
+	import type { ModelsConfig } from '$lib/apis/admin-types';
 	import { marked } from 'marked';
 	import Sortable from 'sortablejs';
 	import fileSaver from 'file-saver';
@@ -68,21 +71,26 @@
 	import AdminViewSelector from './Models/AdminViewSelector.svelte';
 	import TagSelector from '$lib/components/workspace/common/TagSelector.svelte';
 
-	type ModelListItem = { id: string; name?: string };
+	type ModelListItem = Partial<ModelConfig> &
+		Partial<Model> & {
+			id: string;
+			name: string;
+			user?: { id: string; name: string; profile_image_url?: string } | null;
+		};
 
 	let shiftKey = false;
 
 	export let tabState: Record<string, unknown> | null = null;
 
 	let modelsImportInProgress = false;
-	let importFiles;
+	let importFiles: FileList | null = null;
 	let modelsImportInputElement: HTMLInputElement;
 	let tagsContainerElement: HTMLDivElement;
 	let modelListElement: HTMLDivElement;
-	let sortable = null;
+	let sortable: Sortable | null = null;
 
-	let models = null;
-	let modelsConfig = null;
+	let models: ModelListItem[] | null = null;
+	let modelsConfig: ModelsConfig | null = null;
 	let modelOrderList: string[] = [];
 	let defaultModelIds: string[] = [];
 	let defaultPinnedModelIds: string[] = [];
@@ -93,8 +101,8 @@
 	let allModels: ModelListItem[] = [];
 	let availableModelIds = new Set<string>();
 
-	let filteredModels = [];
-	let selectedModelId = null;
+	let filteredModels: ModelListItem[] = [];
+	let selectedModelId: string | null = null;
 
 	let showManageModal = false;
 	let showResetModal = false;
@@ -115,24 +123,25 @@
 		tabState = null;
 	}
 
-	const isPublicModel = (model) => {
+	const isPublicModel = (model: ModelListItem) => {
 		return (model?.access_grants ?? []).some(
 			(g) => g.principal_type === 'user' && g.principal_id === '*' && g.permission === 'read'
 		);
 	};
 
-	const isSharedModel = (model) => (model?.access_grants ?? []).length > 0 && !isPublicModel(model);
+	const isSharedModel = (model: ModelListItem) =>
+		(model?.access_grants ?? []).length > 0 && !isPublicModel(model);
 
-	const isPresetModel = (model: any) =>
+	const isPresetModel = (model: ModelListItem) =>
 		!!(model?.preset || model?.base_model_id || model?.info?.base_model_id);
 	const canResetModel = (model: ModelListItem | null) =>
 		!!model && !isPresetModel(model) && availableModelIds.has(model.id);
-	const modelTags = (model: any): string[] =>
+	const modelTags = (model: ModelListItem): string[] =>
 		(model?.meta?.tags ?? [])
 			.map((tag) => (typeof tag === 'string' ? tag : tag?.name))
 			.filter(Boolean);
 
-	const modelAccessLabel = (model) => {
+	const modelAccessLabel = (model: ModelListItem) => {
 		if (isPublicModel(model)) {
 			return $i18n.t('Public');
 		}
@@ -142,7 +151,7 @@
 		return $i18n.t('Private');
 	};
 
-	const modelAccessClass = (model) => {
+	const modelAccessClass = (model: ModelListItem) => {
 		if (isPublicModel(model)) {
 			return 'text-[#4f7a5a] dark:text-[#8db395]';
 		}
@@ -329,7 +338,7 @@
 		_models.set(
 			await getModels(
 				localStorage.token,
-				$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
+				$config?.features?.enable_direct_connections ? ($settings?.directConnections ?? null) : null
 			)
 		);
 	};
@@ -355,7 +364,9 @@
 			_models.set(
 				await getModels(
 					localStorage.token,
-					$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
+					$config?.features?.enable_direct_connections
+						? ($settings?.directConnections ?? null)
+						: null
 				)
 			);
 		}
@@ -546,7 +557,7 @@
 		_models.set(
 			await getModels(
 				localStorage.token,
-				$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
+				$config?.features?.enable_direct_connections ? ($settings?.directConnections ?? null) : null
 			)
 		);
 	};
@@ -584,11 +595,13 @@
 		};
 
 		await upsertModelHandler(updatedModel, { meta: updatedModel.meta }, false);
-		models = models.map((model) => (model.id === updatedModel.id ? updatedModel : model));
+		if (models) {
+			models = models.map((model) => (model.id === updatedModel.id ? updatedModel : model));
+		}
 		_models.set(
 			await getModels(
 				localStorage.token,
-				$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
+				$config?.features?.enable_direct_connections ? ($settings?.directConnections ?? null) : null
 			)
 		);
 
@@ -623,13 +636,17 @@
 		).catch(() => null);
 
 		if (res) {
-			models = models.map((m) =>
-				m.id === model.id ? { ...m, access_grants: res.access_grants ?? nextAccessGrants } : m
-			);
+			if (models) {
+				models = models.map((m) =>
+					m.id === model.id ? { ...m, access_grants: res.access_grants ?? nextAccessGrants } : m
+				);
+			}
 			_models.set(
 				await getModels(
 					localStorage.token,
-					$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
+					$config?.features?.enable_direct_connections
+						? ($settings?.directConnections ?? null)
+						: null
 				)
 			);
 			toast.success(
@@ -1333,7 +1350,7 @@
 		<ModelEditor
 			admin
 			edit
-			model={models.find((m) => m.id === selectedModelId)}
+			model={models?.find((m) => m.id === selectedModelId)}
 			preset={false}
 			onSubmit={async (model) => {
 				console.log(model);

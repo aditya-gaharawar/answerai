@@ -1,4 +1,8 @@
 <script lang="ts">
+	import type { Editor } from '@tiptap/core';
+	import type { AccessGrant } from '$lib/apis';
+	import type { Settings, Config } from '$lib/stores';
+	import type { NoteRecord, NoteEvent, NoteAttachment, NoteChatSummary } from '$lib/types/notes';
 	import { getContext, onDestroy, onMount, tick } from 'svelte';
 	import { v4 as uuidv4 } from 'uuid';
 	import fileSaver from 'file-saver';
@@ -86,9 +90,10 @@
 
 	export let id: null | string = null;
 
-	let editor = null;
+	let editor: Editor | null = null;
 	let autoFormat = true;
-	let note = null;
+	let note: NoteRecord | null = null;
+	let noteLoadVersion = 0;
 
 	const newNote = {
 		title: '',
@@ -106,7 +111,7 @@
 		access_grants: []
 	};
 
-	const hasPublicReadGrant = (grants) =>
+	const hasPublicReadGrant = (grants: AccessGrant[]) =>
 		Array.isArray(grants) &&
 		grants.some(
 			(grant) =>
@@ -115,29 +120,29 @@
 				grant?.permission === 'read'
 		);
 
-	let files = [];
+	let files: NoteAttachment[] = [];
 
 	let wordCount = 0;
 	let charCount = 0;
 
-	let versionIdx = null;
-	let selectedModelId = null;
+	let versionIdx: number | null = null;
+	let selectedModelId: string | null = null;
 
 	let recording = false;
 	let displayMediaRecord = false;
 
 	let showNoteChat = false;
-	let noteChatId = null;
+	let noteChatId: string | null = null;
 	let noteChatLoading = false;
-	let noteChats = [];
+	let noteChats: NoteChatSummary[] = [];
 	let noteChatDraftKey = '';
 	let noteChatCreating = false;
 
-	let selectedContent = null;
-	let noteAttachmentFiles = [];
+	let selectedContent: { text: string; from: number; to: number } | null = null;
+	let noteAttachmentFiles: NoteAttachment[] = [];
 	let noteChatSuggestedPrompts = [];
-	let pendingNoteEvent = null;
-	let pendingNoteEventTimer = null;
+	let pendingNoteEvent: NoteEvent | null = null;
+	let pendingNoteEventTimer: ReturnType<typeof setTimeout> | null = null;
 	let lastLocalContentChangeAt = 0;
 	$: noteAttachmentFiles = (files ?? []).filter(
 		(file) => file?.type !== 'image' && !(file?.content_type ?? '').startsWith('image/')
@@ -167,17 +172,24 @@
 		(note?.data?.content?.md ? marked.parse(note.data.content.md) : '');
 
 	const init = async () => {
+		if (!id) return;
+		const requestedId = id;
+		const loadVersion = ++noteLoadVersion;
+		note = null;
+		files = [];
 		autoFormat = true;
 		loading = true;
-		const res = await getNoteById(localStorage.token, id).catch((error) => {
+		const res = await getNoteById(localStorage.token, requestedId).catch((error) => {
 			toast.error(`${error}`);
 			return null;
 		});
 
+		if (loadVersion !== noteLoadVersion || id !== requestedId) return;
 		if (res) {
-			note = res;
-			if (!Array.isArray(note?.access_grants)) {
-				note.access_grants = [];
+			const loadedNote: NoteRecord = res;
+			note = loadedNote;
+			if (!Array.isArray(loadedNote.access_grants)) {
+				loadedNote.access_grants = [];
 			}
 			files = res.data.files || [];
 
@@ -200,6 +212,7 @@
 	let debounceTimeout: NodeJS.Timeout | null = null;
 
 	const saveHandler = async () => {
+		if (!note || !id || note.id !== id) return;
 		const res = await updateNoteById(localStorage.token, id, {
 			title: note?.title === '' ? $i18n.t('Untitled') : note.title,
 			data: {
@@ -239,7 +252,8 @@
 		return saveHandler();
 	});
 
-	const applyExternalNoteContent = async (_note) => {
+	const applyExternalNoteContent = async (_note: NoteEvent) => {
+		if (!note || note.id !== _note.id || !_note.data?.content) return false;
 		const incomingContent = _note.data?.content;
 		const contentLength = incomingContent?.md?.length ?? incomingContent?.html?.length ?? 0;
 
@@ -331,11 +345,11 @@
 		init();
 	}
 
-	function areContentsEqual(a, b) {
+	function areContentsEqual(a: unknown, b: unknown) {
 		return equalEditorJSON(a, b);
 	}
 
-	function insertNoteVersion(note) {
+	function insertNoteVersion(note: NoteRecord) {
 		const current = {
 			json: note.data.content.json,
 			html: note.data.content.html,
@@ -351,6 +365,7 @@
 	}
 
 	const generateTitleHandler = async () => {
+		if (!note) return;
 		const content = note.data.content.md;
 		const DEFAULT_TITLE_GENERATION_PROMPT_TEMPLATE = `### Task:
 Generate a concise title summarizing the content in the content's primary language.
@@ -424,7 +439,8 @@ ${content}
 		changeDebounceHandler();
 	};
 
-	function setContentByVersion(versionIdx) {
+	function setContentByVersion(versionIdx: number | null) {
+		if (!note) return;
 		if (!note.data.versions?.length) return;
 		let idx = versionIdx;
 
@@ -447,7 +463,8 @@ ${content}
 	}
 
 	// Navigation
-	function versionNavigateHandler(direction) {
+	function versionNavigateHandler(direction: string) {
+		if (!note) return;
 		if (!note.data.versions || note.data.versions.length === 0) return;
 
 		if (versionIdx === null) {
@@ -479,9 +496,11 @@ ${content}
 		setContentByVersion(versionIdx);
 	}
 
-	const uploadFileHandler = async (file) => {
+	const uploadFileHandler = async (file: File) => {
+		if (!note) return null;
+		const owningNoteId = note.id;
 		const tempItemId = uuidv4();
-		const fileItem = {
+		const fileItem: NoteAttachment = {
 			type: 'file',
 			file: '',
 			id: null,
@@ -515,6 +534,7 @@ ${content}
 
 			// During the file upload, file content is automatically extracted.
 			const uploadedFile = await uploadFile(localStorage.token, file, metadata);
+			if (note?.id !== owningNoteId) return null;
 
 			if (uploadedFile) {
 				console.log('File upload completed:', uploadedFile);
@@ -529,6 +549,7 @@ ${content}
 					toast.error(`${e}`);
 					return null;
 				});
+				if (note?.id !== owningNoteId) return null;
 				fileItem.id = uploadedFile.id;
 				fileItem.collection_name =
 					uploadedFile?.meta?.collection_name || uploadedFile?.collection_name;
@@ -540,10 +561,12 @@ ${content}
 				files = files.filter((item) => item?.itemId !== tempItemId);
 			}
 		} catch (e) {
+			if (note?.id !== owningNoteId) return null;
 			toast.error(`${e}`);
 			files = files.filter((item) => item?.itemId !== tempItemId);
 		}
 
+		if (note?.id !== owningNoteId) return null;
 		if (files.length > 0) {
 			note.data.files = files;
 		} else {
@@ -559,7 +582,7 @@ ${content}
 		return fileItem;
 	};
 
-	const compressImageHandler = async (imageUrl, settings = {}, config = {}) => {
+	const compressImageHandler = async (imageUrl: string, settings?: Settings, config?: Config) => {
 		// Quick shortcut so we don’t do unnecessary work.
 		const settingsCompression = settings?.imageCompression ?? false;
 		const configWidth = config?.file?.image_compression?.width ?? null;
@@ -595,7 +618,8 @@ ${content}
 		return imageUrl;
 	};
 
-	const inputFileHandler = async (file) => {
+	const inputFileHandler = async (file: File) => {
+		if (!note) return null;
 		console.log('Processing file:', {
 			name: file.name,
 			type: file.type,
@@ -620,12 +644,19 @@ ${content}
 		}
 
 		if (file['type'].startsWith('image/') || isHeicImage(file)) {
-			const uploadImagePromise = new Promise(async (resolve, reject) => {
+			const noteId = note.id;
+			const readableFile = isHeicImage(file) ? await convertHeicToJpeg(file) : file;
+			const uploadImagePromise = new Promise<NoteAttachment | null>((resolve, reject) => {
 				let reader = new FileReader();
 				reader.onload = async (event) => {
 					try {
-						let imageUrl = event.target.result;
+						if (typeof reader.result !== 'string') throw new Error('Invalid image data');
+						let imageUrl = reader.result;
 						imageUrl = await compressImageHandler(imageUrl, $settings, $config);
+						if (!note || note.id !== noteId) {
+							resolve(null);
+							return;
+						}
 
 						const fileId = uuidv4();
 						const fileItem = {
@@ -646,7 +677,9 @@ ${content}
 					}
 				};
 
-				reader.readAsDataURL(isHeicImage(file) ? await convertHeicToJpeg(file) : file);
+				reader.onerror = () => reject(reader.error ?? new Error('Could not read image'));
+				reader.onabort = () => reject(new Error('Image read cancelled'));
+				reader.readAsDataURL(readableFile);
 			});
 
 			return await uploadImagePromise;
@@ -655,11 +688,15 @@ ${content}
 		}
 	};
 
-	const inputFilesHandler = async (inputFiles) => {
+	const inputFilesHandler = async (inputFiles: File[]) => {
 		console.log('Input files handler called with:', inputFiles);
-		inputFiles.forEach(async (file) => {
-			await inputFileHandler(file);
-		});
+		for (const file of inputFiles) {
+			try {
+				await inputFileHandler(file);
+			} catch (error) {
+				toast.error(String(error));
+			}
+		}
 	};
 
 	const uploadNoteFilesHandler = () => {
@@ -750,7 +787,8 @@ ${content}
 		}
 	};
 
-	const deleteNoteChat = async (chatId) => {
+	const deleteNoteChat = async (chatId: string) => {
+		if (!note) return;
 		if (!note?.id || !chatId) return;
 
 		const deleted = await deleteChatById(localStorage.token, chatId).catch((error) => {
@@ -783,7 +821,8 @@ ${content}
 		noteChats = chats;
 	};
 
-	const downloadHandler = async (type) => {
+	const downloadHandler = async (type: string) => {
+		if (!note) return;
 		console.log('downloadHandler', type);
 		if (type === 'txt') {
 			const blob = new Blob([note.data.content.md], { type: 'text/plain' });
@@ -800,7 +839,7 @@ ${content}
 		}
 	};
 
-	const deleteNoteHandler = async (id) => {
+	const deleteNoteHandler = async (id: string) => {
 		const res = await deleteNoteById(localStorage.token, id).catch((error) => {
 			toast.error(`${error}`);
 			return null;
@@ -815,7 +854,7 @@ ${content}
 		}
 	};
 
-	const onDragOver = (e) => {
+	const onDragOver = (e: DragEvent) => {
 		e.preventDefault();
 
 		if (
@@ -846,7 +885,7 @@ ${content}
 		dragged = false;
 	};
 
-	const onDrop = async (e) => {
+	const onDrop = async (e: DragEvent) => {
 		e.preventDefault();
 		console.log(e);
 
@@ -861,14 +900,15 @@ ${content}
 		dragged = false;
 	};
 
-	const insertHandler = (content) => {
+	const insertHandler = (content: string) => {
+		if (!note) return;
 		insertNoteVersion(note);
 		inputElement?.insertContent(content);
 	};
 
-	const noteEventHandler = async (_note) => {
+	const noteEventHandler = async (_note: NoteEvent) => {
 		console.log('noteEventHandler', _note);
-		if (_note.id !== id) return;
+		if (!note || _note.id !== id || note.id !== _note.id) return;
 
 		if (_note.updated_at && note?.updated_at && _note.updated_at < note.updated_at) {
 			console.info('[note-chat] external note event skipped', {
@@ -910,7 +950,7 @@ ${content}
 
 		for (const file of files) {
 			if (file.type === 'image' || (file?.content_type ?? '').startsWith('image/')) {
-				const e = new CustomEvent('data', { files: files });
+				const e = new CustomEvent('data', { detail: { files } });
 
 				const img = document.getElementById(`image:${file.id}`);
 				if (img) {
@@ -935,6 +975,7 @@ ${content}
 	});
 
 	onDestroy(() => {
+		noteLoadVersion++;
 		console.log('destroy');
 		$socket?.off('events:note', noteEventHandler);
 		if (pendingNoteEventTimer) {
@@ -973,7 +1014,7 @@ ${content}
 		allowGroups={($user?.permissions?.access_grants?.allow_groups ?? true) ||
 			$user?.role === 'admin'}
 		onChange={async () => {
-			if (id) {
+			if (id && note) {
 				try {
 					await updateNoteAccessGrants(localStorage.token, id, note.access_grants ?? []);
 					toast.success($i18n.t('Saved'));
@@ -987,18 +1028,21 @@ ${content}
 
 <FilesOverlay show={dragged} />
 
-<DeleteConfirmDialog
-	bind:show={showDeleteConfirm}
-	title={$i18n.t('Delete note?')}
-	on:confirm={() => {
-		deleteNoteHandler(note.id);
-		showDeleteConfirm = false;
-	}}
->
-	<div class=" text-sm text-gray-500">
-		{$i18n.t('This will delete')} <span class="  font-normal">{note.title}</span>.
-	</div>
-</DeleteConfirmDialog>
+{#if note}
+	{@const deletingNote = note}
+	<DeleteConfirmDialog
+		bind:show={showDeleteConfirm}
+		title={$i18n.t('Delete note?')}
+		on:confirm={() => {
+			deleteNoteHandler(deletingNote.id);
+			showDeleteConfirm = false;
+		}}
+	>
+		<div class=" text-sm text-gray-500">
+			{$i18n.t('This will delete')} <span class="  font-normal">{deletingNote.title}</span>.
+		</div>
+	</DeleteConfirmDialog>
+{/if}
 
 <div class="w-full h-full flex">
 	<div class="h-full flex flex-col min-w-0 flex-1 relative">
@@ -1009,7 +1053,8 @@ ${content}
 						<Spinner className="size-5" />
 					</div>
 				</div>
-			{:else}
+			{:else if note}
+				{@const currentNote = note}
 				<div class=" w-full flex flex-col {loading ? 'opacity-20' : ''}">
 					<div class="shrink-0 w-full flex justify-between items-center px-3">
 						<div class="w-full min-w-0 flex items-center">
@@ -1038,9 +1083,9 @@ ${content}
 									? 'ml-1'
 									: ''}"
 								type="text"
-								bind:value={note.title}
+								bind:value={currentNote.title}
 								placeholder={titleGenerating ? $i18n.t('Generating...') : $i18n.t('Title')}
-								disabled={(note?.user_id !== $user?.id && $user?.role !== 'admin') ||
+								disabled={(currentNote?.user_id !== $user?.id && $user?.role !== 'admin') ||
 									titleGenerating}
 								required
 								on:focus={() => {
@@ -1066,7 +1111,7 @@ ${content}
 										<button
 											class="flex size-5 items-center justify-center self-center dark:hover:text-white transition disabled:cursor-not-allowed"
 											id="generate-title-button"
-											disabled={(note?.user_id !== $user?.id && $user?.role !== 'admin') ||
+											disabled={(currentNote?.user_id !== $user?.id && $user?.role !== 'admin') ||
 												titleGenerating}
 											on:mouseenter={() => {
 												ignoreBlur = true;
@@ -1087,14 +1132,14 @@ ${content}
 							{/if}
 
 							<div class="flex items-center gap-0.5 shrink-0">
-								{#if note?.write_access}
+								{#if currentNote?.write_access}
 									{#if editor}
 										<div>
 											<div class="flex items-center gap-0.5 self-center min-w-fit" dir="ltr">
 												<button
 													class="self-center p-1 hover:enabled:bg-black/5 dark:hover:enabled:bg-white/5 dark:hover:enabled:text-white hover:enabled:text-black rounded-md transition disabled:cursor-not-allowed disabled:text-gray-500 disabled:hover:text-gray-500"
 													on:click={() => {
-														editor.chain().focus().undo().run();
+														editor?.chain().focus().undo().run();
 														// versionNavigateHandler('prev');
 													}}
 													disabled={!editor.can().undo()}
@@ -1105,7 +1150,7 @@ ${content}
 												<button
 													class="self-center p-1 hover:enabled:bg-black/5 dark:hover:enabled:bg-white/5 dark:hover:enabled:text-white hover:enabled:text-black rounded-md transition disabled:cursor-not-allowed disabled:text-gray-500 disabled:hover:text-gray-500"
 													on:click={() => {
-														editor.chain().focus().redo().run();
+														editor?.chain().focus().redo().run();
 														// versionNavigateHandler('next');
 													}}
 													disabled={!editor.can().redo()}
@@ -1128,7 +1173,7 @@ ${content}
 									</button>
 								</Tooltip>
 
-								{#if note?.write_access}
+								{#if currentNote?.write_access}
 									<RecordMenu
 										onRecord={async () => {
 											displayMediaRecord = false;
@@ -1168,7 +1213,7 @@ ${content}
 											input.click();
 
 											input.onchange = async (e) => {
-												const files = e.target.files;
+												const files = input.files;
 
 												if (files && files.length > 0) {
 													await uploadFileHandler(files[0]);
@@ -1186,14 +1231,14 @@ ${content}
 
 								<NoteMenu
 									bind:autoFormat
-									showAutoFormat={note?.write_access ?? false}
-									onUploadFiles={note?.write_access ? uploadNoteFilesHandler : null}
+									showAutoFormat={currentNote?.write_access ?? false}
+									onUploadFiles={currentNote?.write_access ? uploadNoteFilesHandler : null}
 									onDownload={(type) => {
 										downloadHandler(type);
 									}}
 									onCopyLink={async () => {
 										const baseUrl = window.location.origin;
-										const res = await copyToClipboard(`${baseUrl}/notes/${note.id}`);
+										const res = await copyToClipboard(`${baseUrl}/notes/${currentNote.id}`);
 
 										if (res) {
 											toast.success($i18n.t('Copied link to clipboard'));
@@ -1203,10 +1248,10 @@ ${content}
 									}}
 									onCopyToClipboard={async () => {
 										const res = await copyToClipboard(
-											note.data.content.md,
-											note.data.content.html,
+											currentNote.data.content.md,
+											currentNote.data.content.html,
 											true
-										).catch((error) => {
+										).catch((error: unknown) => {
 											toast.error(`${error}`);
 											return null;
 										});
@@ -1218,10 +1263,11 @@ ${content}
 									onDelete={() => {
 										showDeleteConfirm = true;
 									}}
-									isPinned={$pinnedNotes.some((n) => n.id === note.id)}
+									isPinned={$pinnedNotes.some((n) => n.id === currentNote.id)}
 									onPin={async () => {
-										await toggleNotePinnedStatusById(localStorage.token, note.id);
-										note = await getNoteById(localStorage.token, note.id);
+										await toggleNotePinnedStatusById(localStorage.token, currentNote.id);
+										const updatedNote = await getNoteById(localStorage.token, currentNote.id);
+										if (id === currentNote.id) note = updatedNote;
 										pinnedNotes.set(await getPinnedNoteList(localStorage.token).catch(() => []));
 									}}
 								>
@@ -1230,13 +1276,13 @@ ${content}
 									</div>
 								</NoteMenu>
 
-								{#if note?.write_access}
+								{#if currentNote?.write_access}
 									<div class="ml-1.5">
 										<AccessButton
 											on:click={() => {
 												showAccessControlModal = true;
 											}}
-											disabled={note?.user_id !== $user?.id && $user?.role !== 'admin'}
+											disabled={currentNote?.user_id !== $user?.id && $user?.role !== 'admin'}
 										/>
 									</div>
 								{:else}
@@ -1264,33 +1310,33 @@ ${content}
 								<div class=" flex items-center gap-1 w-fit py-1 px-1.5 rounded-lg min-w-fit">
 									<!-- check for same date, yesterday, last week, and other -->
 
-									{#if dayjs(note.created_at / 1000000)
+									{#if dayjs(currentNote.created_at / 1000000)
 										.locale($i18n.language)
 										.isSame(dayjs().locale($i18n.language), 'day')}
 										<span
-											>{dayjs(note.created_at / 1000000)
+											>{dayjs(currentNote.created_at / 1000000)
 												.locale($i18n.language)
 												.format($i18n.t('[Today at] h:mm A'))}</span
 										>
-									{:else if dayjs(note.created_at / 1000000)
+									{:else if dayjs(currentNote.created_at / 1000000)
 										.locale($i18n.language)
 										.isSame(dayjs().locale($i18n.language).subtract(1, 'day'), 'day')}
 										<span
-											>{dayjs(note.created_at / 1000000)
+											>{dayjs(currentNote.created_at / 1000000)
 												.locale($i18n.language)
 												.format($i18n.t('[Yesterday at] h:mm A'))}</span
 										>
-									{:else if dayjs(note.created_at / 1000000)
+									{:else if dayjs(currentNote.created_at / 1000000)
 										.locale($i18n.language)
 										.isSame(dayjs().locale($i18n.language).subtract(1, 'week'), 'week')}
 										<span
-											>{dayjs(note.created_at / 1000000)
+											>{dayjs(currentNote.created_at / 1000000)
 												.locale($i18n.language)
 												.format($i18n.t('[Last] dddd [at] h:mm A'))}</span
 										>
 									{:else}
 										<span
-											>{dayjs(note.created_at / 1000000)
+											>{dayjs(currentNote.created_at / 1000000)
 												.locale($i18n.language)
 												.format($i18n.t('DD/MM/YYYY'))}</span
 										>
@@ -1324,11 +1370,11 @@ ${content}
 								{#each noteAttachmentFiles as file, fileIdx (file?.id ?? file?.itemId ?? file?.url ?? fileIdx)}
 									<FileItem
 										item={file}
-										name={file.name}
+										name={file.name ?? ''}
 										type={file.type}
-										size={file?.size}
+										size={file?.size ?? 0}
 										loading={file.status === 'uploading'}
-										dismissible={versionIdx === null && note?.write_access}
+										dismissible={versionIdx === null && currentNote?.write_access}
 										edit={true}
 										small={true}
 										modal={['file', 'collection'].includes(file?.type)}
@@ -1336,7 +1382,7 @@ ${content}
 										colorClassName="bg-gray-50/60 dark:bg-white/[0.03] border border-gray-100/80 dark:border-white/5"
 										on:dismiss={() => {
 											files = files.filter((item) => item !== file);
-											note.data.files = files.length > 0 ? files : null;
+											currentNote.data.files = files.length > 0 ? files : null;
 											if (editor) {
 												editor.storage.files = files;
 											}
@@ -1352,12 +1398,12 @@ ${content}
 								{autoFormat}
 								bind:this={inputElement}
 								bind:editor
-								id={`note-${note.id}`}
+								id={`note-${currentNote.id}`}
 								className="input-prose-sm px-0.5 flex-1 min-h-[12rem]"
 								json={true}
-								bind:value={note.data.content.json}
+								bind:value={currentNote.data.content.json}
 								html={editorHtml}
-								documentId={`note:${note.id}`}
+								documentId={`note:${currentNote.id}`}
 								collaboration={true}
 								socket={$socket}
 								user={$user}
@@ -1366,7 +1412,7 @@ ${content}
 								image={true}
 								{files}
 								placeholder={$i18n.t('Write something...')}
-								editable={versionIdx === null && note?.write_access}
+								editable={versionIdx === null && currentNote?.write_access}
 								onSelectionUpdate={({ editor }) => {
 									const { from, to } = editor.state.selection;
 									const selectedText = editor.state.doc.textBetween(from, to, ' ');
@@ -1383,8 +1429,8 @@ ${content}
 								}}
 								onChange={(content) => {
 									lastLocalContentChangeAt = Date.now();
-									note.data.content.html = content.html;
-									note.data.content.md = content.md;
+									currentNote.data.content.html = content.html;
+									currentNote.data.content.md = content.md;
 
 									if (editor) {
 										wordCount = editor.storage.characterCount.words();
@@ -1415,8 +1461,7 @@ ${content}
 								}}
 								onFilePaste={() => {}}
 								on:paste={async (e) => {
-									e = e.detail.event || e;
-									const clipboardData = e.clipboardData || window.clipboardData;
+									const clipboardData = (e.detail.event as ClipboardEvent).clipboardData;
 									console.log('Clipboard data:', clipboardData);
 
 									if (clipboardData && clipboardData.items) {
@@ -1425,9 +1470,10 @@ ${content}
 											console.log('Clipboard item:', item);
 											if (item.type.indexOf('image') !== -1) {
 												const blob = item.getAsFile();
+												if (!blob) continue;
 												const fileItem = await inputFileHandler(blob);
 
-												if (editor) {
+												if (editor && fileItem) {
 													editor
 														?.chain()
 														.insertContentAt(editor.state.selection.$anchor.pos, {
@@ -1441,7 +1487,7 @@ ${content}
 												}
 											} else if (item?.kind === 'file') {
 												const file = item.getAsFile();
-												await inputFileHandler(file);
+												if (file) await inputFileHandler(file);
 												e.preventDefault();
 											}
 										}

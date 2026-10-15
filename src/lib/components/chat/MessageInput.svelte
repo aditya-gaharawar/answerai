@@ -1,4 +1,5 @@
 <script lang="ts">
+	import type { ContextUsage, ChatTask } from '$lib/types/chat';
 	import { resolveLocalizedFunction } from '$lib/utils/localizedContent';
 	import { functions as localizedFunctions } from '$lib/stores';
 	import DOMPurify from 'dompurify';
@@ -151,7 +152,7 @@
 	export let statusHandler: Function = () => {};
 	export let forkHandler: Function = () => {};
 	export let chatId = '';
-	export let contextUsage = null;
+	export let contextUsage: ContextUsage | null = null;
 	export let contextCompactionEnabled = false;
 	export let embedded = false;
 	export let callActive = false;
@@ -231,7 +232,7 @@
 	export let onQueueEdit: (id: string) => void = () => {};
 	export let onQueueDelete: (id: string) => void = () => {};
 	export let onUpdate: (data?: { file?: any }) => void = () => {};
-	export let chatTasks = [];
+	export let chatTasks: ChatTask[] = [];
 
 	let inputContent = null;
 

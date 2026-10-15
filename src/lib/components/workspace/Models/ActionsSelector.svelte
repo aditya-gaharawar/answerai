@@ -7,7 +7,7 @@
 		name?: string;
 		is_global?: boolean;
 		meta?: {
-			description?: string;
+			description?: string | null;
 		};
 	};
 	const i18n = getContext<any>('i18n');

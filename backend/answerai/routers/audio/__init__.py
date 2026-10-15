@@ -1341,6 +1341,14 @@ async def _transcribe_mistral(request, file_path, filename, metadata, file_dir, 
 
 
 async def transcribe(request: Request, file_path: str, metadata: Optional[dict] = None, user=None):
+    from answerai.utils.plans import reserve_audio
+
+    if user is None:
+        raise HTTPException(401, 'Authentication required')
+    if user.role != 'admin' and not await has_permission(user.id, 'chat.stt', await Config.get('user.permissions')):
+        raise HTTPException(403, ERROR_MESSAGES.ACCESS_PROHIBITED)
+    await reserve_audio(request, user, charge_request=False)
+
     log.info('transcribe: %s %s', file_path, metadata)
 
     if BYPASS_PYDUB_PREPROCESSING:

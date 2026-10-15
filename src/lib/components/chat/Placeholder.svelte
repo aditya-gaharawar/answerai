@@ -1,4 +1,5 @@
 <script lang="ts">
+	import type { Model } from '$lib/stores';
 	import { toast } from 'svelte-sonner';
 	import { marked } from 'marked';
 	import DOMPurify from 'dompurify';

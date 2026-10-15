@@ -5,7 +5,7 @@
 
 	export let id;
 	export let token;
-	export let sourceIds = [];
+	export let sourceIds: string[] = [];
 	export let onClick: Function = () => {};
 
 	let containerElement;

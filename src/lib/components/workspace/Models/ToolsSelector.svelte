@@ -6,7 +6,7 @@
 		id: string;
 		name?: string;
 		meta?: {
-			description?: string;
+			description?: string | null;
 		};
 	};
 	const i18n = getContext<any>('i18n');
