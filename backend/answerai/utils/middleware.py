@@ -1,4 +1,3 @@
-import ast
 import asyncio
 import base64
 import copy
@@ -2455,6 +2454,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     use_builtin_tools = is_note_chat or (
         bool(metadata.get('session_id'))
         and metadata.get('params', {}).get('function_calling') != 'legacy'
+        and metadata.get('params', {}).get('agent_mode') != 'chat'
         and (model.get('info', {}).get('meta', {}).get('capabilities') or {}).get('builtin_tools', True)
     )
     metadata['include_file_context'] = bool(
@@ -3322,6 +3322,13 @@ async def process_chat_payload(request, form_data, user, metadata, model):
         except Exception as e:
             log.exception(e)
 
+    if metadata.get('params', {}).get('agent_mode') == 'agent':
+        from answerai.utils.agent_workflow import agent_workflow_prompt
+
+        guidance = agent_workflow_prompt(metadata.get('tools') or {})
+        if guidance:
+            form_data['messages'] = add_or_update_system_message(guidance, form_data['messages'], append=True)
+
     # The tool loop restores these prompts before rebuilding file and tool source context.
     system_message = get_system_message(form_data['messages'])
     base_system_prompt = get_content_from_message(system_message) if system_message else ''
@@ -3442,17 +3449,11 @@ async def build_chat_response_context(request, form_data, user, model, metadata,
 async def execute_tool_call(form_data, metadata, event_caller, tool_call):
     name = tool_call.get('function', {}).get('name', '')
     tool_args = tool_call.get('function', {}).get('arguments', '{}')
-    params = {}
-    if tool_args and tool_args.strip():
-        try:
-            params = JSONCodec.loads(tool_args)
-        except Exception:
-            try:
-                params = ast.literal_eval(tool_args)
-            except Exception as e:
-                log.debug(e)
-                return {}, None, None, None, False
-    if not isinstance(params, dict):
+    from answerai.utils.tool_arguments import parse_tool_arguments
+
+    try:
+        params = parse_tool_arguments(tool_args)
+    except (ValueError, TypeError, SyntaxError):
         return (
             {},
             f'Error: Tool call arguments for `{name}` must be a JSON object. Please try again.',

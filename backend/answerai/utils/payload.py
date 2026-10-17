@@ -116,6 +116,7 @@ def apply_params_to_form_data(form_data: dict, model: dict, params: dict | None 
         'system': str,
         'note_id': str,
         'tool_approval_mode': str,
+        'agent_mode': str,
         'model_controls': dict,
     }
 
@@ -172,6 +173,7 @@ def remove_answerai_params(params: dict) -> dict:
         'system': str,
         'note_id': str,
         'tool_approval_mode': str,
+        'agent_mode': str,
         'model_controls': dict,
     }
 

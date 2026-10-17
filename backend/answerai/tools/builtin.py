@@ -402,6 +402,13 @@ async def generate_image(
             user=user,
         )
 
+        if not images:
+            return JSONCodec.dumps(
+                {
+                    'error': 'Image provider returned no images. Try another prompt or check image settings.'
+                }
+            )
+
         # Prepare file entries for the images
         image_files = [{'type': 'image', **img} for img in images]
 

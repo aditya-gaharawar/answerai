@@ -1217,6 +1217,9 @@ async def chat_completion(
         )
         model_info_params.pop('model_controls', None)
         request_params = {key: value for key, value in (form_data.get('params') or {}).items() if value is not None}
+        agent_mode = request_params.pop('agent_mode', 'auto')
+        if agent_mode not in ('auto', 'agent', 'chat'):
+            raise HTTPException(400, 'Conversation mode must be auto, agent, or chat.')
         model_controls = request_params.pop('model_controls', {})
         if not isinstance(model_controls, dict):
             raise HTTPException(400, 'Model control options must be keyed by model.')
@@ -1359,11 +1362,16 @@ async def chat_completion(
                 'reasoning_tags': reasoning_tags,
                 'compact_token_threshold': compact_token_threshold,
                 'function_calling': (
-                    form_data.get('params', {}).get('function_calling')
-                    or model_info_params.get('function_calling')
-                    or 'native'
+                    'native'
+                    if agent_mode == 'agent'
+                    else (
+                        form_data.get('params', {}).get('function_calling')
+                        or model_info_params.get('function_calling')
+                        or 'native'
+                    )
                 ),
                 'tool_approval_mode': tool_approval_mode,
+                'agent_mode': agent_mode,
                 'model_controls': model_controls,
             },
         }

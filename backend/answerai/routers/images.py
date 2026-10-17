@@ -655,7 +655,7 @@ async def image_generations(
                     {}
                     if re.match(
                         IMAGE_URL_RESPONSE_MODELS_REGEX_PATTERN,
-                        image_config.IMAGE_GENERATION_MODEL,
+                        model,
                     )
                     else {'response_format': 'b64_json'}
                 ),
@@ -673,6 +673,9 @@ async def image_generations(
                 res = await r.json(content_type=None)
 
             images = []
+
+            if not isinstance(res.get('data'), list) or not res['data']:
+                raise ValueError('The image provider returned no images. Check its model and safety settings.')
 
             for image in res['data']:
                 if image_url := image.get('url', None):

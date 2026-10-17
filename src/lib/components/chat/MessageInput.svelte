@@ -96,6 +96,9 @@
 	import VoiceRecording from './MessageInput/VoiceRecording.svelte';
 	import ModelSelector from './ModelSelector.svelte';
 	import ModelControls from './MessageInput/ModelControls.svelte';
+	import AgentControls from './MessageInput/AgentControls.svelte';
+	export let params: import('$lib/apis').ChatParams = {};
+	export let enableAgentControls = false;
 
 	import ToolServersModal from './ToolServersModal.svelte';
 	import SkillsModal from './SkillsModal.svelte';
@@ -1964,7 +1967,7 @@
 
 						<div
 							id="message-input-container"
-							class="flex-1 flex flex-col relative w-full shadow-lg rounded-3xl border {$temporaryChatEnabled
+							class="aai-composer flex-1 flex flex-col relative w-full shadow-lg rounded-3xl border {$temporaryChatEnabled
 								? 'border-dashed border-gray-100 dark:border-gray-800 hover:border-gray-200 focus-within:border-gray-200 hover:dark:border-gray-700 focus-within:dark:border-gray-700'
 								: ' border-gray-100/50 dark:border-gray-850/50 hover:border-gray-200 focus-within:border-gray-100 hover:dark:border-gray-800 focus-within:dark:border-gray-800'} {($settings?.highContrastMode ??
 							false)
@@ -1972,6 +1975,9 @@
 								: ''}  transition px-0.5 bg-white/5 dark:bg-gray-500/5 backdrop-blur-sm dark:text-gray-100"
 							dir={$chatDirection}
 						>
+							{#if enableAgentControls}
+								<AgentControls bind:params selectedModels={selectedModelIds} disabled={isActive} />
+							{/if}
 							{#if atSelectedModel !== undefined}
 								<div class="px-2.5 pt-2.5 text-left w-full flex flex-col z-10">
 									<div class="flex items-center justify-between w-full">
@@ -2663,7 +2669,7 @@
 								</div>
 
 								<div class="self-end flex space-x-1 mr-1 min-w-0 gap-[0.03125rem]">
-									<div class="flex min-w-0 max-w-[10rem] items-center sm:max-w-[13rem]">
+									<div class="flex min-w-0 max-w-[6rem] items-center sm:max-w-[13rem]">
 										<ModelSelector
 											bind:this={modelSelector}
 											bind:selectedModels
@@ -2830,5 +2836,20 @@
 		box-shadow:
 			0 0 8px 2px rgb(255 255 255 / 0.4),
 			0 0 20px 4px rgb(255 255 255 / 0.25);
+	}
+
+	.aai-composer {
+		box-shadow:
+			0 12px 48px -18px rgb(76 29 149 / 0.22),
+			0 2px 8px rgb(0 0 0 / 0.03);
+		border-color: rgb(139 92 246 / 0.18);
+		background: rgb(255 255 255 / 0.8);
+	}
+	:global(.dark) .aai-composer {
+		background: rgb(28 28 34 / 0.9);
+		border-color: rgb(167 139 250 / 0.22);
+	}
+	.aai-composer:focus-within {
+		border-color: rgb(139 92 246 / 0.5);
 	}
 </style>

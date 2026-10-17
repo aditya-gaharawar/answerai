@@ -710,7 +710,7 @@ async def get_builtin_tools(
     if (
         is_builtin_tool_enabled('files')
         and get_model_capability('file_upload')
-        and not get_model_capability('file_context')
+        and (metadata.get('params', {}).get('agent_mode') == 'agent' or not get_model_capability('file_context'))
         and has_chat_files
         and await has_user_chat_permission('file_upload')
     ):
