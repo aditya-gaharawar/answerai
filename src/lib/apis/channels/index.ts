@@ -556,7 +556,7 @@ export const getMessageData = async (
 
 type MessageForm = {
 	temp_id?: string;
-	reply_to_id?: string;
+	reply_to_id?: string | null;
 	parent_id?: string;
 	content: string;
 	data?: object;

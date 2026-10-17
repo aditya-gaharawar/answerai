@@ -1,4 +1,5 @@
 <script>
+	import { parsePluginDraft } from '$lib/utils/pluginImport';
 	import { toast } from 'svelte-sonner';
 	import { onMount, getContext } from 'svelte';
 	import { goto } from '$app/navigation';
@@ -14,8 +15,10 @@
 
 	let mounted = false;
 	let clone = false;
+	/** @type {import('$lib/types/plugins').PluginDraft | null} */
 	let func = null;
 
+	/** @param {import('$lib/types/plugins').PluginDraft} data */
 	const saveHandler = async (data) => {
 		console.log(data);
 
@@ -54,7 +57,9 @@
 			models.set(
 				await getModels(
 					localStorage.token,
-					$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null),
+					$config?.features?.enable_direct_connections
+						? ($settings?.directConnections ?? null)
+						: null,
 					false,
 					true
 				)
@@ -70,19 +75,29 @@
 			return;
 		}
 
-		window.addEventListener('message', async (event) => {
-			if (!COMMUNITY_ORIGINS.includes(event.origin)) return;
+		/** @param {MessageEvent} event */
+		const handleImport = async (event) => {
+			if (!COMMUNITY_ORIGINS.includes(event.origin) || event.source !== window.opener) return;
 
-			func = JSON.parse(event.data);
+			try {
+				func = parsePluginDraft(event.data);
+			} catch {
+				toast.error($i18n.t('Invalid JSON file'));
+			}
 			console.log(func);
-		});
+		};
+		window.addEventListener('message', handleImport);
 
 		if (window.opener ?? false) {
-			window.opener.postMessage('loaded', '*');
+			for (const origin of COMMUNITY_ORIGINS) window.opener.postMessage('loaded', origin);
 		}
 
 		if (sessionStorage.function) {
-			func = JSON.parse(sessionStorage.function);
+			try {
+				func = parsePluginDraft(sessionStorage.function);
+			} catch {
+				toast.error($i18n.t('Invalid JSON file'));
+			}
 			sessionStorage.removeItem('function');
 
 			console.log(func);
@@ -90,6 +105,7 @@
 		}
 
 		mounted = true;
+		return () => window.removeEventListener('message', handleImport);
 	});
 </script>
 

@@ -7,14 +7,14 @@
 
 	export let id: string | null = null;
 	export let openPreview = false;
-	export let resolvedUser = null;
+	export let resolvedUser: import('$lib/types/plugins').PluginOwner | null = null;
 	export let loadingUser = false;
 
-	export let side = 'top';
-	export let align = 'start';
+	export let side: 'top' | 'bottom' | 'left' | 'right' = 'top';
+	export let align: 'start' | 'end' | 'center' = 'start';
 	export let sideOffset = 6;
 
-	let user = null;
+	let user: import('$lib/types/plugins').PluginOwner | null = null;
 	let requestedUserId: string | null = null;
 
 	const loadUser = async (userId: string) => {

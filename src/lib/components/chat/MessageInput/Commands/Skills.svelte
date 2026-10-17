@@ -20,7 +20,10 @@
 	const i18n = getContext('i18n');
 
 	export let query = '';
-	export let onSelect = (e) => {};
+	export let onSelect = (e: {
+		type: 'skill';
+		data: import('$lib/types/chat').SkillSuggestion;
+	}) => {};
 
 	let selectedIdx = 0;
 	export let filteredItems: (
@@ -90,7 +93,7 @@
 			.replaceAll('"', '&quot;')
 			.replaceAll("'", '&#39;');
 
-	const getTooltipContent = (skill) => {
+	const getTooltipContent = (skill: import('$lib/types/chat').SkillSuggestion) => {
 		const name = escapeTooltipText(resolveLocalizedResource(skill, $i18n.language));
 		const description = escapeTooltipText(
 			resolveLocalizedResource(skill, $i18n.language, 'description')

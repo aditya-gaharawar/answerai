@@ -70,3 +70,74 @@ export type ChannelNotificationEvent = {
 				data: import('./channels').ChannelMessage;
 		  };
 };
+
+/** Payloads emitted by the chat socket protocol. */
+type InteractionPayload = { interaction_id?: string; tool_call?: unknown; [key: string]: unknown };
+type ChatEventPayloads = {
+	'voice:play_animation': { name?: string; model_id?: string };
+	'request:interaction:done': { interaction_id?: string };
+	'request:user_input': InteractionPayload;
+	'request:elicitation': InteractionPayload;
+	confirmation: InteractionPayload & { title: string; message: string };
+	typing: { typing: boolean };
+	'chat:messages': import('$lib/utils/chatHistory').ChatHistory;
+	'chat:access': { active?: boolean };
+	'chat:active': { active: boolean };
+	'chat:reload': unknown;
+	'chat:list': unknown;
+	status: import('./messages').MessageStatus;
+	context_compaction: import('./messages').MessageStatus & { error?: unknown };
+	'response:completion': Parameters<
+		typeof import('$lib/components/chat/Messages/structuredOutput').applyResponseStreamEvent
+	>[1];
+	'chat:completion': import('./messages').CompletionEvent;
+	'chat:tasks:cancel': {
+		output?: import('$lib/components/chat/Messages/structuredOutput').OutputItem[];
+	};
+	'chat:message:delta': { content: string };
+	message: { content: string };
+	'chat:message': { content: string };
+	replace: { content: string };
+	'chat:message:voice': { voice: unknown };
+	'chat:message:files': { files: import('./notes').NoteAttachment[] };
+	files: { files: import('./notes').NoteAttachment[] };
+	'chat:message:tasks': { tasks: import('./chat').ChatTask[] };
+	'chat:message:embeds': { embeds: string[] };
+	embeds: { embeds: string[] };
+	'chat:message:error': { error: unknown };
+	'chat:message:follow_ups': { follow_ups: string[] };
+	'chat:outlet': {
+		messages?: (Partial<import('$lib/utils/chatHistory').HistoryNode> & { id: string })[];
+	};
+	'chat:message:favorite': { favorite: boolean };
+	'chat:title': string;
+	'chat:tags': unknown;
+	source:
+		| (import('./messages').CodeExecution & { type: 'code_execution' })
+		| { type?: 'source' | 'citation'; [key: string]: unknown };
+	citation: ChatEventPayloads['source'];
+	notification: { type?: string; content?: string };
+	execute: { code: string };
+	input: {
+		title: string;
+		message: string;
+		placeholder: string;
+		value?: string;
+		input?: { type?: string; options?: (string | { label?: string; value: string })[] };
+		type?: string;
+		options?: (string | { label?: string; value: string })[];
+	};
+};
+type ChatEventData =
+	| {
+			[K in keyof ChatEventPayloads]: { type: K; data: ChatEventPayloads[K] };
+	  }[keyof ChatEventPayloads]
+	| { type: `terminal:${string}`; data: { path?: string; page?: number } };
+export type ChatSocketEvent = {
+	chat_id: string;
+	message_id?: string;
+	user_id?: string;
+	shared?: boolean;
+	user?: { id: string; name: string };
+	data: ChatEventData;
+};

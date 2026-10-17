@@ -12,8 +12,10 @@
 
 	const i18n = getContext('i18n');
 
+	/** @type {import('$lib/types/plugins').PluginDraft | null} */
 	let tool = null;
 
+	/** @param {import('$lib/types/plugins').PluginDraft} data */
 	const saveHandler = async (data) => {
 		console.log(data);
 
@@ -35,7 +37,7 @@
 			return;
 		}
 
-		const res = await updateToolById(localStorage.token, tool.id, {
+		const res = await updateToolById(localStorage.token, tool?.id ?? data.id, {
 			id: data.id,
 			name: data.name,
 			meta: data.meta,

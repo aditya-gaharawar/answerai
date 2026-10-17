@@ -19,7 +19,7 @@
 	export let onClose: Function = () => {};
 
 	export let onSync: Function = () => {};
-	export let onUpload: Function = (data) => {};
+	export let onUpload: Function = (data: unknown) => {};
 	export let onReset: Function = () => {};
 
 	let show = false;

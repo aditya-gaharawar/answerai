@@ -34,7 +34,10 @@
 	export let canTemporary: boolean | (() => boolean) = false;
 	export let temporaryEnabled: boolean | (() => boolean) = false;
 	export let hasChatContent = false;
-	export let contextUsage = null;
+	export let contextUsage:
+		| import('$lib/types/chat').ContextUsage
+		| null
+		| (() => import('$lib/types/chat').ContextUsage | null) = null;
 
 	$: compactAvailable = typeof canCompact === 'function' ? canCompact() : canCompact;
 	$: isCompactDisabled =
@@ -110,7 +113,7 @@
 					forkDisabled={isForkDisabled}
 					canTemporary={temporaryAvailable}
 					temporaryEnabled={isTemporaryEnabled}
-					{contextPercent}
+					contextPercent={contextPercent ?? 0}
 					{contextHasThreshold}
 					{hasChatContent}
 					onSelect={(e) => {

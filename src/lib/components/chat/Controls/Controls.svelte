@@ -12,7 +12,7 @@
 	import { user, settings } from '$lib/stores';
 	export let models: import('$lib/stores').Model[] = [];
 	export let chatFiles: import('$lib/types/notes').NoteAttachment[] = [];
-	export let params = {};
+	export let params: { system?: string; [key: string]: unknown } = {};
 	export let embed = false;
 
 	// Persist collapsible section open/close state

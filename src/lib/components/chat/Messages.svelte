@@ -40,9 +40,9 @@
 	export let sendMessage: Function;
 	export let continueResponse: Function;
 	export let regenerateResponse: Function;
-	export let mergeResponses: Function;
+	export let mergeResponses: Function = () => {};
 
-	export let chatActionHandler: Function;
+	export let chatActionHandler: Function = () => {};
 	export let showMessage: Function = () => {};
 	export let submitMessage: Function = () => {};
 	export let addMessages: Function = () => {};
@@ -356,7 +356,7 @@
 					childrenIds: [],
 					role: 'user',
 					user_id: $_user?.id,
-					user: { id: $_user?.id, name: $_user?.name },
+					user: $_user ? { id: $_user.id, name: $_user.name } : undefined,
 					content: userPrompt,
 					...(files && { files: files }),
 					models: selectedModels,

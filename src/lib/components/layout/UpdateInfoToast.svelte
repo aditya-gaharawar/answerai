@@ -7,7 +7,7 @@
 	import { WEBUI_VERSION } from '$lib/constants';
 	import XMark from '../icons/XMark.svelte';
 
-	export let version = {
+	export let version: { current: string; latest: string | null } = {
 		current: WEBUI_VERSION,
 		latest: WEBUI_VERSION
 	};

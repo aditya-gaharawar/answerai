@@ -1,30 +1,15 @@
-import type { TokenizerThis } from 'marked';
-export const disableSingleTilde = {
-	tokenizer: {
-		del(this: TokenizerThis, src: string) {
-			// 1. First check for the REAL strikethrough: ~~text~~
-			const doubleMatch = /^~~(?=\S)([\s\S]*?\S)~~/.exec(src);
-			if (doubleMatch) {
-				return {
-					type: 'del',
-					raw: doubleMatch[0],
-					text: doubleMatch[1],
-					tokens: this.lexer.inlineTokens(doubleMatch[1])
-				};
+import type { MarkedExtension } from 'marked';
+/** Consume single-tilde text before GFM's deletion tokenizer. */
+export const disableSingleTilde: MarkedExtension = {
+	extensions: [
+		{
+			name: 'singleTildeText',
+			level: 'inline',
+			start: (source) => source.indexOf('~'),
+			tokenizer(source) {
+				const match = /^~(?!~)(?=\S)([\s\S]*?\S)~(?!~)/.exec(source);
+				if (match) return { type: 'text', raw: match[0], text: match[0] };
 			}
-
-			// 2. Check for single-tilde: ~text~
-			const singleMatch = /^~(?=\S)([\s\S]*?\S)~/.exec(src);
-			if (singleMatch) {
-				// return a plain-text token, NOT del
-				return {
-					type: 'text',
-					raw: singleMatch[0],
-					text: singleMatch[0] // include both tildes as literal text
-				};
-			}
-
-			return false;
 		}
-	}
+	]
 };

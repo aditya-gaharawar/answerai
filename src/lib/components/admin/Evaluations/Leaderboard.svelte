@@ -125,9 +125,11 @@
 		const aVal = getValue(a, orderBy);
 		const bVal = getValue(b, orderBy);
 		if (orderBy === 'name') {
-			return direction === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+			return direction === 'asc'
+				? String(aVal).localeCompare(String(bVal))
+				: String(bVal).localeCompare(String(aVal));
 		}
-		return direction === 'asc' ? aVal - bVal : bVal - aVal;
+		return direction === 'asc' ? Number(aVal) - Number(bVal) : Number(bVal) - Number(aVal);
 	});
 </script>
 

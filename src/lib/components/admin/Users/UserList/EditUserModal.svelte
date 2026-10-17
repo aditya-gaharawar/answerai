@@ -35,7 +35,15 @@
 		}
 	};
 
-	let _user = {
+	let _user: {
+		id?: string;
+		oauth?: Record<string, { sub?: string }>;
+		profile_image_url: string;
+		role: string;
+		name: string;
+		email: string;
+		password: string;
+	} = {
 		profile_image_url: '',
 		role: 'pending',
 		name: '',

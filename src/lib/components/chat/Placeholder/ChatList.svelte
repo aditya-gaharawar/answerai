@@ -59,7 +59,7 @@
 		} else {
 			chatList = chats.map((chat) => ({
 				...chat,
-				time_range: getTimeRange(chat.updated_at)
+				time_range: getTimeRange(chat.updated_at ?? 0)
 			}));
 		}
 	};

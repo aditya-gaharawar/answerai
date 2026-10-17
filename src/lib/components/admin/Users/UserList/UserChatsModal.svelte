@@ -81,9 +81,9 @@
 		allChatsLoaded = newChatList.length === 0;
 
 		if (newChatList.length > 0) {
-			const existingIds = new Set(chatList.map((c) => c.id));
+			const existingIds = new Set((chatList ?? []).map((c) => c.id));
 			const uniqueNewChats = newChatList.filter((c) => !existingIds.has(c.id));
-			chatList = [...chatList, ...uniqueNewChats];
+			chatList = [...(chatList ?? []), ...uniqueNewChats];
 		}
 
 		chatListLoading = false;

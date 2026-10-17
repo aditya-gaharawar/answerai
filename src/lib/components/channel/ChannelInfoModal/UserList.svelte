@@ -26,7 +26,7 @@
 
 	const i18n = getContext<any>('i18n');
 
-	export let channel = null;
+	export let channel: import('$lib/types/channels').ChannelRecord | null = null;
 	export let apps: App[] = [];
 	export let onRemoveApp: ((appId: string) => Promise<void>) | null = null;
 	let removingApp = '';
@@ -34,8 +34,8 @@
 		`${app.name} ${app.slug}`.toLowerCase().includes(query.toLowerCase())
 	);
 
-	export let onAdd = null;
-	export let onRemove = null;
+	export let onAdd: (() => void) | null = null;
+	export let onRemove: ((userId: string) => void) | null = null;
 
 	export let search = true;
 	export let sort = true;
@@ -65,6 +65,7 @@
 	};
 
 	const getUserList = async () => {
+		if (!channel) return;
 		try {
 			const res = await getChannelMembersById(
 				localStorage.token,
@@ -90,7 +91,7 @@
 	const handleSearchInput = () => {
 		if (channel === null) return;
 
-		clearTimeout(debounceTimer);
+		if (debounceTimer !== null) clearTimeout(debounceTimer);
 		debounceTimer = setTimeout(() => {
 			if (page !== 1) {
 				page = 1;

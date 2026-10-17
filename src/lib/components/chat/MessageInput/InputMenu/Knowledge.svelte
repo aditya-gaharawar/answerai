@@ -15,7 +15,7 @@
 
 	const i18n = getContext('i18n');
 
-	export let onSelect = (e) => {};
+	export let onSelect = (e: { id: string; type: string; name?: string; url?: string }) => {};
 
 	let loaded = false;
 	let selectedIdx = 0;
@@ -39,7 +39,7 @@
 	const initSelectedFileItems = async () => {
 		selectedFileRequestId += 1;
 		selectedFileItemsPage = 1;
-		selectedFileItems = null;
+		selectedFileItems = [];
 		selectedFileItemsTotal = null;
 		selectedFileAllItemsLoaded = false;
 		selectedFileItemsLoading = false;
@@ -82,7 +82,7 @@
 
 			if (selectedFileItems) {
 				const existingIds = new Set(selectedFileItems.map((item) => item.id));
-				const newItems = pageItems.filter((item) => !existingIds.has(item.id));
+				const newItems = pageItems.filter((item: { id: string }) => !existingIds.has(item.id));
 				selectedFileItems = [...selectedFileItems, ...newItems];
 			} else {
 				selectedFileItems = pageItems;
@@ -156,7 +156,7 @@
 
 			if (items) {
 				const existingIds = new Set(items.map((item) => item.id));
-				const newItems = pageItems.filter((item) => !existingIds.has(item.id));
+				const newItems = pageItems.filter((item: { id: string }) => !existingIds.has(item.id));
 				items = [...items, ...newItems];
 			} else {
 				items = pageItems;
@@ -291,9 +291,12 @@
 												<DocumentPage className="size-3.5" />
 											</Tooltip>
 
-											<Tooltip content={decodeString(file?.meta?.name)} placement="top-start">
+											<Tooltip
+												content={decodeString(file?.meta?.name ?? file.filename)}
+												placement="top-start"
+											>
 												<div class="line-clamp-1 flex-1 text-[0.8125rem]">
-													{decodeString(file?.meta?.name)}
+													{decodeString(file?.meta?.name ?? file.filename)}
 												</div>
 											</Tooltip>
 										</div>

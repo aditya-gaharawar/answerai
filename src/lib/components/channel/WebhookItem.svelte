@@ -41,9 +41,9 @@
 		const reader = new FileReader();
 		reader.onload = (event) => {
 			const dataUrl = `${event.target?.result}`;
-			const fileType = inputFiles[0]?.type;
+			const fileType = inputFiles?.[0]?.type;
 
-			if (['image/gif', 'image/webp'].includes(fileType)) {
+			if (['image/gif', 'image/webp'].includes(fileType ?? '')) {
 				image = dataUrl;
 			} else {
 				const tempImage = new Image();
@@ -55,6 +55,7 @@
 					canvas.height = canvasSize;
 
 					const context = canvas.getContext('2d');
+					if (!context) return;
 					const aspectRatio = tempImage.width / tempImage.height;
 					const scaledWidth = aspectRatio > 1 ? canvasSize * aspectRatio : canvasSize;
 					const scaledHeight = aspectRatio > 1 ? canvasSize : canvasSize / aspectRatio;
@@ -67,7 +68,7 @@
 			}
 			inputFiles = null;
 		};
-		reader.readAsDataURL(inputFiles[0]);
+		reader.readAsDataURL(inputFiles?.[0]);
 	};
 
 	const copyUrl = () => {

@@ -8,7 +8,7 @@
 	import ArenaModelModal from './ArenaModelModal.svelte';
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
 	export let model;
-	export let onEdit = async (_model) => true;
+	export let onEdit = async (_model: import('$lib/types/evaluations').ArenaConfigModel) => true;
 
 	let showModel = false;
 </script>

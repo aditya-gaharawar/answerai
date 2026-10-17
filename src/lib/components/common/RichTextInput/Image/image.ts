@@ -158,7 +158,7 @@ export const Image = Node.create<ImageOptions>({
 						? e.detail.files
 						: editor.storage?.files || [];
 				if (files && node.attrs.src.startsWith('data://')) {
-					const file = files.find((f) => f.id === fileId);
+					const file = files.find((f: { id?: string; url?: string }) => f.id === fileId);
 					if (file) {
 						img.setAttribute('src', safeImageUrl(file.url || ''));
 					} else {

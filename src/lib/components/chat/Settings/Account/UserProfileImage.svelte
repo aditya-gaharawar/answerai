@@ -10,7 +10,7 @@
 	import { WEBUI_BASE_URL } from '$lib/constants';
 
 	export let profileImageUrl: string;
-	export let user = null;
+	export let user: Partial<import('$lib/stores').SessionUser> | null = null;
 
 	export let imageClassName = 'size-14 md:size-18';
 	export let variant = 'default';
@@ -29,7 +29,7 @@
 		const files = profileImageInputElement.files ?? [];
 		let reader = new FileReader();
 		reader.onload = (event) => {
-			let originalImageUrl = `${event.target.result}`;
+			let originalImageUrl = `${event.target?.result}`;
 
 			const img = new Image();
 			img.src = originalImageUrl;
@@ -37,6 +37,7 @@
 			img.onload = function () {
 				const canvas = document.createElement('canvas');
 				const ctx = canvas.getContext('2d');
+				if (!ctx) return;
 
 				// Calculate the aspect ratio of the image
 				const aspectRatio = img.width / img.height;
@@ -92,7 +93,7 @@
 			}}
 		>
 			<img
-				src={profileImageUrl !== '' ? profileImageUrl : generateInitialsImage(user?.name)}
+				src={profileImageUrl !== '' ? profileImageUrl : generateInitialsImage(user?.name ?? '')}
 				alt="profile"
 				class="h-full w-full object-cover"
 			/>
@@ -145,7 +146,7 @@
 					type="button"
 					on:click={async () => {
 						if (canvasPixelTest()) {
-							profileImageUrl = generateInitialsImage(user?.name);
+							profileImageUrl = generateInitialsImage(user?.name ?? '');
 						} else {
 							toast.info(
 								$i18n.t(
@@ -163,7 +164,7 @@
 					class="text-[0.6875rem] text-gray-500 transition-colors duration-100 hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300"
 					type="button"
 					on:click={async () => {
-						const url = await getGravatarUrl(localStorage.token, user?.email);
+						const url = await getGravatarUrl(localStorage.token, user?.email ?? '');
 
 						profileImageUrl = url;
 					}}>{$i18n.t('Gravatar')}</button
@@ -182,7 +183,7 @@
 				}}
 			>
 				<img
-					src={profileImageUrl !== '' ? profileImageUrl : generateInitialsImage(user?.name)}
+					src={profileImageUrl !== '' ? profileImageUrl : generateInitialsImage(user?.name ?? '')}
 					alt="profile"
 					class=" rounded-full {imageClassName} object-cover"
 				/>
@@ -219,7 +220,7 @@
 				type="button"
 				on:click={async () => {
 					if (canvasPixelTest()) {
-						profileImageUrl = generateInitialsImage(user?.name);
+						profileImageUrl = generateInitialsImage(user?.name ?? '');
 					} else {
 						toast.info(
 							$i18n.t(
@@ -237,7 +238,7 @@
 				class="rounded-lg py-0.5 text-center text-xs text-gray-600 opacity-0 transition-all group-hover:opacity-100 group-focus-within:opacity-100 dark:text-gray-400"
 				type="button"
 				on:click={async () => {
-					const url = await getGravatarUrl(localStorage.token, user?.email);
+					const url = await getGravatarUrl(localStorage.token, user?.email ?? '');
 
 					profileImageUrl = url;
 				}}>{$i18n.t('Gravatar')}</button

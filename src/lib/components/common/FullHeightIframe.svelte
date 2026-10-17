@@ -18,7 +18,7 @@
 
 	export let iframeClassName = 'w-full rounded-2xl';
 
-	export let args = null;
+	export let args: unknown = null;
 
 	export let allowScripts = true;
 	export let allowForms = false;
@@ -31,7 +31,7 @@
 		'strict-origin-when-cross-origin';
 	export let allowfullscreen = true;
 
-	export let payload = null; // payload to send into the iframe on request
+	export let payload: unknown = null; // payload to send into the iframe on request
 
 	let iframe: HTMLIFrameElement | null = null;
 	let iframeSrc: string | null = null;

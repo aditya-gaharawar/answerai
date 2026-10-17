@@ -10,7 +10,7 @@
 	import { isValidHttpUrl } from '$lib/utils';
 
 	export let show = false;
-	export let onSubmit: (e) => void;
+	export let onSubmit: (data: { type: 'web'; data: string[] }) => void;
 
 	let url = '';
 

@@ -132,7 +132,7 @@
 						readOnly={true}
 						compactPreview={true}
 						{selectedModels}
-						atSelectedModel={null}
+						atSelectedModel={undefined}
 						{history}
 						autoScroll={true}
 						{messagesContainerId}

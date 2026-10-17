@@ -19,8 +19,8 @@
 
 	export let user: { id?: string | null; name?: string | null } | null = null;
 
-	export let align = 'center';
-	export let side = 'right';
+	export let align: 'center' | 'start' | 'end' = 'center';
+	export let side: 'left' | 'right' | 'top' | 'bottom' = 'right';
 	export let sideOffset = 8;
 
 	export let openPreview = false;

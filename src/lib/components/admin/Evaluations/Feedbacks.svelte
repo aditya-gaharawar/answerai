@@ -395,7 +395,7 @@
 										<Tooltip content={feedback?.user?.name}>
 											<div class="shrink-0">
 												<img
-													src={`${WEBUI_API_BASE_URL}/users/${feedback.user.id}/profile/image`}
+													src={`${WEBUI_API_BASE_URL}/users/${feedback.user?.id}/profile/image`}
 													alt={feedback?.user?.name}
 													class="size-5 rounded-full object-cover shrink-0"
 												/>

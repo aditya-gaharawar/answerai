@@ -4,7 +4,7 @@
 
 	const i18n = getContext('i18n');
 
-	export let messages = [];
+	export let messages: { role: string; content: string }[] = [];
 </script>
 
 <div class="py-3 space-y-3">

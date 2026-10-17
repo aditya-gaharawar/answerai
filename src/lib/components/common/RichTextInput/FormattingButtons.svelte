@@ -187,11 +187,12 @@
 
 	<EmojiPicker
 		onSubmit={(shortCode) => {
+			if (!shortCode) return;
 			const codepoint = $shortCodesToEmojis[shortCode];
 			if (codepoint) {
 				const emoji = codepoint
 					.split('-')
-					.map((cp) => String.fromCodePoint(parseInt(cp, 16)))
+					.map((/** @type {string} */ cp) => String.fromCodePoint(parseInt(cp, 16)))
 					.join('');
 				editor?.chain().focus().insertContent(emoji).run();
 			}

@@ -31,14 +31,14 @@
 	let showModelSelector = false;
 	let selectedModels = [''];
 
-	let chat = null;
-	let user = null;
+	let chat: import('$lib/types/chat').ChatRecord | null = null;
+	let user: import('$lib/stores').SessionUser | undefined = undefined;
 
 	let title = '';
 	let files = [];
 
-	let messages = [];
-	let history = {
+	let messages: import('$lib/utils/chatHistory').HistoryNode[] = [];
+	let history: import('$lib/utils/chatHistory').ChatHistory = {
 		messages: {},
 		currentId: null
 	};
@@ -115,33 +115,30 @@
 
 		if (chat) {
 			user = token
-				? await getUserInfoById(token, chat.user_id).catch((error) => {
+				? await getUserInfoById(token, chat.user_id ?? '').catch((error) => {
 						console.error(error);
 						return null;
 					})
-				: null;
+				: undefined;
 
 			const chatContent = chat.chat;
 
 			if (chatContent) {
 				console.log(chatContent);
 
-				selectedModels =
-					(chatContent?.models ?? undefined) !== undefined
-						? chatContent.models
-						: [chatContent.models ?? ''];
+				selectedModels = chatContent.models ?? [''];
 				history =
 					(chatContent?.history ?? undefined) !== undefined
 						? chatContent.history
-						: convertMessagesToHistory(chatContent.messages);
+						: convertMessagesToHistory(chatContent.messages ?? []);
 				title = chatContent.title;
 
 				autoScroll = true;
 				await tick();
 
-				if (messages.length > 0 && messages.at(-1)?.id && messages.at(-1)?.id in history.messages) {
-					history.messages[messages.at(-1)?.id].done = true;
-				}
+				const lastMessage = messages.at(-1);
+				if (lastMessage && history.messages[lastMessage.id])
+					history.messages[lastMessage.id].done = true;
 				await tick();
 
 				return true;
@@ -230,11 +227,11 @@
 						</h1>
 						<time
 							class="ms-auto shrink-0 whitespace-nowrap text-xs text-gray-400 dark:text-gray-500"
-							datetime={dayjs(chat.chat.timestamp || chat.created_at * 1000)
+							datetime={dayjs(chat?.chat.timestamp || (chat?.created_at ?? 0) * 1000)
 								.locale($i18n.language)
 								.toISOString()}
 						>
-							{dayjs(chat.chat.timestamp || chat.created_at * 1000)
+							{dayjs(chat?.chat.timestamp || (chat?.created_at ?? 0) * 1000)
 								.locale($i18n.language)
 								.format('LLL')}
 						</time>
@@ -251,11 +248,8 @@
 							readOnly={true}
 							forkHandler={canClone ? forkSharedChat : null}
 							{selectedModels}
-							{processing}
 							bind:history
-							bind:messages
 							bind:autoScroll
-							bottomPadding={files.length > 0}
 							sendMessage={() => {}}
 							continueResponse={() => {}}
 							regenerateResponse={() => {}}

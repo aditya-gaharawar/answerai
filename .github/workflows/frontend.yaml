@@ -61,5 +61,8 @@ jobs:
       - name: Install dependencies (frozen lockfile)
         run: npm ci --force
 
+      - name: Strict Svelte and TypeScript check
+        run: npm run check
+
       - name: Execute test suite
         run: npm run test:frontend

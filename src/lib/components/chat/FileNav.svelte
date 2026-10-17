@@ -1,10 +1,11 @@
-<script context="module">
+<script context="module" lang="ts">
 	// Keep keys in nested template expressions visible to i18next-parser.
 	// $i18n.t("Unknown error");
 
 	// Persists across mount/unmount cycles (module-level, not per-instance)
 	let savedPath = '/';
-	let savedFileRoot = null;
+	/** @type {import('$lib/apis/terminal').TerminalFileRoot | null} */
+	let savedFileRoot: import('$lib/apis/terminal').TerminalFileRoot | null = null;
 	/** @type {Map<string, string[]>} */
 	const treeExpandedCache = new Map();
 	/** @type {Map<string, [string, any[]][]>} */

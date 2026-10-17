@@ -280,7 +280,7 @@
 										<div class="w-32 shrink-0 flex items-center gap-2">
 											<img
 												src="{WEBUI_API_BASE_URL}/users/{chat.user_id}/profile/image"
-												alt={chat.user_name || 'User'}
+												alt={typeof chat.user_name === 'string' ? chat.user_name : 'User'}
 												class="size-5 rounded-full object-cover shrink-0"
 											/>
 											<span class="text-xs text-gray-600 dark:text-gray-400 truncate"

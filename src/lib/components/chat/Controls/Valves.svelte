@@ -197,7 +197,7 @@
 									>{$i18n.t('Select a tool')}</option
 								>
 
-								{#each $tools
+								{#each ($tools ?? [])
 									.filter((tool) => !tool?.id?.startsWith('server:'))
 									.sort((a, b) => (a.name ?? '').localeCompare(b.name ?? '')) as tool, toolIdx}
 									<option value={tool.id} class="bg-gray-100 dark:bg-gray-800"
@@ -209,7 +209,7 @@
 									>{$i18n.t('Select a function')}</option
 								>
 
-								{#each $functions.sort( (a, b) => (a.name ?? '').localeCompare(b.name ?? '') ) as func, funcIdx}
+								{#each ($functions ?? []).toSorted( (a, b) => (a.name ?? '').localeCompare(b.name ?? '') ) as func, funcIdx}
 									<option value={func.id} class="bg-gray-100 dark:bg-gray-800"
 										>{resolveLocalizedResource(func, $i18n.language)}</option
 									>

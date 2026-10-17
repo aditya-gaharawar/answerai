@@ -120,7 +120,7 @@
 					document.body.appendChild(clonedElement);
 
 					// Override content-visibility so html2canvas can capture all messages
-					clonedElement.querySelectorAll('.message-virtualized').forEach((el) => {
+					clonedElement.querySelectorAll<HTMLElement>('.message-virtualized').forEach((el) => {
 						el.style.contentVisibility = 'visible';
 					});
 
@@ -166,6 +166,7 @@
 						pageCanvas.height = sliceHeight;
 
 						const ctx = pageCanvas.getContext('2d');
+						if (!ctx) throw new Error('PDF rendering is unavailable');
 
 						// Draw the slice of original canvas onto pageCanvas
 						ctx.drawImage(
@@ -307,7 +308,7 @@
 
 	<div slot="content">
 		<DropdownMenu className="select-none min-w-[12.5rem] transition">
-			{#if $user?.role === 'admin' || ($user.permissions?.chat?.share ?? true)}
+			{#if $user?.role === 'admin' || ($user?.permissions?.chat?.share ?? true)}
 				<button
 					draggable="false"
 					class="flex h-[1.6875rem] gap-2 items-center rounded-xl px-2 text-[0.8125rem] cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-900 w-full"
@@ -320,7 +321,7 @@
 				</button>
 			{/if}
 
-			{#if $user?.role === 'admin' || ($user.permissions?.chat?.export ?? true)}
+			{#if $user?.role === 'admin' || ($user?.permissions?.chat?.export ?? true)}
 				<DropdownSub contentClass="select-none z-50">
 					<button
 						slot="trigger"

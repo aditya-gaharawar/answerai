@@ -56,7 +56,9 @@ export const chatId = writable('');
 export const chatTitle = writable('');
 
 export type ChannelListItem = {
-	name?: string;
+	name: string;
+	created_at: number;
+	updated_at: number;
 	id: string;
 	type: string | null;
 	is_channel_muted: boolean;
@@ -429,8 +431,8 @@ export type Config = {
 		image_compression?: { width?: number; height?: number };
 		allowed_extensions?: string[];
 	};
-	code?: { engine?: string };
-	metadata?: { favicon?: string; [key: string]: unknown };
+	code?: { engine?: string; interpreter_engine?: string };
+	metadata?: { favicon?: string; login_footer?: string; [key: string]: unknown };
 	google_drive?: { api_key: string; client_id: string };
 	audio?: {
 		realtime?: { enabled: boolean; model: string; voice: string };
@@ -449,6 +451,7 @@ export type Config = {
 	default_prompt_suggestions_i18n?: Record<string, { suggestion_prompts: PromptSuggestion[] }>;
 	features: {
 		enable_password_change_form?: boolean;
+		enable_signup_password_confirmation?: boolean;
 		enable_public_active_users_count?: boolean;
 		enable_easter_eggs?: boolean;
 		enable_folders?: boolean;

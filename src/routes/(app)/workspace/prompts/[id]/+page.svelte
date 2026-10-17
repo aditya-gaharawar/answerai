@@ -10,18 +10,19 @@
 
 	import PromptEditor from '$lib/components/workspace/Prompts/PromptEditor.svelte';
 
-	let prompt = null;
+	let prompt: import('$lib/types/resources').PromptRecord | null = null;
 	let disabled = false;
 
 	// Get prompt ID from route params
 	$: promptId = $page.params.id;
 
-	const onSubmit = async (_prompt) => {
+	const onSubmit = async (_prompt: import('$lib/types/resources').PromptRecord) => {
 		const updatedPrompt = await updatePromptById(localStorage.token, _prompt);
 		if (updatedPrompt) {
 			toast.success($i18n.t('Prompt updated successfully'));
 			// Update local prompt state to reflect the new version
 			prompt = {
+				...updatedPrompt,
 				id: updatedPrompt.id,
 				name: updatedPrompt.name,
 				command: updatedPrompt.command,
@@ -43,8 +44,9 @@
 			});
 
 			if (_prompt) {
-				disabled = !_prompt.write_access ?? true;
+				disabled = !(_prompt.write_access ?? false);
 				prompt = {
+					..._prompt,
 					id: _prompt.id,
 					name: _prompt.name,
 					command: _prompt.command,

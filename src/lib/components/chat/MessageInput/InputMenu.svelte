@@ -30,7 +30,7 @@
 
 	const i18n: any = getContext('i18n');
 
-	export let files = [];
+	export let files: import('$lib/types/notes').NoteAttachment[] = [];
 
 	export let selectedModels: string[] = [];
 	export let fileUploadCapableModels: string[] = [];
@@ -83,15 +83,18 @@
 		return /android|iphone|ipad|ipod|windows phone/i.test(userAgent);
 	};
 
-	const handleFileChange = (event) => {
-		const inputFiles = Array.from(event.target?.files);
+	const handleFileChange = (event: Event) => {
+		if (!(event.target instanceof HTMLInputElement)) return;
+		const inputFiles = Array.from(event.target.files ?? []);
 		if (inputFiles && inputFiles.length > 0) {
 			console.log(inputFiles);
 			inputFilesHandler(inputFiles);
 		}
 	};
 
-	const onSelect = (item) => {
+	const onSelect = (
+		item: Omit<import('$lib/types/notes').NoteAttachment, 'url'> & { url?: string }
+	) => {
 		if (files.find((f) => f.id === item.id)) {
 			return;
 		}
@@ -99,6 +102,7 @@
 			...files,
 			{
 				...item,
+				url: item.url ?? '',
 				status: 'processed'
 			}
 		];

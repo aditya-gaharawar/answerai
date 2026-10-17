@@ -486,9 +486,10 @@
 		}
 
 		if (!model && history?.messages && history?.currentId) {
-			let currentId = history.currentId;
+			let currentId: string | null = history.currentId;
 			while (currentId) {
-				const msg = history.messages[currentId];
+				const msg: import('$lib/utils/chatHistory').HistoryNode | undefined =
+					history.messages[currentId];
 				if (!msg) break;
 				if (msg.role === 'assistant' && msg.model) {
 					model = msg.model;

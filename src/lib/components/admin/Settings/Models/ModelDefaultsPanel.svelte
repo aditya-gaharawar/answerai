@@ -18,6 +18,8 @@
 	import LanguageModeSelect from '$lib/components/common/LanguageModeSelect.svelte';
 	import LocalizedPromptSuggestions from '$lib/components/workspace/Models/LocalizedPromptSuggestions.svelte';
 
+	/** @param {[string, boolean | undefined]} entry @returns {entry is [string, boolean]} */
+	const isBooleanCapability = (entry) => typeof entry[1] === 'boolean';
 	export let initHandler = () => {};
 	export let dirty = false;
 
@@ -29,16 +31,19 @@
 	let showPromptSuggestions = false;
 	let savedSnapshot = '';
 
+	/** @type {Record<string, boolean>} */
 	let defaultCapabilities = {};
 	/** @type {string[]} */
 	let defaultFeatureIds = [];
 	let defaultParams = {};
+	/** @type {Record<string, boolean>} */
 	let builtinTools = {};
 	/** @type {import('$lib/utils/promptSuggestions').PromptSuggestion[]} */
 	let promptSuggestions = [];
 	let useDefaultPromptSuggestions = false;
+	/** @type {Record<string, {suggestion_prompts?: import('$lib/utils/promptSuggestions').PromptSuggestion[]}>} */
 	let promptSuggestionsI18n = {};
-	/** @type {{ code: string; name: string }[]} */
+	/** @type {{ code: string; title: string }[]} */
 	let languages = [];
 	let editingLocale = '';
 
@@ -80,11 +85,15 @@
 
 		const savedMeta = config?.DEFAULT_MODEL_METADATA;
 		if (savedMeta && Object.keys(savedMeta).length > 0) {
-			defaultCapabilities = savedMeta.capabilities ?? { ...DEFAULT_CAPABILITIES };
+			defaultCapabilities =
+				savedMeta.capabilities ??
+				Object.fromEntries(Object.entries(DEFAULT_CAPABILITIES).filter(isBooleanCapability));
 			defaultFeatureIds = savedMeta.defaultFeatureIds ?? [];
 			builtinTools = savedMeta.builtinTools ?? {};
 		} else {
-			defaultCapabilities = { ...DEFAULT_CAPABILITIES };
+			defaultCapabilities = Object.fromEntries(
+				Object.entries(DEFAULT_CAPABILITIES).filter(isBooleanCapability)
+			);
 			defaultFeatureIds = [];
 			builtinTools = {};
 		}

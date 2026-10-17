@@ -19,8 +19,8 @@
 		if (!order || order.length === 0) return $pinnedNotes;
 		const orderMap = new Map(order.map((id, idx) => [id, idx]));
 		return [...$pinnedNotes].sort((a, b) => {
-			const aIdx = orderMap.has(a.id) ? orderMap.get(a.id) : Infinity;
-			const bIdx = orderMap.has(b.id) ? orderMap.get(b.id) : Infinity;
+			const aIdx = orderMap.get(a.id) ?? Infinity;
+			const bIdx = orderMap.get(b.id) ?? Infinity;
 			return aIdx - bIdx;
 		});
 	})();
@@ -43,6 +43,7 @@
 				onUpdate: async (event) => {
 					const noteId = event.item.dataset.id;
 					const newIndex = event.newIndex;
+					if (!noteId || newIndex === undefined) return;
 					const current = sortedPinnedNotes.map((n) => n.id);
 					const oldIndex = current.indexOf(noteId);
 					current.splice(oldIndex, 1);

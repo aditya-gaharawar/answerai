@@ -8,7 +8,7 @@
 	const i18n = getContext('i18n');
 
 	export let query = '';
-	export let onSelect = (e) => {};
+	export let onSelect = (e: { type: 'emoji'; data: { name: string; shortCodes: string[] } }) => {};
 
 	let selectedIdx = 0;
 	export let filteredItems: { name: string; shortCodes: string[] }[] = [];
@@ -30,7 +30,7 @@
 				)
 				.sort((a, b) => {
 					// Score: 0 = exact match, 1 = prefix match, 2 = substring match
-					const score = (emoji) => {
+					const score = (emoji: { name: string; shortCodes: string[] }) => {
 						if (emoji.shortCodes.some((c: string) => c.toLowerCase() === q)) return 0;
 						if (emoji.shortCodes.some((c: string) => c.toLowerCase().startsWith(q))) return 1;
 						return 2;

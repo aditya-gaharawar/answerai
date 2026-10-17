@@ -10,15 +10,16 @@
 	const dispatch = createEventDispatcher();
 	const i18n = getContext('i18n');
 
-	export let banner: Banner = {
-		id: '',
-		type: 'info',
-		title: '',
-		content: '',
-		url: '',
-		dismissible: true,
-		timestamp: Math.floor(Date.now() / 1000)
-	};
+	export let banner: Omit<Banner, 'id' | 'timestamp'> & Partial<Pick<Banner, 'id' | 'timestamp'>> =
+		{
+			id: '',
+			type: 'info',
+			title: '',
+			content: '',
+			url: '',
+			dismissible: true,
+			timestamp: Math.floor(Date.now() / 1000)
+		};
 	export let className = 'mx-2 px-2 rounded-lg';
 
 	export let dismissed = false;
@@ -32,7 +33,7 @@
 		error: 'bg-red-500/20 text-red-700 dark:text-red-200'
 	};
 
-	const dismiss = (id) => {
+	const dismiss = (id: string | undefined) => {
 		dismissed = true;
 		dispatch('dismiss', id);
 	};

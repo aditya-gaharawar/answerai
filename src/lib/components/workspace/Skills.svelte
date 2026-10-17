@@ -261,7 +261,10 @@
 		}
 	};
 
-	const exportHandler = async (skill, format: 'json' | 'zip' | 'skill' = 'json') => {
+	const exportHandler = async (
+		skill: import('$lib/types/resources').SkillRecord,
+		format: 'json' | 'zip' | 'skill' = 'json'
+	) => {
 		try {
 			saveAs(
 				await exportSkillBundle(localStorage.token, format, [skill.id]),
@@ -288,17 +291,17 @@
 		await _skills.set(await getSkills(localStorage.token));
 	};
 
-	onMount(async () => {
+	onMount(() => {
 		viewOption = localStorage?.workspaceViewOption || '';
 		loaded = true;
 
-		const onKeyDown = (event) => {
+		const onKeyDown = (event: KeyboardEvent) => {
 			if (event.key === 'Shift') {
 				shiftKey = true;
 			}
 		};
 
-		const onKeyUp = (event) => {
+		const onKeyUp = (event: KeyboardEvent) => {
 			if (event.key === 'Shift') {
 				shiftKey = false;
 			}
@@ -341,7 +344,7 @@
 {#if loaded}
 	<ImportModal
 		bind:show={showImportFromLink}
-		loadUrlHandler={(url) => loadSkillByUrl(localStorage.token, url)}
+		loadUrlHandler={(url: string) => loadSkillByUrl(localStorage.token, url)}
 		transformResult={(packages) => packages}
 		successMessage={$i18n.t('Skills loaded for preview')}
 		onImport={(packages) => {
@@ -604,7 +607,7 @@
 												cloneHandler={() => {
 													cloneHandler(skill);
 												}}
-												exportHandler={(format) => {
+												exportHandler={(format: 'json' | 'zip' | 'skill') => {
 													exportHandler(skill, format);
 												}}
 												deleteHandler={async () => {

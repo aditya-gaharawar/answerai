@@ -30,7 +30,7 @@
 	$: message = entry?.commit_message || entry?.id.slice(0, 7) || status;
 	$: author =
 		entry?.user?.name ||
-		($user?.id === authorId ? $user.name : authorId ? $i18n.t('Unknown user') : '');
+		($user?.id && $user.id === authorId ? $user.name : authorId ? $i18n.t('Unknown user') : '');
 	$: date = entry?.created_at ? new Date(entry.created_at * 1000) : null;
 </script>
 
@@ -65,7 +65,9 @@
 				allowHTML={false}
 			>
 				<time datetime={date.toISOString()} class="whitespace-nowrap text-[0.625rem] text-gray-400">
-					{dayjs(date).locale(getDayjsLocale($i18n.language)).fromNow()}
+					{dayjs(date)
+						.locale(getDayjsLocale($i18n.language) ?? 'en')
+						.fromNow()}
 				</time>
 			</Tooltip>
 		{/if}

@@ -19,9 +19,15 @@
 	const i18n = getContext('i18n');
 
 	export let show = false;
-	export let channel = null;
+	export let channel: import('$lib/types/channels').ChannelRecord | null = null;
 
-	let webhooks = [];
+	let webhooks: {
+		id: string;
+		name: string;
+		profile_image_url?: string;
+		url?: string;
+		created_at?: number;
+	}[] = [];
 	let isLoading = false;
 	let isSaving = false;
 
@@ -32,6 +38,7 @@
 	let pendingChanges: { [webhookId: string]: { name: string; profile_image_url: string } } = {};
 
 	const loadWebhooks = async () => {
+		if (!channel) return;
 		isLoading = true;
 		try {
 			webhooks = await getChannelWebhooks(localStorage.token, channel.id);
@@ -42,6 +49,7 @@
 	};
 
 	const createHandler = async () => {
+		if (!channel) return;
 		isSaving = true;
 		try {
 			const newWebhook = await createChannelWebhook(localStorage.token, channel.id, {
@@ -58,6 +66,7 @@
 	};
 
 	const saveHandler = async () => {
+		if (!channel) return;
 		isSaving = true;
 		try {
 			for (const [webhookId, changes] of Object.entries(pendingChanges)) {
@@ -73,6 +82,7 @@
 	};
 
 	const deleteHandler = async () => {
+		if (!channel) return;
 		if (!selectedWebhookId) return;
 
 		try {

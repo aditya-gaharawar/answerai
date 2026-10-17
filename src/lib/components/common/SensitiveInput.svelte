@@ -13,7 +13,7 @@
 	export let inputClassName = '';
 	export let showButtonClassName = '';
 	export let screenReader = true;
-	export let autocomplete = 'off';
+	export let autocomplete: import('svelte/elements').HTMLInputAttributes['autocomplete'] = 'off';
 	export let name: string | undefined = undefined;
 	export let ariaLabel: string | undefined = undefined;
 	export let ariaRequired: boolean | undefined = undefined;

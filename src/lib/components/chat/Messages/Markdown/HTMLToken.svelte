@@ -27,10 +27,7 @@
 				class="w-full my-2"
 				src={videoSrc.replaceAll('&amp;', '&')}
 				title={$i18n.t('Video player')}
-				frameborder="0"
-				referrerpolicy="strict-origin-when-cross-origin"
 				controls
-				allowfullscreen
 			></video>
 		{:else}
 			{token.text}
@@ -75,11 +72,14 @@
 				src={iframeSrc}
 				title={$i18n.t('Embedded content')}
 				frameborder="0"
-				sandbox
+				sandbox=""
 				on:load={(e) => {
+					const answeraiTarget = e.currentTarget;
+					if (!(answeraiTarget instanceof HTMLIFrameElement)) return;
+
 					try {
-						e.currentTarget.style.height =
-							e.currentTarget.contentWindow.document.body.scrollHeight + 20 + 'px';
+						answeraiTarget.style.height =
+							(answeraiTarget.contentDocument?.body.scrollHeight ?? 0) + 20 + 'px';
 					} catch {}
 				}}
 			></iframe>
@@ -126,9 +126,12 @@
 				allowfullscreen
 				width="100%"
 				on:load={(e) => {
+					const answeraiTarget = e.currentTarget;
+					if (!(answeraiTarget instanceof HTMLIFrameElement)) return;
+
 					try {
-						e.currentTarget.style.height =
-							e.currentTarget.contentWindow.document.body.scrollHeight + 20 + 'px';
+						answeraiTarget.style.height =
+							(answeraiTarget.contentDocument?.body.scrollHeight ?? 0) + 20 + 'px';
 					} catch {}
 				}}
 			></iframe>

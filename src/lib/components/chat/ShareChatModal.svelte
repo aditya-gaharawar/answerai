@@ -50,11 +50,11 @@
 		const url = 'https://answerai.in';
 		// const url = 'http://localhost:5173';
 
-		const tab = await window.open(`${url}/chats/upload`, '_blank');
+		const tab = window.open(`${url}/chats/upload`, '_blank');
 		window.addEventListener(
 			'message',
 			(event) => {
-				if (event.origin !== url) return;
+				if (event.origin !== url || !tab || event.source !== tab) return;
 				if (event.data === 'loaded') {
 					tab.postMessage(
 						JSON.stringify({
@@ -97,7 +97,7 @@
 
 	export let show = false;
 
-	const isDifferentChat = (_chat) => {
+	const isDifferentChat = (_chat: import('$lib/types/chat').ChatRecord | null) => {
 		if (!chat) {
 			return true;
 		}

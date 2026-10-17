@@ -56,7 +56,7 @@
 
 		const [modelRes, knowledgeRes, promptRes, skillRes, toolRes] = await Promise.all([
 			canViewModels
-				? getModelItems(localStorage.token, null, null, null, null, null, 1).catch(() => null)
+				? getModelItems(localStorage.token, '', null, null, null, null, 1).catch(() => null)
 				: null,
 			canViewKnowledge
 				? searchKnowledgeBases(localStorage.token, null, null, 1, null).catch(() => null)

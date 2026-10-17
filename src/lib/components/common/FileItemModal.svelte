@@ -188,6 +188,7 @@
 				getFileContentById(item.id),
 				import('$lib/utils/pptxToHtml')
 			]);
+			if (!arrayBuffer) throw new Error('File content is unavailable');
 			const result = await pptxToImages(arrayBuffer);
 			pptxSlides = result.images;
 			pptxCurrentSlide = 0;

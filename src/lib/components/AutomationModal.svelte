@@ -84,7 +84,7 @@
 				dispatch('save', { id: created?.id });
 			}
 		} catch (e: any) {
-			toast.error(e?.detail ?? `${e}` ?? 'Failed to save');
+			toast.error(e?.detail ?? String(e));
 		} finally {
 			loading = false;
 		}

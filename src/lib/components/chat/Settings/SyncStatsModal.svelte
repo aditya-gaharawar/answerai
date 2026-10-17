@@ -245,7 +245,7 @@
 				);
 			});
 
-			if (!res) {
+			if (!res?.body) {
 				throw new Error('Failed to start download. The server may be unavailable.');
 			}
 
@@ -431,7 +431,11 @@
 								<input
 									type="checkbox"
 									checked={syncMode === 'incremental'}
-									on:change={(e) => (syncMode = e.target.checked ? 'incremental' : 'full')}
+									on:change={(e) =>
+										(syncMode =
+											e.currentTarget instanceof HTMLInputElement && e.currentTarget.checked
+												? 'incremental'
+												: 'full')}
 									disabled={syncing}
 									class="w-4 h-4 rounded border-gray-300 dark:border-gray-600"
 								/>

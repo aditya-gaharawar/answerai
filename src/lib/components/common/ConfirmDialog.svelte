@@ -100,7 +100,7 @@
 			previousOverflow = document.body.style.overflow;
 			document.body.style.overflow = 'hidden';
 		} else if (modalElement) {
-			focusTrap.deactivate();
+			focusTrap?.deactivate();
 
 			window.removeEventListener('keydown', handleKeyDown);
 			document.body.removeChild(modalElement);
@@ -114,7 +114,7 @@
 		restoreOverflow();
 		window.removeEventListener('keydown', handleKeyDown);
 		if (focusTrap) {
-			focusTrap.deactivate();
+			focusTrap?.deactivate();
 		}
 		if (modalElement) {
 			document.body.removeChild(modalElement);

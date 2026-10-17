@@ -30,13 +30,14 @@
 
 	let draggedOver = false;
 
-	const onDragOver = (e) => {
+	const onDragOver = (e: DragEvent) => {
 		e.preventDefault();
 		e.stopPropagation();
 		draggedOver = true;
 	};
 
-	const onDrop = (e) => {
+	const onDrop = (e: DragEvent) => {
+		if (!(e.target instanceof Node) || !e.dataTransfer) return;
 		e.preventDefault();
 		e.stopPropagation();
 
@@ -56,7 +57,9 @@
 							const reader = new FileReader();
 							reader.onload = async function (event) {
 								try {
-									const fileContent = JSON.parse(event.target.result);
+									const fileContent = JSON.parse(
+										typeof event.target?.result === 'string' ? event.target.result : ''
+									);
 									console.log('Parsed JSON Content: ', fileContent);
 									open = true;
 									dispatch('import', fileContent);
@@ -100,7 +103,7 @@
 		}
 	};
 
-	const onDragLeave = (e) => {
+	const onDragLeave = (e: DragEvent) => {
 		e.preventDefault();
 		e.stopPropagation();
 
@@ -146,7 +149,7 @@
 				bind:open
 				className="w-full "
 				buttonClassName="w-full"
-				onChange={(state) => {
+				onChange={(state: boolean) => {
 					dispatch('change', state);
 					localStorage.setItem(`${id}-folder-state`, `${state}`);
 				}}

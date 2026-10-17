@@ -138,7 +138,9 @@
 				user_name: c.user_name
 			}));
 			const existingIds = new Set(chatList.map((c) => c.id));
-			const uniqueNewChats = newChats.filter((c) => !existingIds.has(c.id));
+			const uniqueNewChats = newChats.filter(
+				(c: (typeof chatList)[number]) => !existingIds.has(c.id)
+			);
 			chatList = [...chatList, ...uniqueNewChats];
 			allChatsLoaded = chatList.length >= (res?.total ?? chatList.length);
 		} catch (err) {

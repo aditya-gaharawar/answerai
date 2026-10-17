@@ -17,6 +17,7 @@ export interface OpenAIConnections {
 }
 
 export type ToolServerData = {
+	config?: { enable?: boolean };
 	url: string;
 	id?: string;
 	openapi?: Record<string, unknown>;

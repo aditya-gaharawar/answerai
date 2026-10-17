@@ -13,7 +13,7 @@
 
 	const i18n = getContext<typeof import('$lib/i18n').default>('i18n');
 
-	export let onSelect = (e) => {};
+	export let onSelect = (e: { id: string; type: string; name?: string; url?: string }) => {};
 
 	let loaded = false;
 
@@ -79,7 +79,7 @@
 
 		items = [
 			...items,
-			...pageItems.map((note) => {
+			...pageItems.map((note: import('$lib/types/notes').NoteListItem) => {
 				return {
 					...note,
 					type: 'note',

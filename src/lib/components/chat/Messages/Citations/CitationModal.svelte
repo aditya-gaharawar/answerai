@@ -84,7 +84,7 @@
 				? sourceUrl
 				: null;
 
-		if (!baseUrl || !content) return baseUrl;
+		if (!baseUrl || !content) return baseUrl ?? null;
 
 		// Extract first and last words for text fragment, filtering out URLs and emojis
 		const words = content
@@ -93,11 +93,11 @@
 			.split(' ')
 			.filter((w: string) => w.length > 0 && !/https?:\/\/|[\u{1F300}-\u{1F9FF}]/u.test(w));
 
-		if (words.length === 0) return baseUrl;
+		if (words.length === 0) return baseUrl ?? null;
 
 		const clean = (w: string) => w.replace(/[^\w]/g, '');
 		const first = clean(words[0]);
-		const last = clean(words.at(-1));
+		const last = clean(words.at(-1) ?? '');
 		const fragment = words.length === 1 ? first : `${first},${last}`;
 
 		return fragment ? `${baseUrl}#:~:text=${fragment}` : baseUrl;
@@ -122,7 +122,7 @@
 							<a
 								class="hover:text-gray-500 dark:hover:text-gray-100 underline grow line-clamp-1"
 								href={document?.metadata?.file_id
-									? `${WEBUI_API_BASE_URL}/files/${document?.metadata?.file_id}/content${document?.metadata?.page !== undefined ? `#page=${document.metadata.page + 1}` : ''}`
+									? `${WEBUI_API_BASE_URL}/files/${document?.metadata?.file_id}/content${document?.metadata?.page !== undefined ? `#page=${Number(document.metadata?.page) + 1}` : ''}`
 									: isValidHttpUrl(document.source?.url)
 										? document.source.url
 										: `#`}
@@ -216,7 +216,7 @@
 								{#if Number.isInteger(document?.metadata?.page)}
 									<span class="text-sm text-gray-500 dark:text-gray-400">
 										({$i18n.t('page')}
-										{document.metadata.page + 1})
+										{Number(document.metadata?.page) + 1})
 									</span>
 								{/if}
 							</div>

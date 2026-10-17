@@ -5,7 +5,7 @@
 
 	export let history;
 	export let onNodeClick;
-	export let chatUser = null;
+	export let chatUser: (Partial<import('$lib/stores').SessionUser> & { id: string }) | null = null;
 </script>
 
 <SvelteFlowProvider>

@@ -71,7 +71,7 @@
 		await updateUserSettings(localStorage.token, { ui: { pinnedMenuItems: updated } });
 	};
 
-	let usage = null;
+	let usage: { user_count?: number; model_ids?: string[] } | null = null;
 	const getUsageInfo = async () => {
 		const res = await getUsage(localStorage.token).catch((error) => {
 			console.error('Error fetching usage info:', error);
@@ -84,7 +84,7 @@
 		}
 	};
 
-	const handleDropdownChange = (state) => {
+	const handleDropdownChange = (state: boolean) => {
 		dispatch('change', state);
 
 		// Fetch usage info when dropdown opens, if user has permission

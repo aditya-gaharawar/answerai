@@ -16,6 +16,7 @@
 
 	export let chatId = '';
 	export let disabled = false;
+	/** @type {import('$lib/utils/tags').Tag[]} */
 	let tags = [];
 
 	const getTags = async () => {
@@ -24,7 +25,7 @@
 		});
 	};
 
-	const addTag = async (tagName) => {
+	const addTag = async (/** @type {string} */ tagName) => {
 		const res = await addTagById(localStorage.token, chatId, tagName).catch(async (error) => {
 			toast.error(`${error}`);
 			return null;
@@ -44,7 +45,7 @@
 		});
 	};
 
-	const deleteTag = async (tagName) => {
+	const deleteTag = async (/** @type {string} */ tagName) => {
 		const res = await deleteTagById(localStorage.token, chatId, tagName);
 		tags = await getTags();
 		await updateChatById(localStorage.token, chatId, {

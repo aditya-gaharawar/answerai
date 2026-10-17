@@ -12,7 +12,7 @@
 	let ready = false;
 	let loadedFolderId = '';
 
-	const init = async (folderId) => {
+	const init = async (folderId: string) => {
 		if (!folderId) {
 			await goto('/');
 			return;
@@ -43,7 +43,7 @@
 	};
 
 	$: if ($page.params.folderId !== loadedFolderId) {
-		loadedFolderId = $page.params.folderId;
+		loadedFolderId = $page.params.folderId ?? '';
 		init(loadedFolderId);
 	}
 

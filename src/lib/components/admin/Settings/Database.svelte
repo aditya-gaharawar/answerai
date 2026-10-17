@@ -62,12 +62,13 @@
 				if (!(answeraiEventTarget instanceof HTMLInputElement)) return;
 
 				const file = answeraiEventTarget.files?.[0];
+				if (!file) return;
 				const reader = new FileReader();
 
 				reader.onload = async (e) => {
 					const res = await importConfig(
 						localStorage.token,
-						JSON.parse(answeraiEventTarget.result)
+						JSON.parse(typeof e.target?.result === 'string' ? e.target.result : '')
 					).catch((error) => {
 						toast.error(`${error}`);
 					});
@@ -75,7 +76,7 @@
 					if (res) {
 						toast.success($i18n.t('Config imported successfully'));
 					}
-					answeraiEventTarget.value = null;
+					answeraiEventTarget.value = '';
 				};
 
 				reader.readAsText(file);

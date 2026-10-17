@@ -40,7 +40,7 @@
 
 	let mode = $config?.features.enable_ldap ? 'ldap' : 'signin';
 
-	let form = null;
+	let form: string | null = null;
 
 	let name = '';
 	let email = '';
@@ -51,7 +51,15 @@
 
 	let submitting = false;
 
-	const setSessionUser = async (sessionUser, redirectPath: string | null = null) => {
+	type AuthResult =
+		| EmailVerificationStep
+		| MfaChallenge
+		| { next_step: 'pending' }
+		| (import('$lib/stores').SessionUser & { next_step?: undefined });
+	const setSessionUser = async (
+		sessionUser: AuthResult | null,
+		redirectPath: string | null = null
+	) => {
 		if (sessionUser) {
 			if (sessionUser.next_step === 'verify_email') {
 				emailVerification = sessionUser;
@@ -64,7 +72,7 @@
 				pendingApproval = true;
 				return;
 			}
-			if (sessionUser.challenge_token) {
+			if ('challenge_token' in sessionUser) {
 				mfaChallenge = sessionUser;
 				password = '';
 				confirmPassword = '';
@@ -74,7 +82,7 @@
 			if (sessionUser.token) {
 				localStorage.token = sessionUser.token;
 			}
-			$socket.emit('user-join', { auth: { token: sessionUser.token } });
+			$socket?.emit('user-join', { auth: { token: sessionUser.token } });
 			await user.set(sessionUser);
 			await config.set(await getBackendConfig());
 
@@ -149,7 +157,7 @@
 
 	const oauthCallbackHandler = async () => {
 		// Get the value of the 'token' cookie
-		function getCookie(name) {
+		function getCookie(name: string) {
 			const match = document.cookie.match(
 				new RegExp('(?:^|; )' + name.replace(/([.$?*|{}()[\]\\/+^])/g, '\\$1') + '=([^;]*)')
 			);
@@ -441,7 +449,7 @@
 												name="password"
 												screenReader={true}
 												required
-												ariaRequired="true"
+												ariaRequired={true}
 											/>
 										</div>
 

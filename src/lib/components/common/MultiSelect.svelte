@@ -35,7 +35,7 @@
 	};
 
 	/** Svelte action: moves the node to document.body (portal) */
-	function portal(node) {
+	function portal(node: HTMLElement) {
 		document.body.appendChild(node);
 		return {
 			destroy() {
@@ -65,14 +65,15 @@
 		}
 	}
 
-	function handleWindowClick(event) {
+	function handleWindowClick(event: MouseEvent) {
+		if (!(event.target instanceof Node)) return;
 		if (!open) return;
 		if (triggerEl?.contains(event.target)) return;
 		if (contentEl?.contains(event.target)) return;
 		open = false;
 	}
 
-	function handleKeydown(event) {
+	function handleKeydown(event: KeyboardEvent) {
 		if (event.key === 'Escape' && open) {
 			open = false;
 		}

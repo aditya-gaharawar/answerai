@@ -58,7 +58,7 @@
 		return hasPublicReadGrant(channel?.access_grants);
 	};
 
-	const removeMemberHandler = async (userId) => {
+	const removeMemberHandler = async (userId: string) => {
 		const res = await removeMembersById(localStorage.token, channel.id, {
 			user_ids: [userId]
 		}).catch((error) => {

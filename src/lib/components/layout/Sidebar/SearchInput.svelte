@@ -14,13 +14,13 @@
 	export let showClearButton = false;
 
 	export let onFocus = () => {};
-	export let onKeydown = (e) => {};
+	export let onKeydown = (e: KeyboardEvent) => {};
 
-	let selectedIdx = 0;
-	let selectedOption = null;
+	let selectedIdx: number | null = 0;
+	let selectedOption: string | null = null;
 
 	let lastWord = '';
-	$: lastWord = value ? value.split(' ').at(-1) : value;
+	$: lastWord = value ? (value.split(' ').at(-1) ?? '') : value;
 
 	$: options = [
 		{
@@ -54,7 +54,7 @@
 		return option.name.startsWith(lastWord);
 	});
 
-	let filteredItems = [];
+	let filteredItems: { id: string; name: string; type: string }[] = [];
 
 	$: if (lastWord && $i18n) {
 		initItems();
@@ -67,7 +67,7 @@
 
 		if (lastWord.startsWith('tag:')) {
 			filteredItems = [
-				...$tags,
+				...$tags.map((tag) => ({ ...tag, id: tag.name.replaceAll(' ', '_').toLowerCase() })),
 				{
 					id: 'none',
 					name: $i18n.t('Untagged')
@@ -238,20 +238,20 @@
 				if (e.key === 'Enter') {
 					if (filteredItems.length > 0) {
 						const itemElement = document.getElementById(`search-item-${selectedIdx}`);
-						itemElement.click();
+						itemElement?.click();
 						return;
 					}
 
 					if (filteredOptions.length > 0) {
 						const optionElement = document.getElementById(`search-option-${selectedIdx}`);
-						optionElement.click();
+						optionElement?.click();
 						return;
 					}
 				}
 
 				if (e.key === 'ArrowUp') {
 					e.preventDefault();
-					selectedIdx = Math.max(0, selectedIdx - 1);
+					selectedIdx = Math.max(0, (selectedIdx ?? 0) - 1);
 				} else if (e.key === 'ArrowDown') {
 					e.preventDefault();
 
@@ -259,13 +259,13 @@
 						if (selectedIdx === filteredItems.length - 1) {
 							focused = false;
 						} else {
-							selectedIdx = Math.min(selectedIdx + 1, filteredItems.length - 1);
+							selectedIdx = Math.min((selectedIdx ?? 0) + 1, filteredItems.length - 1);
 						}
 					} else {
 						if (selectedIdx === filteredOptions.length - 1) {
 							focused = false;
 						} else {
-							selectedIdx = Math.min(selectedIdx + 1, filteredOptions.length - 1);
+							selectedIdx = Math.min((selectedIdx ?? 0) + 1, filteredOptions.length - 1);
 						}
 					}
 				} else {

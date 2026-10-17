@@ -5,6 +5,7 @@
 	import ManageOllama from './ManageOllama.svelte';
 	import SettingsSelect from '$lib/components/common/SettingsSelect.svelte';
 
+	/** @type {{OLLAMA_BASE_URLS: string[]} | null} */
 	export let ollamaConfig = null;
 
 	let selectedUrlIdx = 0;

@@ -10,12 +10,12 @@
 
 	export let show = false;
 
-	export let onImport = (e) => {};
+	export let onImport = (e: import('$lib/types/plugins').PluginDraft) => {};
 	export let onClose = () => {};
 
 	export let loadUrlHandler: Function = () => {};
 	export let successMessage: string = '';
-	export let transformResult = (res) => {
+	export let transformResult = (res: import('$lib/types/plugins').PluginDraft) => {
 		const func = { ...res, id: res.id || nameToId(res.name) };
 		const frontmatter = extractFrontmatter(res.content);
 		if (frontmatter?.title) func.name = frontmatter.title;
@@ -38,7 +38,7 @@
 			return;
 		}
 
-		const res = await loadUrlHandler(url).catch((err) => {
+		const res = await loadUrlHandler(url).catch((err: unknown) => {
 			toast.error(`${err}`);
 			loading = false;
 			return null;

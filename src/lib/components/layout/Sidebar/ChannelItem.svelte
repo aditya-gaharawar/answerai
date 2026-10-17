@@ -20,7 +20,10 @@
 	export let onUpdate: Function = () => {};
 
 	export let className = '';
-	export let channel;
+	export let channel: import('$lib/types/channels').ChannelRecord & {
+		unread_count: number;
+		is_channel_muted?: boolean;
+	};
 
 	let showEditChannelModal = false;
 

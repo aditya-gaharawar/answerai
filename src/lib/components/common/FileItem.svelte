@@ -27,9 +27,9 @@
 	export let edit = false;
 	export let small = false;
 
-	export let name: string;
-	export let type: string;
-	export let size: number;
+	export let name = '';
+	export let type = 'file';
+	export let size = 0;
 
 	import DocumentPage from '../icons/DocumentPage.svelte';
 	import Database from '../icons/Database.svelte';

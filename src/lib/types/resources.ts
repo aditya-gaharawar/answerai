@@ -1,6 +1,7 @@
 import type { AccessGrant } from '$lib/apis';
 import type { PluginOwner, PluginMeta } from './plugins';
 export type UserRecord = PluginOwner & {
+	is_active?: boolean;
 	email: string;
 	role: string;
 	profile_image_url: string;
@@ -12,6 +13,7 @@ export type UserRecord = PluginOwner & {
 	info?: { location?: string; bio?: string; date_of_birth?: string } | null;
 };
 export type FileRecord = {
+	description?: string;
 	id: string;
 	user_id?: string;
 	filename: string;
@@ -25,6 +27,7 @@ export type FileRecord = {
 	updated_at?: number;
 };
 export type SkillRecord = {
+	source?: string;
 	id: string;
 	name: string;
 	description?: string | null;
@@ -39,6 +42,7 @@ export type SkillRecord = {
 	updated_at: number;
 };
 export type PromptRecord = {
+	version_id?: string | null;
 	id: string;
 	command: string;
 	name: string;

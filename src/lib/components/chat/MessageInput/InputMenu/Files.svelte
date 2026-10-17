@@ -13,7 +13,7 @@
 
 	const i18n = getContext('i18n');
 
-	export let onSelect = (e) => {};
+	export let onSelect = (e: { id: string; type: string; name?: string; url?: string }) => {};
 
 	let loaded = false;
 	let items: (import('$lib/types/resources').FileRecord & { type: string; name: string })[] = [];
@@ -71,7 +71,7 @@
 
 		items = [
 			...items,
-			...(res ?? []).map((file) => ({
+			...(res ?? []).map((file: import('$lib/types/resources').FileRecord) => ({
 				...file,
 				type: isRasterImageContentType(file?.meta?.content_type) ? 'image' : 'file',
 				name: file.filename,

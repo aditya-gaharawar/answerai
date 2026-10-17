@@ -145,7 +145,7 @@
 		}
 
 		if (name !== $user?.name) {
-			if (profileImageUrl === generateInitialsImage($user?.name) || profileImageUrl === '') {
+			if (profileImageUrl === generateInitialsImage($user?.name ?? '') || profileImageUrl === '') {
 				profileImageUrl = generateInitialsImage(name);
 			}
 		}
@@ -620,7 +620,7 @@
 		</div>
 		<Textarea
 			className={variableValueClass}
-			rows="6"
+			rows={6}
 			minSize={132}
 			bind:value={variableFormValue}
 			ariaLabel={$i18n.t('Variable value')}

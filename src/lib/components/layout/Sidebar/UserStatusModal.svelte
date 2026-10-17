@@ -110,7 +110,7 @@
 								onClose={() => {}}
 								onSubmit={(name) => {
 									console.log(name);
-									emoji = name;
+									emoji = name ?? '';
 								}}
 							>
 								<div class=" flex items-center">

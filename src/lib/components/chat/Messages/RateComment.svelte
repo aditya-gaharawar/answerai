@@ -62,7 +62,7 @@
 			comment = message?.annotation?.comment ?? '';
 		}
 
-		tags = (message?.annotation?.tags ?? []).map((tag) => ({
+		tags = (message?.annotation?.tags ?? []).map((tag: string) => ({
 			name: tag
 		}));
 

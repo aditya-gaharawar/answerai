@@ -12,7 +12,7 @@
 
 	const i18n = getContext<any>('i18n');
 
-	const onSubmit = async (modelInfo) => {
+	const onSubmit = async (modelInfo: import('$lib/apis').ModelConfig) => {
 		if ($models.find((m) => m.id === modelInfo.id)) {
 			toast.error(
 				$i18n.t(
@@ -69,7 +69,7 @@
 		return false;
 	};
 
-	let model = null;
+	let model: import('$lib/apis').ModelConfig | null = null;
 
 	onMount(() => {
 		const handleMessageEvent = async (event: MessageEvent) => {

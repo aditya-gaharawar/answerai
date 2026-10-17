@@ -27,7 +27,7 @@
 	const i18n: any = getContext('i18n');
 
 	export let query = '';
-	export let onSelect = (e) => {};
+	export let onSelect = (e: import('$lib/types/chat').SlashSelection) => {};
 	export let canCompact = false;
 	export let canCompare = false;
 	export let compactDisabled = false;
@@ -41,10 +41,10 @@
 	export let contextHasThreshold = false;
 
 	let selectedIdx = 0;
-	export let filteredItems = [];
+	export let filteredItems: import('$lib/types/chat').SlashSelection[] = [];
 
-	let prompts = [];
-	let skills = [];
+	let prompts: import('$lib/types/resources').PromptRecord[] = [];
+	let skills: import('$lib/types/chat').SkillSuggestion[] = [];
 	let searchDebounceTimer: ReturnType<typeof setTimeout>;
 
 	$: contextCirclePercent = contextHasThreshold
@@ -54,30 +54,30 @@
 
 	$: commandItems = [
 		...(canTemporary && 'temporary'.startsWith(query.toLowerCase())
-			? [{ type: 'command', data: { id: 'temporary' } }]
+			? [{ type: 'command' as const, data: { id: 'temporary' } }]
 			: []),
 		...(canCompact && 'compact'.startsWith(query.toLowerCase())
-			? [{ type: 'command', data: { id: 'compact' } }]
+			? [{ type: 'command' as const, data: { id: 'compact' } }]
 			: []),
 		...(canFork && 'fork'.startsWith(query.toLowerCase())
-			? [{ type: 'command', data: { id: 'fork' } }]
+			? [{ type: 'command' as const, data: { id: 'fork' } }]
 			: []),
 		...(canStatus && 'status'.startsWith(query.toLowerCase())
-			? [{ type: 'command', data: { id: 'status' } }]
+			? [{ type: 'command' as const, data: { id: 'status' } }]
 			: []),
 		...('model'.startsWith(query.toLowerCase())
-			? [{ type: 'command', data: { id: 'model' } }]
+			? [{ type: 'command' as const, data: { id: 'model' } }]
 			: []),
 		...('settings'.startsWith(query.toLowerCase())
-			? [{ type: 'command', data: { id: 'settings' } }]
+			? [{ type: 'command' as const, data: { id: 'settings' } }]
 			: []),
 		...(canCompare && 'compare'.startsWith(query.toLowerCase())
-			? [{ type: 'command', data: { id: 'compare' } }]
+			? [{ type: 'command' as const, data: { id: 'compare' } }]
 			: []),
 		...(hasChatContent &&
 		($user?.role === 'admin' || $user?.permissions?.workspace?.skills) &&
 		'skills:create'.startsWith(query.toLowerCase())
-			? [{ type: 'command', data: { id: 'skills:create' } }]
+			? [{ type: 'command' as const, data: { id: 'skills:create' } }]
 			: [])
 	];
 
@@ -87,8 +87,8 @@
 
 	$: filteredItems = [
 		...commandItems,
-		...filteredPrompts.map((data) => ({ type: 'prompt', data })),
-		...skills.map((data) => ({ type: 'skill', data }))
+		...filteredPrompts.map((data) => ({ type: 'prompt' as const, data })),
+		...skills.map((data) => ({ type: 'skill' as const, data }))
 	];
 
 	$: if (query) {
@@ -166,7 +166,7 @@
 			.replaceAll('"', '&quot;')
 			.replaceAll("'", '&#39;');
 
-	const getSkillTooltipContent = (skill) => {
+	const getSkillTooltipContent = (skill: import('$lib/types/chat').SkillSuggestion) => {
 		const name = escapeTooltipText(resolveLocalizedResource(skill, $i18n.language));
 		const description = escapeTooltipText(
 			resolveLocalizedResource(skill, $i18n.language, 'description')

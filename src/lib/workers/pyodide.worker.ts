@@ -49,7 +49,10 @@ async function loadPyodideAndPackages(packages: string[] = []) {
 	// Create the upload directory and mount IDBFS for persistence
 	const uploadDir = '/mnt/uploads';
 	self.pyodide.FS.mkdirTree(uploadDir);
-	self.pyodide.FS.mount(self.pyodide.FS.filesystems.IDBFS, {}, '/mnt');
+	const fs = self.pyodide.FS as PyodideInterface['FS'] & {
+		filesystems: { IDBFS: Parameters<PyodideInterface['FS']['mount']>[0] };
+	};
+	fs.mount(fs.filesystems.IDBFS, {}, '/mnt');
 
 	// Load persisted files from IndexedDB
 	await new Promise<void>((resolve) => {

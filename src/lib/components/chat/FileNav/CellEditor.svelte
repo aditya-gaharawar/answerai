@@ -24,7 +24,7 @@
 		return await language?.load();
 	};
 
-	onMount(async () => {
+	onMount(() => {
 		const isDark = document.documentElement.classList.contains('dark');
 
 		const extensions = [
@@ -74,10 +74,13 @@
 			parent: container
 		});
 
-		const language = await getLang();
-		if (language && editor) {
-			editor.dispatch({ effects: editorLanguage.reconfigure(language) });
-		}
+		let disposed = false;
+		void getLang()
+			.then((language) => {
+				if (!disposed && language)
+					editor?.dispatch({ effects: editorLanguage.reconfigure(language) });
+			})
+			.catch((error) => console.error('Unable to load editor language', error));
 
 		// Watch dark mode
 		const observer = new MutationObserver(() => {
@@ -89,6 +92,7 @@
 		editor.focus();
 
 		return () => {
+			disposed = true;
 			observer.disconnect();
 			editor?.destroy();
 			editor = null;

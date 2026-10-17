@@ -42,6 +42,7 @@
 	export let messageId = '';
 	export let content;
 	export let done = true;
+	/** @type {import('$lib/stores').Model | null | undefined} */
 	export let model = null;
 	export let save = false;
 	export let preview = false;
@@ -57,13 +58,17 @@
 	export /** @type {string[]} */
 	let sourceIds = [];
 
+	/** @type {(event: {raw: string; oldContent: string; newContent: string}) => void} */
 	export let onSave = () => {};
 	export let onUpdate = () => {};
 
 	export let onPreview = () => {};
 
+	/** @type {(event: string | number) => void} */
 	export let onSourceClick = () => {};
+	/** @type {(event?: unknown) => void} */
 	export let onTaskClick = () => {};
+	/** @type {(event?: unknown) => void} */
 	export let onToolCallResolved = () => {};
 
 	/** @type {import('marked').Token[]} */
@@ -89,10 +94,10 @@
 		}
 	};
 
-	const updateHandler = (content) => {
+	const updateHandler = (/** @type {string} */ content) => {
 		if (content) {
 			if (done) {
-				cancelAnimationFrame(pendingUpdate);
+				if (pendingUpdate !== null) cancelAnimationFrame(pendingUpdate);
 				pendingUpdate = null;
 				parseTokens();
 			} else if (!pendingUpdate) {
@@ -108,7 +113,7 @@
 
 	// Throttle parsing to once per animation frame while streaming
 	onDestroy(() => {
-		cancelAnimationFrame(pendingUpdate);
+		if (pendingUpdate !== null) cancelAnimationFrame(pendingUpdate);
 	});
 </script>
 

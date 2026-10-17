@@ -21,7 +21,7 @@
 	const i18n = getContext<typeof import('$lib/i18n').default>('i18n');
 
 	export let query = '';
-	export let onSelect = (e) => {};
+	export let onSelect = (e: import('$lib/types/chat').KnowledgeSelection) => {};
 
 	let selectedIdx = 0;
 	let items: import('$lib/apis').ModelKnowledgeReference[] = [];
@@ -57,7 +57,7 @@
 
 	export const select = async () => {
 		// find item with data-selected=true
-		const item = document.querySelector(`[data-selected="true"]`);
+		const item = document.querySelector<HTMLElement>(`[data-selected="true"]`);
 		if (item) {
 			// click the item
 			item.click();
@@ -100,12 +100,14 @@
 		});
 
 		if (res) {
-			knowledgeItems = res.items.map((item) => {
-				return {
-					...item,
-					type: 'collection'
-				};
-			});
+			knowledgeItems = res.items.map(
+				(item: import('$lib/types/resources').FileRecord & { collection?: { name: string } }) => {
+					return {
+						...item,
+						type: 'collection'
+					};
+				}
+			);
 		}
 	};
 
@@ -115,14 +117,16 @@
 		});
 
 		if (res) {
-			fileItems = res.items.map((item) => {
-				return {
-					...item,
-					type: 'file',
-					name: item.filename,
-					description: item.collection ? item.collection.name : ''
-				};
-			});
+			fileItems = res.items.map(
+				(item: import('$lib/types/resources').FileRecord & { collection?: { name: string } }) => {
+					return {
+						...item,
+						type: 'file',
+						name: item.filename,
+						description: item.collection ? item.collection.name : ''
+					};
+				}
+			);
 		}
 	};
 
@@ -149,7 +153,7 @@
 			</div>
 		{/if}
 
-		{#if !['youtube', 'web'].includes(item.type)}
+		{#if !['youtube', 'web'].includes(item.type ?? '')}
 			<button
 				class="flex h-[1.6875rem] w-full items-center justify-between rounded-xl px-2 text-left text-[0.8125rem] hover:bg-gray-50/40 dark:hover:bg-gray-800/40 {idx ===
 				selectedIdx
@@ -173,7 +177,7 @@
 						content={item?.legacy
 							? $i18n.t('Legacy')
 							: item?.type === 'file'
-								? `${item?.collection?.name} > ${$i18n.t('File')}`
+								? `${typeof item.collection === 'object' && item.collection && 'name' in item.collection ? item.collection.name : ''} > ${$i18n.t('File')}`
 								: item?.type === 'collection'
 									? $i18n.t('Collection')
 									: ''}
@@ -188,9 +192,9 @@
 						{/if}
 					</Tooltip>
 
-					<Tooltip content={`${decodeString(item?.name)}`} placement="top-start">
+					<Tooltip content={`${decodeString(item?.name ?? '')}`} placement="top-start">
 						<div class="min-w-0 flex-1 truncate">
-							{decodeString(item?.name)}
+							{decodeString(item?.name ?? '')}
 						</div>
 					</Tooltip>
 				</div>

@@ -8,7 +8,7 @@
 
 	const i18n = getContext('i18n');
 
-	let adminDetails = null;
+	let adminDetails: { name: string; email: string } | null = null;
 
 	onMount(async () => {
 		adminDetails = await getAdminDetails(localStorage.token).catch((err) => {
@@ -29,7 +29,7 @@
 					style="white-space: pre-wrap;"
 				>
 					{#if ($config?.ui?.pending_user_overlay_title ?? '').trim() !== ''}
-						{$config.ui.pending_user_overlay_title}
+						{$config?.ui?.pending_user_overlay_title}
 					{:else}
 						{$i18n.t('Account Activation Pending')}<br />
 						{$i18n.t('Contact Admin for ANSWERAI Access')}

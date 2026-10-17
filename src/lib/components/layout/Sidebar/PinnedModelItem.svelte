@@ -9,7 +9,7 @@
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import PinSlash from './icons/PinSlash.svelte';
 
-	export let model = null;
+	export let model: import('$lib/stores').Model | null | undefined = null;
 	export let shiftKey = false;
 	export let onClick = () => {};
 	export let onUnpin = () => {};
@@ -42,10 +42,13 @@
 					class=" size-4 rounded-full"
 					alt="logo"
 					on:error={(e) => {
+						const answeraiTarget = e.currentTarget;
+						if (!(answeraiTarget instanceof HTMLImageElement)) return;
+
 						// LICENSE covers this Open WebUI fallback logo.
 						// Do not alter, remove, obscure, or replace it except as LICENSE permits:
 						// https://docs.openwebui.com/license.
-						e.currentTarget.src = '/favicon.png';
+						answeraiTarget.src = '/favicon.png';
 					}}
 				/>
 			</div>

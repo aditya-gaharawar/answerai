@@ -60,7 +60,7 @@
 	let role = 'user';
 	let message = '';
 
-	let messages = [];
+	let messages: { role: string; content: string }[] = [];
 
 	const scrollToBottom = () => {
 		const element = messagesContainerElement;
@@ -125,7 +125,7 @@
 
 		let responseMessage;
 		if (messages.at(-1)?.role === 'assistant') {
-			responseMessage = messages.at(-1);
+			responseMessage = messages.at(-1)!;
 		} else {
 			responseMessage = {
 				role: 'assistant',
@@ -138,7 +138,7 @@
 		await tick();
 		const textareaElement = document.getElementById(`assistant-${messages.length - 1}-textarea`);
 
-		if (res && res.ok) {
+		if (res?.body && res.ok) {
 			const reader = res.body
 				.pipeThrough(new TextDecoderStream())
 				.pipeThrough(splitStream('\n'))
@@ -148,7 +148,7 @@
 				const { value, done } = await reader.read();
 				if (done || stopResponseFlag) {
 					if (stopResponseFlag) {
-						controller.abort('User: Stop Response');
+						controller?.abort('User: Stop Response');
 					}
 					break;
 				}
@@ -169,12 +169,14 @@
 								if (responseMessage.content == '' && data.choices[0].delta.content == '\n') {
 									continue;
 								} else {
-									textareaElement.style.height = textareaElement.scrollHeight + 'px';
+									if (textareaElement)
+										textareaElement.style.height = textareaElement.scrollHeight + 'px';
 
 									responseMessage.content += data.choices[0].delta.content ?? '';
 									messages = messages;
 
-									textareaElement.style.height = textareaElement.scrollHeight + 'px';
+									if (textareaElement)
+										textareaElement.style.height = textareaElement.scrollHeight + 'px';
 
 									await tick();
 								}

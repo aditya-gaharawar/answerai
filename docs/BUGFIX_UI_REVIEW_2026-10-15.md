@@ -1,5 +1,7 @@
 # UI and security repair continuation: 15 October 2026
 
+The remaining strict errors were subsequently resolved in [the 17 October repair](STRICT_CHECK_REPAIR_2026-10-17.md).
+
 This review continues from `400a8990d7be91dadf6e47342373384d07eccdbb`. It repairs confirmed frontend failures and tightens the contracts used by channels, chat, settings, resource imports and exports. It does not establish that the repository is free of unknown vulnerabilities.
 
 ## Security and runtime repairs

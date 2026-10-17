@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
-	import { onMount, getContext, createEventDispatcher } from 'svelte';
+	import { onMount, onDestroy, getContext, createEventDispatcher } from 'svelte';
 	const i18n: any = getContext('i18n');
 	const dispatch = createEventDispatcher();
 
@@ -38,45 +38,36 @@
 				: Math.min(selectedContentIdx + 1, contents.length - 1);
 	}
 
+	let removeFrameListeners = () => {};
+	onDestroy(() => removeFrameListeners());
 	const iframeLoadHandler = () => {
-		iframeElement.contentWindow.addEventListener(
-			'click',
-			function (e) {
-				const target = e.target.closest('a');
-				if (target && target.href) {
-					e.preventDefault();
-					const url = new URL(target.href, iframeElement.baseURI);
-					if (url.origin === window.location.origin) {
-						iframeElement.contentWindow.history.pushState(
-							null,
-							'',
-							url.pathname + url.search + url.hash
-						);
-					} else {
-						console.info('External navigation blocked:', url.href);
-					}
-				}
-			},
-			true
-		);
-
-		// Cancel drag when hovering over iframe
-		iframeElement.contentWindow.addEventListener('mouseenter', function (e) {
-			e.preventDefault();
-			iframeElement.contentWindow.addEventListener('dragstart', (event) => {
+		removeFrameListeners();
+		removeFrameListeners = () => {};
+		const frame = iframeElement?.contentWindow;
+		if (!frame) return;
+		try {
+			const click = (event: MouseEvent) => {
+				if (!event.target || !('nodeType' in event.target) || event.target.nodeType !== 1) return;
+				const href = (event.target as Element).closest('a')?.getAttribute('href');
+				if (!href) return;
 				event.preventDefault();
-			});
-		});
-	};
-
-	const showFullScreen = () => {
-		if (iframeElement.requestFullscreen) {
-			iframeElement.requestFullscreen();
-		} else if (iframeElement.webkitRequestFullscreen) {
-			iframeElement.webkitRequestFullscreen();
-		} else if (iframeElement.msRequestFullscreen) {
-			iframeElement.msRequestFullscreen();
+				const url = new URL(href, iframeElement.baseURI);
+				if (url.origin === window.location.origin)
+					frame.history.pushState(null, '', url.pathname + url.search + url.hash);
+			};
+			const preventDrag = (event: Event) => event.preventDefault();
+			frame.addEventListener('click', click, true);
+			frame.addEventListener('dragstart', preventDrag);
+			removeFrameListeners = () => {
+				frame.removeEventListener('click', click, true);
+				frame.removeEventListener('dragstart', preventDrag);
+			};
+		} catch {
+			/* Opaque sandbox origins do not expose their DOM. */
 		}
+	};
+	const showFullScreen = () => {
+		void iframeElement?.requestFullscreen?.().catch((error) => toast.error(String(error)));
 	};
 
 	const downloadArtifact = () => {
@@ -94,7 +85,7 @@
 	onMount(() => {
 		const unsubscribeArtifactCode = artifactCode.subscribe((value) => {
 			if (contents) {
-				const codeIdx = contents.findIndex((content) => content.content.includes(value));
+				const codeIdx = contents.findIndex((content) => content.content.includes(value ?? ''));
 				selectedContentIdx = codeIdx !== -1 ? codeIdx : 0;
 			}
 		});

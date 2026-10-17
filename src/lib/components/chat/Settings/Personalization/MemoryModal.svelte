@@ -10,7 +10,8 @@
 
 	const dispatch = createEventDispatcher();
 
-	export let show;
+	export let show = false;
+	/** @type {{id: string; content: string; type?: string; path?: string} | null} */
 	export let memory = null;
 
 	const i18n = getContext('i18n');
@@ -31,7 +32,7 @@
 		loading = true;
 
 		const res = await (
-			edit
+			memory
 				? updateMemoryById(localStorage.token, memory.id, content, type, path)
 				: addNewMemory(localStorage.token, content, type, path)
 		).catch((error) => {

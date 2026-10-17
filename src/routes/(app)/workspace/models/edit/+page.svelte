@@ -13,6 +13,7 @@
 	import { getModels } from '$lib/apis';
 	import ModelEditor from '$lib/components/workspace/Models/ModelEditor.svelte';
 
+	/** @type {import('$lib/apis').ModelConfig | null} */
 	let model = null;
 
 	onMount(async () => {
@@ -36,6 +37,7 @@
 		}
 	});
 
+	/** @param {import('$lib/apis').ModelConfig} modelInfo */
 	const onSubmit = async (modelInfo) => {
 		const res = await updateModelById(localStorage.token, modelInfo.id, modelInfo);
 

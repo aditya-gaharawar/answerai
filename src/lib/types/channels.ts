@@ -3,7 +3,13 @@ import type { PluginOwner } from './plugins';
 import type { NoteAttachment } from './notes';
 import type { OutputItem } from '$lib/components/chat/Messages/structuredOutput';
 import type { Embed } from '$lib/apis/apps';
-export type ChannelUser = PluginOwner & { is_active?: boolean; role?: string; deleted?: boolean };
+export type ChannelUser = PluginOwner & {
+	is_active?: boolean;
+	role?: string;
+	status_emoji?: string | null;
+	status_message?: string | null;
+	deleted?: boolean;
+};
 export interface ChannelRecord {
 	id: string;
 	name: string;

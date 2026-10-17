@@ -38,7 +38,7 @@
 
 		let reader = new FileReader();
 		reader.onload = (event) => {
-			let chats = JSON.parse(event.target.result);
+			let chats = JSON.parse(typeof event.target?.result === 'string' ? event.target.result : '');
 			console.log(chats);
 			if (getImportOrigin(chats) == 'openai') {
 				try {
@@ -55,7 +55,7 @@
 		}
 	}
 
-	const importChatsHandler = async (_chats) => {
+	const importChatsHandler = async (_chats: Record<string, unknown>[]) => {
 		const res = await importChats(
 			localStorage.token,
 			_chats.map((chat) => {

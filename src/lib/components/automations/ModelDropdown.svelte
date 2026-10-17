@@ -109,10 +109,13 @@
 							class="rounded-full size-5 items-center mr-2"
 							loading="lazy"
 							on:error={(e) => {
+								const answeraiTarget = e.currentTarget;
+								if (!(answeraiTarget instanceof HTMLImageElement)) return;
+
 								// LICENSE covers this Open WebUI fallback logo.
 								// Do not alter, remove, obscure, or replace it except as LICENSE permits:
 								// https://docs.openwebui.com/license.
-								e.currentTarget.src = '/favicon.png';
+								answeraiTarget.src = '/favicon.png';
 							}}
 						/>
 						<div class="truncate">

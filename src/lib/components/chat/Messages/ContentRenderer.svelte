@@ -97,13 +97,15 @@
 	export let topPadding = false;
 	export let allowEmbeds = false;
 
-	/** @type {(event: unknown) => void} */
-	export let onSave = (e) => {};
-	/** @type {(event: unknown) => void} */
+	/** @type {(event: {raw: string; oldContent: string; newContent: string}) => void} */
+	export let onSave = (
+		/** @type {{raw: string; oldContent: string; newContent: string}} */ e
+	) => {};
+	/** @type {(event: string | number) => void} */
 	export let onSourceClick = (e) => {};
-	/** @type {(event: unknown) => void} */
+	/** @type {(event?: unknown) => void} */
 	export let onTaskClick = (e) => {};
-	/** @type {(event: unknown) => void} */
+	/** @type {(event?: unknown) => void} */
 	export let onToolCallResolved = (e) => {};
 	/** @type {(text: string) => void} */
 	export let onSetInputText = (text) => {};

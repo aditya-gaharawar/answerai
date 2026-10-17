@@ -17,8 +17,8 @@
 
 	let ollamaVersion = '';
 
-	let updateAvailable = null;
-	let version = {
+	let updateAvailable: boolean | null = null;
+	let version: { current: string; latest: string | null } = {
 		current: '',
 		latest: ''
 	};
@@ -36,7 +36,7 @@
 
 		console.log(version);
 
-		updateAvailable = compareVersion(version.latest, version.current);
+		updateAvailable = compareVersion(version.latest ?? '', version.current);
 		console.log(updateAvailable);
 	};
 

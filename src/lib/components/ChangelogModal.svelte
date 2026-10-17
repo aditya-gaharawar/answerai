@@ -39,9 +39,9 @@
 	};
 
 	const closeModal = async () => {
-		localStorage.version = $config.version;
-		await settings.set({ ...$settings, ...{ version: $config.version } });
-		await updateUserSettings(localStorage.token, { ui: { version: $config.version } });
+		localStorage.version = $config?.version;
+		await settings.set({ ...$settings, ...{ version: $config?.version } });
+		await updateUserSettings(localStorage.token, { ui: { version: $config?.version } });
 		show = false;
 	};
 
@@ -157,7 +157,7 @@
 													class="min-w-0 markdown-prose-sm list-none !max-w-none !text-[0.8125rem] text-gray-600 dark:text-gray-300 [&_*]:!my-0 [&_b]:!font-normal [&_strong]:!font-normal"
 												>
 													<!-- eslint-disable-next-line svelte/no-at-html-tags -->
-													{@html DOMPurify.sanitize(entry?.raw)}
+													{@html DOMPurify.sanitize(entry?.raw ?? '')}
 												</div>
 											</div>
 										{/each}

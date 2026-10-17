@@ -63,7 +63,7 @@
 							source: citations[index],
 							chatId: chatId,
 							messageId: id,
-							sourceId: sourceId
+							sourceId: String(sourceId)
 						});
 					}
 				} else {

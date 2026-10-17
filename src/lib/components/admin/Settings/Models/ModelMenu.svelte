@@ -48,7 +48,7 @@
 		await handler();
 	};
 
-	const isPublicModel = (model) =>
+	const isPublicModel = (model: { access_grants?: import('$lib/apis').AccessGrant[] }) =>
 		(model?.access_grants ?? []).some(
 			(g) => g.principal_type === 'user' && g.principal_id === '*' && g.permission === 'read'
 		);

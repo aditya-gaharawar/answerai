@@ -1,4 +1,5 @@
 <script>
+	import { parsePluginDraft } from '$lib/utils/pluginImport';
 	import { goto } from '$app/navigation';
 	import { createNewTool, getTools } from '$lib/apis/tools';
 	import ToolkitEditor from '$lib/components/workspace/Tools/ToolkitEditor.svelte';
@@ -12,8 +13,10 @@
 
 	let mounted = false;
 	let clone = false;
+	/** @type {import('$lib/types/plugins').PluginDraft | null} */
 	let tool = null;
 
+	/** @param {import('$lib/types/plugins').PluginDraft} data */
 	const saveHandler = async (data) => {
 		console.log(data);
 
@@ -56,19 +59,29 @@
 	};
 
 	onMount(() => {
-		window.addEventListener('message', async (event) => {
-			if (!COMMUNITY_ORIGINS.includes(event.origin)) return;
+		/** @param {MessageEvent} event */
+		const handleImport = async (event) => {
+			if (!COMMUNITY_ORIGINS.includes(event.origin) || event.source !== window.opener) return;
 
-			tool = JSON.parse(event.data);
+			try {
+				tool = parsePluginDraft(event.data);
+			} catch {
+				toast.error($i18n.t('Invalid JSON file'));
+			}
 			console.log(tool);
-		});
+		};
+		window.addEventListener('message', handleImport);
 
 		if (window.opener ?? false) {
-			window.opener.postMessage('loaded', '*');
+			for (const origin of COMMUNITY_ORIGINS) window.opener.postMessage('loaded', origin);
 		}
 
 		if (sessionStorage.tool) {
-			tool = JSON.parse(sessionStorage.tool);
+			try {
+				tool = parsePluginDraft(sessionStorage.tool);
+			} catch {
+				toast.error($i18n.t('Invalid JSON file'));
+			}
 			sessionStorage.removeItem('tool');
 
 			console.log(tool);
@@ -76,6 +89,7 @@
 		}
 
 		mounted = true;
+		return () => window.removeEventListener('message', handleImport);
 	});
 </script>
 

@@ -15,7 +15,7 @@
 	const i18n = getContext<typeof import('$lib/i18n').default>('i18n');
 
 	export let query = '';
-	export let onSelect = (e) => {};
+	export let onSelect = (e: { type: 'model'; data: import('$lib/stores').Model }) => {};
 
 	let selectedIdx = 0;
 	export let filteredItems = [];
@@ -27,13 +27,13 @@
 				const _item = {
 					...model,
 					modelName: resolveLocalizedModelName(model, $i18n.language),
-					tags: model?.info?.meta?.tags?.map((tag) => tag.name).join(' '),
+					searchTags: model?.info?.meta?.tags?.map((tag) => tag.name).join(' '),
 					desc: resolveLocalizedModelDescription(model, $i18n.language)
 				};
 				return _item;
 			}),
 		{
-			keys: ['value', 'tags', 'modelName'],
+			keys: ['value', 'searchTags', 'modelName'],
 			threshold: 0.5
 		}
 	);
@@ -95,7 +95,7 @@
 							// LICENSE covers this Open WebUI fallback logo.
 							// Do not alter, remove, obscure, or replace it except as LICENSE permits:
 							// https://docs.openwebui.com/license.
-							e.currentTarget.src = '/favicon.png';
+							if (e.currentTarget instanceof HTMLImageElement) e.currentTarget.src = '/favicon.png';
 						}}
 					/>
 					<div class="min-w-0 truncate">

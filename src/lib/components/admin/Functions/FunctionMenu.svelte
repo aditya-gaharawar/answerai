@@ -57,7 +57,7 @@
 					</div>
 
 					<div>
-						<Switch on:change={toggleGlobalHandler} bind:state={func.is_global} />
+						<Switch on:change={(event) => toggleGlobalHandler(event)} bind:state={func.is_global} />
 					</div>
 				</div>
 

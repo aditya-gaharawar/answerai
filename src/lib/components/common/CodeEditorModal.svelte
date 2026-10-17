@@ -7,16 +7,22 @@
 	const i18n: any = getContext('i18n');
 
 	let {
-		show = $bindable(),
-		value = $bindable(),
+		show = $bindable(false),
+		value = $bindable(''),
 		lang = 'python',
 		onChange = () => {},
 		onSave = () => {}
-	} = $props();
+	} = $props<{
+		show?: boolean;
+		value?: string;
+		lang?: string;
+		onChange?: (value: string) => void;
+		onSave?: () => void;
+	}>();
 
 	let boilerplate = ``;
 
-	let codeEditor = $state(null);
+	let codeEditor = $state<InstanceType<typeof CodeEditor> | null>(null);
 	let _content = $state(value);
 
 	$effect(() => {

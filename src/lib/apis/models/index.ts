@@ -13,9 +13,9 @@ export const exportModels = async (token: string, ids?: string[]) => {
 
 export const getModelItems = async (
 	token: string = '',
-	query: string,
-	viewOption: string,
-	selectedTag: string,
+	query: string | null,
+	viewOption: string | null,
+	selectedTag: string | null,
 	orderBy: string | null,
 	direction: string | null,
 	page: number,

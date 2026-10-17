@@ -19,8 +19,11 @@
 	alt="profile"
 	draggable="false"
 	on:error={(e) => {
-		if (!e.currentTarget.src.endsWith(FALLBACK_SRC)) {
-			e.currentTarget.src = FALLBACK_SRC;
+		const answeraiTarget = e.currentTarget;
+		if (!(answeraiTarget instanceof HTMLImageElement)) return;
+
+		if (!answeraiTarget.src.endsWith(FALLBACK_SRC)) {
+			answeraiTarget.src = FALLBACK_SRC;
 		}
 	}}
 />

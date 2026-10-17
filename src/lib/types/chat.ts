@@ -52,9 +52,20 @@ export type PromptSelection = { type: 'prompt'; data: string };
 export interface ChatRecord extends ChatSummary {
 	chat: {
 		title: string;
+		timestamp?: number;
 		history: import('$lib/utils/chatHistory').ChatHistory;
 		messages?: import('$lib/utils/chatHistory').HistoryNode[];
 		models?: string[];
 		[key: string]: unknown;
 	};
 }
+
+export type SkillSuggestion =
+	import('./resources').SkillRecord | import('$lib/apis/terminal').TerminalSkill;
+export type SlashSelection =
+	| { type: 'command'; data: { id: string } }
+	| { type: 'prompt'; data: import('./resources').PromptRecord }
+	| { type: 'skill'; data: SkillSuggestion };
+export type KnowledgeSelection =
+	| { type: 'knowledge'; data: import('$lib/apis').ModelKnowledgeReference }
+	| { type: 'web' | 'youtube'; data: string };

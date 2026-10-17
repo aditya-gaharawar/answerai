@@ -44,7 +44,7 @@
 
 	$: onTypeChange(type);
 
-	const onTypeChange = (type) => {
+	const onTypeChange = (type: string) => {
 		if (type === 'group') {
 			if (isPrivate === null) {
 				isPrivate = true;

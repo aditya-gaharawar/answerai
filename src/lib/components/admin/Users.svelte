@@ -13,7 +13,8 @@
 
 	const i18n = getContext('i18n');
 
-	let selectedTab;
+	/** @type {string} */
+	let selectedTab = '';
 	$: {
 		const pathParts = $page.url.pathname.split('/');
 		const tabFromPath = pathParts[pathParts.length - 1];

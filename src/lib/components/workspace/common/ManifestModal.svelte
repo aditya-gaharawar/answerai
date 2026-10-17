@@ -10,7 +10,7 @@
 	const dispatch = createEventDispatcher();
 
 	export let show = false;
-	export let manifest = {};
+	export let manifest: import('$lib/types/plugins').PluginManifest = {};
 </script>
 
 <Modal size="sm" bind:show>

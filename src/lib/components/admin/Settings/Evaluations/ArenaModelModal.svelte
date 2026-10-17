@@ -140,8 +140,8 @@
 		if (model) {
 			name = model.name;
 			id = model.id;
-			profileImageUrl = model.meta.profile_image_url;
-			description = model.meta.description;
+			profileImageUrl = model.meta.profile_image_url ?? `${WEBUI_BASE_URL}/favicon.png`;
+			description = model.meta.description ?? '';
 			modelIds = [...new Set(model.meta.model_ids || [])];
 			filterMode = model.meta?.filter_mode ?? 'include';
 			accessGrants = model.meta.access_grants ?? [];

@@ -119,7 +119,7 @@
 
 	async function blobForPreview() {
 		if (!terminal) return null;
-		return downloadFileBlob(terminal.url, terminal.key, path, chatId || undefined);
+		return downloadFileBlob(terminal?.url ?? '', terminal?.key ?? '', path, chatId || undefined);
 	}
 
 	async function loadExcelSheet(sheet: string) {
@@ -161,8 +161,8 @@
 					fileSqliteData = arrayBuffer;
 				} else if (ext === 'docx') {
 					const preview = await downloadFilePreview(
-						terminal.url,
-						terminal.key,
+						terminal?.url ?? '',
+						terminal?.key ?? '',
 						path,
 						chatId || undefined
 					);
@@ -185,8 +185,8 @@
 					}
 				} else if (ext === 'pptx') {
 					const preview = await downloadFilePreview(
-						terminal.url,
-						terminal.key,
+						terminal?.url ?? '',
+						terminal?.key ?? '',
 						path,
 						chatId || undefined
 					);
@@ -202,7 +202,12 @@
 					}
 				}
 			} else if (terminal) {
-				fileContent = await readFile(terminal.url, terminal.key, path, chatId || undefined);
+				fileContent = await readFile(
+					terminal?.url ?? '',
+					terminal?.key ?? '',
+					path,
+					chatId || undefined
+				);
 			}
 		} catch (e) {
 			error = e instanceof Error ? e.message : t('Preview failed');
@@ -219,7 +224,12 @@
 
 	async function downloadFile() {
 		if (!terminal || !path) return;
-		const result = await downloadFileBlob(terminal.url, terminal.key, path, chatId || undefined);
+		const result = await downloadFileBlob(
+			terminal?.url ?? '',
+			terminal?.key ?? '',
+			path,
+			chatId || undefined
+		);
 		if (!result) {
 			toast.error(t('Download failed'));
 			return;

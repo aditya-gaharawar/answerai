@@ -159,7 +159,7 @@
 										class="pl-3 text-xs flex rounded-sm transition"
 										aria-label={$i18n.t('Remove action')}
 										on:click={() => {
-											floatingActionButtons = floatingActionButtons.filter(
+											floatingActionButtons = (floatingActionButtons ?? []).filter(
 												(b) => b.id !== button.id
 											);
 										}}

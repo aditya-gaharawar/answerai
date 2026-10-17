@@ -69,7 +69,7 @@
 				const reader = new FileReader();
 
 				reader.onload = async (e) => {
-					const csv = e.target.result;
+					const csv = typeof e.target?.result === 'string' ? e.target.result : '';
 					const rows = csv.split('\n');
 
 					const validRows = [];
@@ -124,8 +124,8 @@
 					inputFiles = null;
 					const uploadInputElement = document.getElementById('upload-user-csv-input');
 
-					if (uploadInputElement) {
-						uploadInputElement.value = null;
+					if (uploadInputElement instanceof HTMLInputElement) {
+						uploadInputElement.value = '';
 					}
 
 					stopLoading();

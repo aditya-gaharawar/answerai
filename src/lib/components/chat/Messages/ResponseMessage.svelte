@@ -87,17 +87,6 @@
 		done: boolean;
 		error?: boolean | { content: string };
 		sources?: string[];
-		code_executions?: {
-			uuid: string;
-			name: string;
-			code: string;
-			language?: string;
-			result?: {
-				error?: string;
-				output?: string;
-				files?: { name: string; url: string }[];
-			};
-		}[];
 		info?: {
 			openai?: boolean;
 			prompt_tokens?: number;

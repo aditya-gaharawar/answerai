@@ -56,7 +56,7 @@
 	let showEditUserModal = false;
 	let showUserPreviewModal = false;
 
-	const deleteUserHandler = async (id) => {
+	const deleteUserHandler = async (id: string) => {
 		const res = await deleteUserById(localStorage.token, id).catch((error) => {
 			toast.error(`${error}`);
 			return null;
@@ -72,7 +72,7 @@
 		}
 	};
 
-	const sortState = (key, orderBy, direction) =>
+	const sortState = (key: string, orderBy: string, direction: string) =>
 		orderBy === key ? (direction === 'asc' ? 'ascending' : 'descending') : 'none';
 
 	const setSortKey = (key: string) => {
@@ -136,7 +136,7 @@
 <ConfirmDialog
 	bind:show={showDeleteConfirmDialog}
 	on:confirm={() => {
-		deleteUserHandler(selectedUser.id);
+		if (selectedUser) deleteUserHandler(selectedUser.id);
 	}}
 />
 
@@ -379,7 +379,8 @@
 											// LICENSE covers this Open WebUI fallback logo.
 											// Do not alter, remove, obscure, or replace it except as LICENSE permits:
 											// https://docs.openwebui.com/license.
-											e.currentTarget.src = '/favicon.png';
+											if (e.currentTarget instanceof HTMLImageElement)
+												e.currentTarget.src = '/favicon.png';
 										}}
 									/>
 								</ProfilePreview>
@@ -426,7 +427,7 @@
 
 						<td class="px-3 py-1 text-right">
 							<div class="flex justify-end w-full">
-								{#if $config.features.enable_admin_chat_access && user.role !== 'admin'}
+								{#if $config?.features.enable_admin_chat_access && user.role !== 'admin'}
 									<Tooltip content={$i18n.t('Chats')}>
 										<button
 											class="self-center w-fit p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg"
@@ -563,7 +564,7 @@
 {#if selectedUser}
 	<UserPreviewModal
 		bind:show={showUserPreviewModal}
-		userId={selectedUser.id}
+		userId={selectedUser?.id}
 		userName={selectedUser.name}
 	/>
 {/if}

@@ -50,8 +50,8 @@
 	type IntegrationItem = {
 		id: string;
 		name: string;
-		description?: string;
-		meta?: { description?: string };
+		description?: string | null;
+		meta?: { description?: string | null };
 		is_active?: boolean;
 		authenticated?: boolean;
 		has_user_valves?: boolean;
@@ -68,7 +68,7 @@
 	export let toggleFilters: {
 		id: string;
 		name: string;
-		description?: string;
+		description?: string | null;
 		icon?: string;
 		has_user_valves?: boolean;
 	}[] = [];

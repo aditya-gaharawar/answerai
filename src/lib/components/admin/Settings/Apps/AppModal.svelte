@@ -277,10 +277,12 @@
 									if (scopeMode === 'requested') {
 										manifest.requested_scopes = event.detail
 											? [...manifest.requested_scopes, scope]
-											: manifest.requested_scopes.filter((s) => s !== scope);
-										scopes = scopes.filter((s) => manifest.requested_scopes.includes(s));
+											: manifest.requested_scopes.filter((s: string) => s !== scope);
+										scopes = scopes.filter((s: string) => manifest.requested_scopes.includes(s));
 									} else {
-										scopes = event.detail ? [...scopes, scope] : scopes.filter((s) => s !== scope);
+										scopes = event.detail
+											? [...scopes, scope]
+											: scopes.filter((s: string) => s !== scope);
 									}
 								}}
 							/>

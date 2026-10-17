@@ -27,10 +27,34 @@
 	export let channelSuggestions = false;
 	export let channelId: string | null = null;
 
-	let _models = [];
-	let _users = [];
-	let _channels = [];
-	let _apps: { type: string; id: string; label: string; profile_image_url?: string | null }[] = [];
+	let _models: {
+		id: string;
+		label: string;
+		type: 'user' | 'model' | 'app' | 'channel';
+		profile_image_url?: string | null;
+		data?: { name?: string; info?: { meta?: { profile_image_url?: string } } };
+	}[] = [];
+	let _users: {
+		id: string;
+		label: string;
+		type: 'user' | 'model' | 'app' | 'channel';
+		profile_image_url?: string | null;
+		data?: { name?: string; info?: { meta?: { profile_image_url?: string } } };
+	}[] = [];
+	let _channels: {
+		id: string;
+		label: string;
+		type: 'user' | 'model' | 'app' | 'channel';
+		profile_image_url?: string | null;
+		data?: { name?: string; info?: { meta?: { profile_image_url?: string } } };
+	}[] = [];
+	let _apps: {
+		type: 'user' | 'model' | 'app' | 'channel';
+		id: string;
+		label: string;
+		profile_image_url?: string | null;
+		data?: { name?: string };
+	}[] = [];
 
 	type UserSuggestion = { id: string; name: string };
 
@@ -42,7 +66,7 @@
 
 	const toUserItems = (users: UserSuggestion[]) =>
 		[...users]
-			.map((u) => ({ type: 'user', id: u.id, label: u.name }))
+			.map((u) => ({ type: 'user' as const, id: u.id, label: u.name }))
 			.sort((a, b) => a.label.localeCompare(b.label));
 
 	const getUserList = async (requestQuery: string, requestChannelId: string | null) => {
@@ -157,14 +181,14 @@
 			_channels = [
 				...$channels
 					.filter((c) => c?.type !== 'dm')
-					.map((c) => ({ type: 'channel', id: c.id, label: c.name, data: c }))
+					.map((c) => ({ type: 'channel' as const, id: c.id, label: c.name ?? c.id, data: c }))
 			];
 		} else {
 			if (modelSuggestions) {
 				_models = [
 					...$models
 						.filter((m) => !m?.direct)
-						.map((m) => ({ type: 'model', id: m.id, label: m.name, data: m }))
+						.map((m) => ({ type: 'model' as const, id: m.id, label: m.name, data: m }))
 				];
 			}
 		}
@@ -250,10 +274,13 @@
 								alt={item?.data?.name ?? item.id}
 								class="rounded-full size-5 items-center mr-2"
 								on:error={(e) => {
+									const answeraiTarget = e.currentTarget;
+									if (!(answeraiTarget instanceof HTMLImageElement)) return;
+
 									// LICENSE covers this Open ANSWERAI fallback logo.
 									// Do not alter, remove, obscure, or replace it except as LICENSE permits:
 									// https://docs.openwebui.com/license.
-									e.currentTarget.src = '/favicon.png';
+									answeraiTarget.src = '/favicon.png';
 								}}
 							/>
 						{:else if item.type === 'user'}
@@ -262,10 +289,13 @@
 								alt={item?.label ?? item.id}
 								class="rounded-full size-5 items-center mr-2"
 								on:error={(e) => {
+									const answeraiTarget = e.currentTarget;
+									if (!(answeraiTarget instanceof HTMLImageElement)) return;
+
 									// LICENSE covers this Open ANSWERAI fallback logo.
 									// Do not alter, remove, obscure, or replace it except as LICENSE permits:
 									// https://docs.openwebui.com/license.
-									e.currentTarget.src = '/favicon.png';
+									answeraiTarget.src = '/favicon.png';
 								}}
 							/>
 						{/if}

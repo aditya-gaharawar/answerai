@@ -122,7 +122,7 @@
 		selectedTerminalId.set(null);
 	}
 
-	const handleMediaQuery = async (e) => {
+	const handleMediaQuery = async (e: { matches: boolean }) => {
 		if (e.matches) {
 			largeScreen = true;
 			if ($showCallOverlay) {
@@ -214,7 +214,7 @@
 							{submitPrompt}
 							{stopResponse}
 							{modelId}
-							{chatId}
+							chatId={chatId ?? ''}
 							{eventTarget}
 							on:close={() => showControls.set(false)}
 						/>
@@ -292,13 +292,15 @@
 								<Overview
 									{history}
 									{chatUser}
-									onNodeClick={(e) => {
+									onNodeClick={(e: {
+										node: { data: { message: import('$lib/utils/chatHistory').HistoryNode } };
+									}) => {
 										const node = e.node;
 										showMessage(node.data.message, true);
 									}}
 								/>
 							{:else if activeTab === 'files' && terminalFilesAvailable && $selectedTerminalId}
-								<FileNav {chatId} />
+								<FileNav chatId={chatId ?? ''} />
 							{:else if activeTab === 'files' && codeInterpreterEnabled}
 								<PyodideFileNav />
 							{:else}
@@ -339,7 +341,7 @@
 							{submitPrompt}
 							{stopResponse}
 							{modelId}
-							{chatId}
+							chatId={chatId ?? ''}
 							{eventTarget}
 							on:close={() => showControls.set(false)}
 						/>
@@ -417,7 +419,9 @@
 								<Overview
 									{history}
 									{chatUser}
-									onNodeClick={(e) => {
+									onNodeClick={(e: {
+										node: { data: { message: import('$lib/utils/chatHistory').HistoryNode } };
+									}) => {
 										const node = e.node;
 										if (node?.data?.message?.favorite) {
 											history.messages[node.data.message.id].favorite = true;
@@ -428,7 +432,7 @@
 									}}
 								/>
 							{:else if activeTab === 'files' && terminalFilesAvailable && $selectedTerminalId}
-								<FileNav overlay={dragged} {chatId} />
+								<FileNav overlay={dragged} chatId={chatId ?? ''} />
 							{:else if activeTab === 'files' && codeInterpreterEnabled}
 								<PyodideFileNav overlay={dragged} />
 							{:else}

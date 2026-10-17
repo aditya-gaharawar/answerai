@@ -35,7 +35,42 @@
 	const actionButtonClass =
 		'text-xs text-gray-500 transition-colors hover:text-gray-900 dark:text-gray-500 dark:hover:text-white';
 
-	let params = {
+	type GeneralParams = {
+		stream_response: boolean | null;
+		stream_delta_chunk_size: number | null;
+		compact_token_threshold: number | null;
+		function_calling: string | null;
+		reasoning_tags: string[] | boolean | null;
+		seed: number | null;
+		temperature: number | null;
+		reasoning_effort: string | null;
+		logit_bias: string | Record<string, number> | null;
+		frequency_penalty: number | null;
+		presence_penalty: number | null;
+		repeat_penalty: number | null;
+		repeat_last_n: number | null;
+		mirostat: number | null;
+		mirostat_eta: number | null;
+		mirostat_tau: number | null;
+		top_k: number | null;
+		top_p: number | null;
+		min_p: number | null;
+		stop: string | null;
+		tfs_z: number | null;
+		num_ctx: number | null;
+		num_batch: number | null;
+		num_keep: number | null;
+		max_tokens: number | null;
+		use_mmap: boolean | null;
+		use_mlock: boolean | null;
+		num_thread: number | null;
+		num_gpu: number | null;
+		think: boolean | string | null;
+		format: string | Record<string, unknown> | null;
+		keep_alive: number | string | null;
+		custom_params?: string;
+	};
+	let params: GeneralParams = {
 		// Advanced
 		stream_response: null,
 		stream_delta_chunk_size: null,
@@ -90,7 +125,7 @@
 				function_calling: params.function_calling !== null ? params.function_calling : undefined,
 				reasoning_tags: params.reasoning_tags !== null ? params.reasoning_tags : undefined,
 				seed: (params.seed !== null ? params.seed : undefined) ?? undefined,
-				stop: params.stop ? params.stop.split(',').filter((e) => e) : undefined,
+				stop: params.stop ? params.stop.split(',').filter((e: string) => e) : undefined,
 				temperature: params.temperature !== null ? params.temperature : undefined,
 				reasoning_effort: params.reasoning_effort !== null ? params.reasoning_effort : undefined,
 				logit_bias: params.logit_bias !== null ? params.logit_bias : undefined,
@@ -288,7 +323,7 @@
 					<Textarea
 						bind:value={system}
 						className={systemPromptTextareaClass}
-						rows="4"
+						rows={4}
 						placeholder={$i18n.t('Enter system prompt here')}
 					/>
 				</UserSettingField>

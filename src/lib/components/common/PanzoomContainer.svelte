@@ -29,7 +29,7 @@
 			if (Math.abs(e.deltaY) >= Math.abs(e.deltaX)) return;
 
 			e.preventDefault();
-			instance.moveBy(-e.deltaX, -e.deltaY);
+			instance.moveBy(-e.deltaX, -e.deltaY, false);
 			updateZoomLevel();
 			return;
 		}

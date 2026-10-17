@@ -19,7 +19,7 @@
 	const i18n = getContext<Writable<I18n>>('i18n');
 
 	export let show = false;
-	export let onSubmit: Function = (e) => {};
+	export let onSubmit: Function = (e: unknown) => {};
 
 	export let folderId: string | null = null;
 	export let parentId: string | null = null;
@@ -27,13 +27,13 @@
 
 	let folder = null;
 	let name = '';
-	let meta = {
+	let meta: { background_image_url: string | null } = {
 		background_image_url: null
 	};
 	let data = {
 		model_ids: [] as string[],
 		system_prompt: '',
-		files: []
+		files: [] as import('$lib/apis').ModelKnowledgeReference[]
 	};
 
 	let loading = false;
@@ -110,7 +110,7 @@
 		data = {
 			model_ids: [],
 			system_prompt: '',
-			files: []
+			files: [] as import('$lib/apis').ModelKnowledgeReference[]
 		};
 	}
 </script>
@@ -165,14 +165,17 @@
 						hidden
 						accept="image/*"
 						on:change={(e) => {
-							const answeraiEventTarget = e.currentTarget;
+							const answeraiTarget = e.currentTarget;
+							if (!(answeraiTarget instanceof HTMLInputElement)) return;
+
+							const answeraiEventTarget = answeraiTarget;
 							if (!(answeraiEventTarget instanceof HTMLInputElement)) return;
 
 							const inputFiles = answeraiEventTarget.files;
 
 							let reader = new FileReader();
 							reader.onload = (event) => {
-								let originalImageUrl = `${event.target.result}`;
+								let originalImageUrl = `${event.target?.result}`;
 								meta.background_image_url = originalImageUrl;
 							};
 
@@ -180,12 +183,12 @@
 								inputFiles &&
 								inputFiles.length > 0 &&
 								['image/gif', 'image/webp', 'image/jpeg', 'image/png'].includes(
-									inputFiles[0]['type']
+									inputFiles?.[0]['type']
 								)
 							) {
-								reader.readAsDataURL(inputFiles[0]);
+								reader.readAsDataURL(inputFiles?.[0]);
 							} else {
-								console.log(`Unsupported File Type '${inputFiles[0]['type']}'.`);
+								console.log(`Unsupported File Type '${inputFiles?.[0]['type']}'.`);
 
 								// clear the input
 								answeraiEventTarget.value = '';

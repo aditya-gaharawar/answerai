@@ -2,6 +2,10 @@ import { get } from 'svelte/store';
 import { config } from '$lib/stores';
 import { checkSourceSize, readSourceResponse } from './sourceText';
 export type FileEntry = {
+	fullPath?: string;
+	parentPath?: string;
+	depth?: number;
+	rowIndex?: number;
 	name: string;
 	type: 'file' | 'directory';
 	size?: number;

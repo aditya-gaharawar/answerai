@@ -1365,23 +1365,30 @@
 	};
 	$: syncChatRoom($socket, $chatId, $temporaryChatEnabled);
 
-	const chatEventHandler = async (event, cb) => {
+	const chatEventHandler = async (
+		event: import('$lib/types/socket').ChatSocketEvent,
+		cb?: import('$lib/types/socket').SocketReply
+	) => {
+		const messageId = event.message_id ?? '';
 		console.log(event);
 		if (event?.data?.type === 'voice:play_animation') {
 			cb?.(
-				routeAvatarAnimation(eventTarget, event, {
-					active: $showCallOverlay && callMode === 'current' && selectedModelIds.length === 1,
-					chatId: $chatId,
-					modelId: selectedModelIds[0],
-					messageId: history.currentId,
-					message: history.messages[event.message_id]
-				})
+				routeAvatarAnimation(
+					eventTarget,
+					{ chat_id: event.chat_id, message_id: messageId, data: { data: event.data.data } },
+					{
+						active: $showCallOverlay && callMode === 'current' && selectedModelIds.length === 1,
+						chatId: $chatId,
+						modelId: selectedModelIds[0],
+						messageId: history.currentId,
+						message: history.messages[messageId]
+					}
+				)
 			);
 			return;
 		}
 		if (event.shared && event.user_id === $user?.id && event.data?.type !== 'chat:messages') return;
-		const interactionType = event?.data?.type;
-		const interactionData = event?.data?.data;
+		const { type: interactionType, data: interactionData } = event.data;
 		if (interactionType === 'request:interaction:done') {
 			browserInteractions = browserInteractions.filter(
 				(item) => item.id !== interactionData?.interaction_id
@@ -1394,7 +1401,7 @@
 			(interactionType === 'confirmation' && interactionData?.tool_call)
 		) {
 			if (!cb) return;
-			if (event.chat_id !== $chatId || !history.messages[event.message_id]) {
+			if (event.chat_id !== $chatId || !history.messages[messageId]) {
 				cb({ status: 'cancelled', answers: {} });
 				return;
 			}
@@ -1410,7 +1417,7 @@
 				...browserInteractions,
 				{
 					id: interactionData?.interaction_id ?? uuidv4(),
-					messageId: event.message_id,
+					messageId: messageId,
 					type: interactionType,
 					data: interactionData,
 					callback: cb
@@ -1422,10 +1429,10 @@
 		// A new chat's title can arrive before its id; the response message already exists.
 		if (
 			event.chat_id === $chatId ||
-			(!$chatId && event?.data?.type === 'chat:title' && history.messages[event.message_id])
+			(!$chatId && event?.data?.type === 'chat:title' && history.messages[messageId])
 		) {
 			await tick();
-			const type = event?.data?.type ?? null;
+			const { type, data } = event.data;
 			if (type === 'typing') {
 				const sender = event.user;
 				if (
@@ -1434,7 +1441,7 @@
 					(isShared && chat?.chat?.share_mode !== 'continue')
 				)
 					return;
-				if (event.data.data?.typing) {
+				if (data.typing) {
 					if (!typingUsers.some((entry) => entry.id === sender.id))
 						typingUsers = [...typingUsers, { id: sender.id, name: sender.name }];
 					clearTimeout(typingUsersTimeout[sender.id]);
@@ -1446,16 +1453,17 @@
 			}
 			if (event.shared) {
 				if (type === 'chat:messages') {
-					removeTypingUser(event.user_id);
-					mergeChatMessages(event.data.data);
+					removeTypingUser(event.user_id ?? '');
+					mergeChatMessages(data);
 					return;
 				}
 				if (type === 'chat:access' || type === 'chat:active') {
 					if (type === 'chat:access') clearTyping();
-					if (type === 'chat:access' || event.data.data?.active === false) await refreshChat();
+					if (type === 'chat:access' || ('active' in data && data.active === false))
+						await refreshChat();
 					return;
 				}
-				if (!history.messages[event.message_id]) await refreshChat();
+				if (!history.messages[messageId]) await refreshChat();
 				if ($chatId !== event.chat_id) return;
 			}
 			if (type === 'chat:reload') {
@@ -1465,12 +1473,10 @@
 			if (type === 'chat:list') {
 				return;
 			}
-			let message = history.messages[event.message_id];
+			let message = history.messages[messageId];
 			if (message) message = { ...message };
 
 			if (message) {
-				const data = event?.data?.data ?? null;
-
 				queueMicrotask(() => bridge?.update());
 				if (type === 'status') {
 					if (message?.statusHistory) {
@@ -1503,20 +1509,22 @@
 					autoScrollToBottom();
 				} else if (type === 'chat:tasks:cancel') {
 					for (const interaction of browserInteractions) {
-						if (interaction.messageId === event.message_id) {
+						if (interaction.messageId === messageId) {
 							resolveBrowserInteraction(interaction, { status: 'cancelled', answers: {} });
 						}
 					}
 					message.bridgeCancelled = true;
-					bridgeCancellations.get(event.message_id)?.();
+					bridgeCancellations.get(messageId)?.();
 					if (!event.shared) dismissContextCompactionToast();
 					if (data?.output) {
 						message.output = data.output;
 					}
-					if (!event.shared && event.message_id === history.currentId) {
+					if (!event.shared && messageId === history.currentId) {
 						taskIds = null;
 						// Set all response messages to done
-						for (const messageId of history.messages[message.parentId].childrenIds) {
+						for (const messageId of message.parentId
+							? (history.messages[message.parentId]?.childrenIds ?? [])
+							: []) {
 							history.messages[messageId].done = true;
 						}
 						message.done = true;
@@ -1542,7 +1550,7 @@
 					// Auto-scroll to the embed once it's rendered in the DOM
 					await tick();
 					setTimeout(() => {
-						const embedEl = document.getElementById(`${event.message_id}-embeds-container`);
+						const embedEl = document.getElementById(`${messageId}-embeds-container`);
 						if (embedEl) {
 							embedEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
 						}
@@ -1555,7 +1563,7 @@
 					} else handleOpenAIError(data.error, message);
 					if (!event.shared && !responseCompleted) {
 						dismissContextCompactionToast();
-						if (event.message_id === history.currentId) {
+						if (messageId === history.currentId) {
 							await processNextInQueue(event.chat_id);
 						}
 					}
@@ -1636,7 +1644,7 @@
 						toast.info(toastContent);
 					}
 				} else if (type === 'confirmation') {
-					eventCallback = cb;
+					eventCallback = cb ?? (() => {});
 
 					eventConfirmationInput = false;
 					showEventConfirmation = true;
@@ -1645,7 +1653,7 @@
 					eventConfirmationTitle = data.title;
 					eventConfirmationMessage = data.message;
 				} else if (type === 'execute') {
-					eventCallback = cb;
+					eventCallback = cb ?? (() => {});
 
 					try {
 						// Use Function constructor to evaluate code in a safer way
@@ -1659,7 +1667,7 @@
 						console.error('Error executing code:', error);
 					}
 				} else if (type === 'input') {
-					eventCallback = cb;
+					eventCallback = cb ?? (() => {});
 
 					eventConfirmationInput = true;
 					showEventConfirmation = true;
@@ -1676,7 +1684,7 @@
 					console.log('Unknown message type', data);
 				}
 
-				history.messages[event.message_id] = message;
+				history.messages[messageId] = message;
 			}
 		} else {
 			// Non-active chat completion: queue stays in the global store.
@@ -3714,7 +3722,7 @@
 
 		if (
 			($config?.file?.max_count ?? null) !== null &&
-			files.length + chatFiles.length > $config?.file?.max_count
+			files.length + chatFiles.length > ($config?.file?.max_count ?? Infinity)
 		) {
 			toast.error(
 				$i18n.t(`You can only chat with a maximum of {{maxCount}} file(s) at a time.`, {

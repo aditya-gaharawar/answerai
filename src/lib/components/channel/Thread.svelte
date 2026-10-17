@@ -159,8 +159,8 @@
 		content: string;
 		data: any;
 		channel_id: string;
-		parent_id: string | null;
-		reply_to_message: any;
+		parent_id?: string | null;
+		reply_to_message?: import('$lib/types/channels').ChannelMessage | null;
 	}) => {
 		if (!content && (data?.files ?? []).length === 0) {
 			return;

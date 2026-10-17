@@ -53,3 +53,18 @@ export interface ToolSummary {
 	write_access?: boolean;
 	has_user_valves?: boolean;
 }
+
+export type PluginDraft = {
+	id: string;
+	name: string;
+	content: string;
+	meta: {
+		description: string;
+		i18n?: Record<string, Record<string, string>>;
+		[key: string]: unknown;
+	};
+	commit_message?: string | null;
+	access_grants?: AccessGrant[];
+	write_access?: boolean;
+	version_id?: string;
+};

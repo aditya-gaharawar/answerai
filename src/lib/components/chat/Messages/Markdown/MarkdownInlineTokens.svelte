@@ -138,9 +138,12 @@
 			width="100%"
 			frameborder="0"
 			on:load={(e) => {
+				const answeraiTarget = e.currentTarget;
+				if (!(answeraiTarget instanceof HTMLIFrameElement)) return;
+
 				try {
-					e.currentTarget.style.height =
-						e.currentTarget.contentWindow.document.body.scrollHeight + 20 + 'px';
+					answeraiTarget.style.height =
+						(answeraiTarget.contentDocument?.body.scrollHeight ?? 0) + 20 + 'px';
 				} catch {}
 			}}
 		></iframe>

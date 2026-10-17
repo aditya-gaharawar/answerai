@@ -37,7 +37,7 @@
 
 	$: localizedDescription = resolveLocalizedModelDescription(item.model, $i18n.language);
 
-	const copyLinkHandler = async (model) => {
+	const copyLinkHandler = async (model: import('$lib/stores').Model) => {
 		const baseUrl = window.location.origin;
 		const res = await copyToClipboard(`${baseUrl}/?model=${encodeURIComponent(model.id)}`);
 
@@ -82,7 +82,7 @@
 			<div
 				class="flex gap-0.5 self-center items-start h-full w-full translate-y-[0.5px] overflow-x-auto scrollbar-none"
 			>
-				{#each item.model?.tags.sort((a, b) => a.name.localeCompare(b.name)) as tag}
+				{#each item.model?.tags.toSorted((a: {name: string}, b: {name: string}) => a.name.localeCompare(b.name)) as tag}
 					<Tooltip content={tag.name} className="flex-shrink-0">
 						<div
 							class=" text-xs font-normal px-1 rounded-sm uppercase bg-gray-500/20 text-gray-700 dark:text-gray-200"
@@ -106,7 +106,7 @@
 							// LICENSE covers this Open WebUI fallback logo.
 							// Do not alter, remove, obscure, or replace it except as LICENSE permits:
 							// https://docs.openwebui.com/license.
-							e.currentTarget.src = '/favicon.png';
+							if (e.currentTarget instanceof HTMLImageElement) e.currentTarget.src = '/favicon.png';
 						}}
 					/>
 				</Tooltip>
@@ -196,7 +196,7 @@
 					{#key item.model.id}
 						<Tooltip elementId="tags-{item.model.id}">
 							<div slot="tooltip" id="tags-{item.model.id}">
-								{#each item.model?.tags.sort((a, b) => a.name.localeCompare(b.name)) as tag}
+								{#each item.model?.tags.toSorted( (a: { name: string }, b: { name: string }) => a.name.localeCompare(b.name) ) as tag}
 									<Tooltip content={tag.name} className="flex-shrink-0">
 										<div class=" text-xs font-normal rounded-sm uppercase text-white">
 											{tag.name}

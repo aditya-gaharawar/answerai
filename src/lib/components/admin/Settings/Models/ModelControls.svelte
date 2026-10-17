@@ -2,7 +2,6 @@
 	import ModelSettingsLabel from '$lib/components/workspace/Models/ModelSettingsLabel.svelte';
 	import { getContext, tick } from 'svelte';
 	import { v4 as uuidv4 } from 'uuid';
-	// @ts-expect-error The existing SortableJS dependency does not ship declarations.
 	import Sortable from 'sortablejs';
 	import type { ModelControl } from '$lib/apis';
 	import CustomParams from '$lib/components/chat/Settings/Advanced/CustomParams.svelte';
@@ -122,12 +121,12 @@
 			}: {
 				item: HTMLElement;
 				from: HTMLElement;
-				oldIndex: number;
-				newIndex: number;
+				oldIndex?: number;
+				newIndex?: number;
 			}) => {
 				// Let Svelte reconcile the keyed rows in their original DOM order.
 				from.insertBefore(item, nextSibling);
-				reorder(oldIndex, newIndex);
+				if (oldIndex !== undefined && newIndex !== undefined) reorder(oldIndex, newIndex);
 			}
 		});
 		return { destroy: () => instance.destroy() };

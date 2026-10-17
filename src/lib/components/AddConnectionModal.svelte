@@ -292,7 +292,13 @@
 			passthroughParams = Array.isArray(connection.config?.passthrough_params)
 				? connection.config.passthrough_params.join(', ')
 				: (connection.config?.passthrough_params ?? '');
-			modelIds = [...new Set(connection.config?.model_ids ?? [])];
+			modelIds = [
+				...new Set<string>(
+					(Array.isArray(connection.config?.model_ids) ? connection.config.model_ids : []).filter(
+						(id: unknown): id is string => typeof id === 'string'
+					)
+				)
+			];
 
 			if (ollama) {
 				connectionType = connection.config?.connection_type ?? 'local';

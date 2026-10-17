@@ -142,7 +142,7 @@
 			summary = summaryRes ?? summary;
 
 			const modelsMap = new Map($models.map((m) => [m.id, m.name || m.id]));
-			modelStats = (modelsRes?.models ?? []).map((entry) => ({
+			modelStats = (modelsRes?.models ?? []).map((entry: (typeof modelStats)[number]) => ({
 				...entry,
 				name: modelsMap.get(entry.model_id) || entry.model_id
 			}));
@@ -196,7 +196,9 @@
 
 	$: sortedModels = [...modelStats].sort((a, b) => {
 		if (modelOrderBy === 'name') {
-			return modelDirection === 'asc' ? a.name.localeCompare(b.name) : b.name.localeCompare(a.name);
+			return modelDirection === 'asc'
+				? (a.name ?? a.model_id).localeCompare(b.name ?? b.model_id)
+				: (b.name ?? b.model_id).localeCompare(a.name ?? a.model_id);
 		}
 		if (
 			modelOrderBy === 'input_tokens' ||
@@ -368,7 +370,7 @@
 			'#06b6d4',
 			'#84cc16'
 		]}
-		{@const periodMap = { '24h': 'hour', '7d': 'week', '30d': 'month', '90d': 'year', all: 'all' }}
+		{@const periodMap: Record<string, 'hour' | 'week' | 'month' | 'year' | 'all'> = { '24h': 'hour', '7d': 'week', '30d': 'month', '90d': 'year', all: 'all' }}
 		<div class="mb-4">
 			<div class="text-xs font-normal text-gray-600 dark:text-gray-400 mb-2 px-0.5">
 				{selectedPeriod === '24h' ? $i18n.t('Hourly Messages') : $i18n.t('Daily Messages')}
@@ -378,7 +380,7 @@
 				models={topModels}
 				colors={chartColors}
 				height={200}
-				period={periodMap[selectedPeriod] || 'week'}
+				period={periodMap[selectedPeriod as keyof typeof periodMap] || 'week'}
 			/>
 		</div>
 	{/if}
@@ -533,7 +535,7 @@
 								<tr
 									class="dark:border-gray-850 text-xs cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
 									on:click={() => {
-										selectedModel = { id: model.model_id, name: model.name };
+										selectedModel = { id: model.model_id, name: model.name ?? model.model_id };
 										showModelModal = true;
 									}}
 								>

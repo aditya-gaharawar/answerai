@@ -35,7 +35,7 @@
 
 	$: lastSeen = user?.last_active_at
 		? dayjs(user.last_active_at * 1000)
-				.locale(getDayjsLocale($i18n.language))
+				.locale(getDayjsLocale($i18n.language) ?? 'en')
 				.from(now)
 		: '';
 	$: lastSeenTimestamp = user?.last_active_at

@@ -7,7 +7,7 @@
 	let popupElement: HTMLDivElement | null = null;
 
 	onMount(() => {
-		document.body.appendChild(popupElement);
+		if (popupElement) document.body.appendChild(popupElement);
 		document.body.style.overflow = 'hidden';
 	});
 

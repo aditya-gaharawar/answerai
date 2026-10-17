@@ -86,8 +86,8 @@
 									voiceInput = false;
 								}}
 								onConfirm={(data) => {
-									const { text, filename } = data;
-									content = `${content}${text} `;
+									const { text } = data;
+									content = `${content}${text ?? ''} `;
 
 									voiceInput = false;
 								}}

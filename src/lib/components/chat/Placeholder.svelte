@@ -227,7 +227,7 @@
 									{#if models[selectedModelIdx]?.info?.meta?.user?.community}
 										<a
 											href="https://answerai.in/m/{models[selectedModelIdx]?.info?.meta?.user
-												.username}"
+												?.username}"
 											>{models[selectedModelIdx]?.info?.meta?.user?.name
 												? models[selectedModelIdx]?.info?.meta?.user?.name
 												: `@${models[selectedModelIdx]?.info?.meta?.user?.username}`}</a

@@ -34,6 +34,7 @@
 					);
 				},
 				onUpdate: async (event) => {
+					if (event.oldIndex === undefined || event.newIndex === undefined) return;
 					const reorderedIds = [...$visiblePinnedModels];
 					const [movedId] = reorderedIds.splice(event.oldIndex, 1);
 					reorderedIds.splice(event.newIndex, 0, movedId);

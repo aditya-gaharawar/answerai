@@ -242,7 +242,7 @@
 		content: string;
 		data: any;
 		channel_id: string;
-		reply_to_message: any;
+		reply_to_message?: import('$lib/types/channels').ChannelMessage | null;
 	}) => {
 		if (!content && (data?.files ?? []).length === 0) {
 			return;

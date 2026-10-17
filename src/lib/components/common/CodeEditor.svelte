@@ -44,7 +44,7 @@
 			_value = value;
 
 			if (codeEditor && changes.length > 0) {
-				codeEditor.dispatch({ changes });
+				codeEditor?.dispatch({ changes });
 			}
 		}
 	};
@@ -92,7 +92,7 @@
 	const editorPlaceholder = new Compartment();
 	const editorReadOnly = new Compartment();
 	$: if (codeEditor) {
-		codeEditor.dispatch({
+		codeEditor?.dispatch({
 			effects: editorReadOnly.reconfigure([
 				EditorState.readOnly.of(readOnly),
 				EditorView.editable.of(!readOnly)
@@ -100,7 +100,7 @@
 		});
 	}
 	$: if (codeEditor) {
-		codeEditor.dispatch({
+		codeEditor?.dispatch({
 			effects: editorPlaceholder.reconfigure(
 				readOnly ? [] : placeholder($i18n.t('Enter your code here...'))
 			)
@@ -142,7 +142,9 @@ print("${endTag}")
 
 			const packages = ['black'];
 
-			function handleMessage(event) {
+			function handleMessage(
+				event: MessageEvent<{ id: string; stdout?: string; stderr?: string }>
+			) {
 				const { id: eventId, stdout, stderr } = event.data;
 				if (eventId !== id) return; // Only handle our message
 				clearTimeout(timeout);
@@ -152,7 +154,7 @@ print("${endTag}")
 				if (stderr) {
 					reject(stderr);
 				} else {
-					function extractBetweenDelimiters(stdout, start, end) {
+					function extractBetweenDelimiters(stdout: string, start: string, end: string) {
 						console.log('stdout', stdout);
 						const startIdx = stdout.indexOf(start);
 						const endIdx = stdout.indexOf(end, startIdx + start.length);
@@ -170,7 +172,7 @@ print("${endTag}")
 				}
 			}
 
-			function handleError(event) {
+			function handleError(event: ErrorEvent) {
 				clearTimeout(timeout);
 				worker.removeEventListener('message', handleMessage);
 				worker.removeEventListener('error', handleError);
@@ -209,7 +211,7 @@ print("${endTag}")
 			});
 			if (!readOnly && res && typeof res.code === 'string') {
 				const formattedCode = res.code;
-				codeEditor.dispatch({
+				codeEditor?.dispatch({
 					changes: [{ from: 0, to: codeEditor.state.doc.length, insert: formattedCode }]
 				});
 
@@ -249,7 +251,7 @@ print("${endTag}")
 	const setLanguage = async () => {
 		const language = await getLang();
 		if (language && codeEditor) {
-			codeEditor.dispatch({
+			codeEditor?.dispatch({
 				effects: editorLanguage.reconfigure(language)
 			});
 		}
@@ -275,7 +277,7 @@ print("${endTag}")
 		});
 
 		if (isDarkMode) {
-			codeEditor.dispatch({
+			codeEditor?.dispatch({
 				effects: editorTheme.reconfigure(oneDark)
 			});
 		}
@@ -289,12 +291,12 @@ print("${endTag}")
 					if (_isDarkMode !== isDarkMode) {
 						isDarkMode = _isDarkMode;
 						if (_isDarkMode) {
-							codeEditor.dispatch({
+							codeEditor?.dispatch({
 								effects: editorTheme.reconfigure(oneDark)
 							});
 						} else {
-							codeEditor.dispatch({
-								effects: editorTheme.reconfigure()
+							codeEditor?.dispatch({
+								effects: editorTheme.reconfigure([])
 							});
 						}
 					}
@@ -307,7 +309,7 @@ print("${endTag}")
 			attributeFilter: ['class']
 		});
 
-		const keydownHandler = async (e) => {
+		const keydownHandler = async (e: KeyboardEvent) => {
 			if (!codeEditor?.hasFocus) return;
 			if ((e.ctrlKey || e.metaKey) && e.key === 's') {
 				e.preventDefault();

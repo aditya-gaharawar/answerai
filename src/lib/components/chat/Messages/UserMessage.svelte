@@ -506,12 +506,12 @@
 												e.currentTarget.select();
 											}}
 											on:blur={(e) => {
-												gotoMessage(message, e.currentTarget.value - 1);
+												gotoMessage(message, Number(e.currentTarget.value) - 1);
 												messageIndexEdit = false;
 											}}
 											on:keydown={(e) => {
 												if (e.key === 'Enter') {
-													gotoMessage(message, e.currentTarget.value - 1);
+													gotoMessage(message, Number(e.currentTarget.value) - 1);
 													messageIndexEdit = false;
 												}
 											}}
@@ -695,12 +695,12 @@
 												e.currentTarget.select();
 											}}
 											on:blur={(e) => {
-												gotoMessage(message, e.currentTarget.value - 1);
+												gotoMessage(message, Number(e.currentTarget.value) - 1);
 												messageIndexEdit = false;
 											}}
 											on:keydown={(e) => {
 												if (e.key === 'Enter') {
-													gotoMessage(message, e.currentTarget.value - 1);
+													gotoMessage(message, Number(e.currentTarget.value) - 1);
 													messageIndexEdit = false;
 												}
 											}}
