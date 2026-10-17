@@ -33,6 +33,7 @@ The screenshots use a controlled account/model fixture and mocked APIs, not prod
 - Backend: 155 passing tests, including native tool argument, image payload, empty response, file tool permission, and agent guidance regressions.
 - Node 22 production build with `USE_SLIM=true`.
 - Browser checks: desktop and mobile layouts; no horizontal page overflow; thinking and agent selections; image starter does not submit a draft; outgoing chat request retains agent mode, native function calling, thinking selection, and image feature flag.
+- Archived workspace checkouts are excluded from Docker build contexts, formatting/lint sweeps, and current frontend test discovery.
 - Branding audit and whitespace checks. New Python modules/tests pass Ruff. The six modified legacy backend files retain 233 existing Ruff findings; their rule counts did not increase.
 
 Reproduce the browser checks after starting a production preview:

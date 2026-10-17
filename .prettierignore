@@ -312,3 +312,6 @@ cypress/screenshots
 
 
 /static/*
+
+# Historical audit and workspace material is not application source.
+internal-workspace/

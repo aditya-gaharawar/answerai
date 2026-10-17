@@ -21,3 +21,6 @@ backend/data/*
 
 .venv
 .git
+
+# Historical audit and workspace material is not application source.
+internal-workspace/
