@@ -1853,9 +1853,3 @@ export interface ModelParams {
 	compact_token_threshold?: number;
 	model_controls?: Record<string, ModelControl>;
 }
-
-/** User choices are distinct from the control definitions stored on a model. */
-export type ChatParams = Omit<ModelParams, 'model_controls'> & {
-	model_controls?: Record<string, Record<string, string>>;
-	agent_mode?: 'auto' | 'agent' | 'chat';
-};

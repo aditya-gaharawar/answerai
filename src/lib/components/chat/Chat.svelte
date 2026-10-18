@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { mergeModelControls } from '$lib/utils/agentControls';
 	import { normalizeStopTokens } from '$lib/utils/stopTokens';
 	import type {
 		ContextUsage,
@@ -8,7 +7,7 @@
 		TokenEstimateMessage
 	} from '$lib/types/chat';
 	import type { NoteChatSummary, NoteAttachment } from '$lib/types/notes';
-	import type { ChatParams } from '$lib/apis';
+	import type { ModelParams } from '$lib/apis';
 	import type { SessionUser } from '$lib/stores';
 	import type { ChatHistory, HistoryNode } from '$lib/utils/chatHistory';
 	import { v4 as uuidv4 } from 'uuid';
@@ -491,7 +490,7 @@
 	let prompt = '';
 	let chatFiles: NoteAttachment[] = [];
 	let files: any[] = [];
-	let params: ChatParams = {};
+	let params: ModelParams = {};
 	let chatVariables: InputVariableValues = {};
 	let showChatVariablesModal = false;
 	let loadedChatIdProp = '';
@@ -4174,10 +4173,7 @@
 				params: {
 					...$settings?.params,
 					...Object.fromEntries(Object.entries(params).filter(([, value]) => value !== null)),
-					model_controls: mergeModelControls(
-						$settings?.params?.model_controls,
-						params.model_controls
-					),
+					model_controls: $settings?.params?.model_controls ?? {},
 					stop: getStopTokens()
 				},
 
@@ -5104,8 +5100,6 @@
 									class=" pb-2 {dragged ? 'z-0' : 'z-10'}"
 								>
 									<MessageInput
-										enableAgentControls
-										bind:params
 										{typingUsers}
 										on:typing={(event) => emitTyping(event.detail)}
 										callActive={!!(bridge?.connected || bridge?.connecting)}
@@ -5202,8 +5196,6 @@
 								{/if}
 								<div id={embedded ? messageInputDropzoneId : undefined} class="pb-2 z-10">
 									<MessageInput
-										enableAgentControls
-										bind:params
 										{typingUsers}
 										on:typing={(event) => emitTyping(event.detail)}
 										callActive={!!(bridge?.connected || bridge?.connecting)}
@@ -5269,7 +5261,6 @@
 						{:else}
 							<div class="flex items-center h-full">
 								<Placeholder
-									bind:params
 									callActive={!!(bridge?.connected || bridge?.connecting)}
 									callEnabled={!isShared}
 									bind:selectedModelIdx
