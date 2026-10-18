@@ -517,7 +517,7 @@ async def get_tools(request: Request, tool_ids: list[str], user: UserModel, extr
                                     connection, request, user, server_id=server_id, metadata=metadata
                                 )
                                 headers.setdefault('Content-Type', 'application/json')
-                                return await execute_tool_server(
+                                result, response_headers = await execute_tool_server(
                                     url=tool_server_data['url'],
                                     headers=headers,
                                     cookies=cookies,
@@ -525,6 +525,9 @@ async def get_tools(request: Request, tool_ids: list[str], user: UserModel, extr
                                     params=kwargs,
                                     server_data=tool_server_data,
                                 )
+                                from answerai.utils.connectors import normalize_connector_result
+
+                                return normalize_connector_result(connection, result), response_headers
 
                             return tool_function
 
@@ -1854,7 +1857,7 @@ async def execute_tool_server(
                     # pass "" instead of omitting optional parameters).
                     if value is None or (value == '' and not param.get('required')):
                         continue
-                    query_params[param_name] = value
+                    query_params[param_name] = ('true' if value else 'false') if isinstance(value, bool) else value
 
         final_url = f'{url.rstrip("/")}{route_path}'
         for key, value in path_params.items():

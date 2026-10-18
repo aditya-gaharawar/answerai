@@ -12,6 +12,7 @@ from answerai.events import EVENTS, publish_event
 from answerai.models.config import Config
 from answerai.models.oauth_sessions import OAuthSessions
 from answerai.utils.auth import get_admin_user, get_verified_user
+from answerai.utils.connectors import ConnectorCredentialForm, check_connector_credentials, connector_catalog
 from answerai.utils.headers import bearer_auth_header, get_custom_headers
 from answerai.utils.mcp.client import MCPClient
 from answerai.utils.oauth import (
@@ -217,6 +218,22 @@ async def register_oauth_client(
 ############################
 # ToolServers Config
 ############################
+
+
+@router.get('/connectors/catalog')
+async def get_connector_catalog(user=Depends(get_admin_user)):
+    if not ENABLE_TOOL_SERVERS:
+        raise HTTPException(status_code=403, detail='Tool servers are disabled')
+    return connector_catalog()
+
+
+@router.post('/connectors/test')
+async def test_connector_credentials(form_data: ConnectorCredentialForm, user=Depends(get_admin_user)):
+    if not ENABLE_TOOL_SERVERS:
+        raise HTTPException(status_code=403, detail='Tool servers are disabled')
+    from answerai.utils.session_pool import get_session
+
+    return await check_connector_credentials(form_data, await get_session(), ssl=AIOHTTP_CLIENT_SESSION_SSL)
 
 
 class ToolServerConnection(BaseModel):

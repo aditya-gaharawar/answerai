@@ -5,6 +5,14 @@
 	const { saveAs } = fileSaver;
 
 	import { toast } from 'svelte-sonner';
+	import { user } from '$lib/stores';
+	import { connectorDraft } from '$lib/utils/connectorPresets';
+	import {
+		getConnectorCatalog,
+		testConnectorCredentials,
+		type ConnectorPreset,
+		type ConnectorCheck
+	} from '$lib/apis/configs';
 	import { getContext, tick } from 'svelte';
 	const i18n = getContext<any>('i18n');
 
@@ -38,6 +46,101 @@
 
 	export let direct = false;
 	export let connection: any = null;
+
+	let presets: ConnectorPreset[] = [];
+	let selectedConnector = '';
+	let catalogRequested = false;
+	let catalogError = false;
+	let credentialCheck: ConnectorCheck | null = null;
+	let testingCredentials = false;
+	let checkedTarget: { id: string; key: string; url: string } | null = null;
+	$: if (
+		credentialCheck &&
+		checkedTarget &&
+		(selectedConnector !== checkedTarget.id ||
+			key !== checkedTarget.key ||
+			url !== checkedTarget.url ||
+			auth_type !== 'bearer')
+	)
+		credentialCheck = null;
+	$: activePreset = presets.find((p) => p.id === selectedConnector);
+	const loadCatalog = async () => {
+		catalogRequested = true;
+		catalogError = false;
+		try {
+			presets = await getConnectorCatalog(localStorage.token);
+		} catch {
+			catalogError = true;
+		}
+	};
+	const applyPreset = (connectorId: string) => {
+		const preset = presets.find((p) => p.id === connectorId);
+		selectedConnector = connectorId;
+		credentialCheck = null;
+		if (!preset) return;
+		const draft = connectorDraft(preset, uuidv4().slice(0, 8));
+		type = draft.type;
+		url = draft.url;
+		spec_type = draft.spec_type;
+		spec = draft.spec;
+		path = draft.path;
+		auth_type = draft.auth_type;
+		key = '';
+		headers = '';
+		forwardCookies = false;
+		accessGrants = [];
+		id = draft.info.id;
+		name = draft.info.name;
+		description = draft.info.description;
+		oauthClientInfo = null;
+		oauthClientId = '';
+		oauthClientSecret = '';
+		oauthServerUrl = '';
+		oauthScope = '';
+		oauthResourceParameter = 'auto';
+		functionNameFilterList = '';
+		enable = true;
+	};
+	const checkCredentials = async () => {
+		if (
+			!activePreset ||
+			activePreset.type !== 'openapi' ||
+			url !== activePreset.url ||
+			auth_type !== 'bearer' ||
+			!key.trim()
+		)
+			return;
+		const target = { id: selectedConnector, key, url };
+		checkedTarget = target;
+		testingCredentials = true;
+		credentialCheck = null;
+		try {
+			const result = await testConnectorCredentials(localStorage.token, target.id, target.key);
+			if (
+				show &&
+				selectedConnector === target.id &&
+				key === target.key &&
+				url === target.url &&
+				auth_type === 'bearer'
+			)
+				credentialCheck = result;
+		} catch {
+			if (
+				show &&
+				selectedConnector === target.id &&
+				key === target.key &&
+				url === target.url &&
+				auth_type === 'bearer'
+			)
+				credentialCheck = {
+					status: 'unavailable',
+					message: $i18n.t('Credential check failed. Check your access and retry.')
+				};
+		} finally {
+			testingCredentials = false;
+		}
+	};
+	$: if (show && !direct && $user?.role === 'admin' && !catalogRequested) void loadCatalog();
 
 	let inputElement: HTMLInputElement | null = null;
 
@@ -80,9 +183,12 @@
 	const selectClass =
 		'bg-transparent pr-5 outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700';
 	const oauthAuthTypes = ['oauth_2.1', 'oauth_2.1_static'];
-	$: verifyLabel = oauthAuthTypes.includes(auth_type)
-		? $i18n.t('Check OAuth Discovery')
-		: $i18n.t('Verify Connection');
+	$: verifyLabel =
+		type === 'openapi' && spec_type === 'json'
+			? $i18n.t('Validate schema')
+			: oauthAuthTypes.includes(auth_type)
+				? $i18n.t('Check OAuth Discovery')
+				: $i18n.t('Verify Connection');
 	const verifySuccessMessage = () =>
 		oauthAuthTypes.includes(auth_type)
 			? $i18n.t('OAuth discovery successful')
@@ -195,6 +301,25 @@
 			}
 		}
 
+		if (type === 'openapi' && spec_type === 'json') {
+			try {
+				const parsed = JSON.parse(spec);
+				if (
+					!parsed?.openapi ||
+					!parsed?.paths ||
+					typeof parsed.paths !== 'object' ||
+					Array.isArray(parsed.paths)
+				)
+					throw new Error();
+				toast.success(
+					$i18n.t('OpenAPI schema is valid. Use Test credentials to check provider access.')
+				);
+			} catch {
+				toast.error($i18n.t('Please enter a valid OpenAPI JSON spec'));
+			}
+			return;
+		}
+
 		if (direct) {
 			const res = await getToolServerData(
 				auth_type === 'bearer' ? key : localStorage.token,
@@ -270,6 +395,7 @@
 			if (data.key) key = data.key;
 
 			if (data.info) {
+				selectedConnector = data.info.connector_id ?? '';
 				id = data.info.id ?? '';
 				name = data.info.name ?? '';
 				description = data.info.description ?? '';
@@ -310,6 +436,7 @@
 				key,
 
 				info: {
+					...(selectedConnector ? { connector_id: selectedConnector } : {}),
 					id: id,
 					name: name,
 					description: description,
@@ -401,6 +528,7 @@
 				access_grants: accessGrants
 			},
 			info: {
+				...(selectedConnector ? { connector_id: selectedConnector } : {}),
 				id: id,
 				name: name,
 				description: description,
@@ -435,6 +563,8 @@
 		path = 'openapi.json';
 
 		key = '';
+		selectedConnector = '';
+		credentialCheck = null;
 		auth_type = 'bearer';
 		forwardCookies = false;
 
@@ -472,6 +602,7 @@
 			id = connection.info?.id ?? '';
 			name = connection.info?.name ?? '';
 			description = connection.info?.description ?? '';
+			selectedConnector = connection.info?.connector_id ?? '';
 			oauthClientInfo = connection.info?.oauth_client_info ?? null;
 			oauthClientId = connection.info?.oauth_client_id ?? '';
 			oauthClientSecret = connection.info?.oauth_client_secret ?? '';
@@ -494,7 +625,14 @@
 		init();
 	}
 
-	$: if (show && type === 'mcp' && !edit && !oauthClientInfo && name) {
+	$: if (
+		show &&
+		type === 'mcp' &&
+		!edit &&
+		!oauthClientInfo &&
+		(!selectedConnector || !id.trim()) &&
+		name
+	) {
 		id = slugify(name.trim());
 	}
 </script>
@@ -557,6 +695,72 @@
 						submitHandler();
 					}}
 				>
+					{#if !direct && $user?.role === 'admin'}
+						<div class="px-1 mb-4 space-y-2">
+							{#if !edit}
+								<label for="connector-preset" class="text-xs text-gray-500"
+									>{$i18n.t('Start from a connector')}</label
+								>
+								<select
+									id="connector-preset"
+									class="w-full text-sm rounded-lg bg-gray-50 dark:bg-gray-850 p-2"
+									value={selectedConnector}
+									on:change={(event) => applyPreset(event.currentTarget.value)}
+								>
+									<option value="">{$i18n.t('Custom connection')}</option>
+									{#each presets as preset}<option value={preset.id}
+											>{preset.name}{preset.read_only
+												? ` · ${$i18n.t('Read-only template')}`
+												: ' · MCP'}</option
+										>{/each}
+								</select>
+							{/if}
+							{#if catalogError}<button
+									type="button"
+									class="text-xs underline"
+									on:click={loadCatalog}>{$i18n.t('Retry loading connectors')}</button
+								>{/if}
+							{#if activePreset}
+								<p class="text-xs text-gray-500">{$i18n.t(activePreset.description)}</p>
+								<ul class="text-xs text-gray-500 list-disc pl-4">
+									{#each activePreset.scopes as scope}<li>{scope}</li>{/each}
+								</ul>
+								<a
+									class="text-xs underline"
+									href={activePreset.documentation_url}
+									target="_blank"
+									rel="noopener noreferrer">{$i18n.t('Provider setup documentation')}</a
+								>
+								{#if activePreset.type === 'openapi'}
+									<p class="text-xs text-gray-500">
+										{$i18n.t(
+											'Uses the configured access token for everyone granted access. Private to admins until access is explicitly granted. Google access tokens expire; refresh them outside ANSWERAI.'
+										)}
+									</p>
+									<button
+										type="button"
+										class="text-xs rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-1.5"
+										on:click={checkCredentials}
+										disabled={testingCredentials ||
+											!key.trim() ||
+											url !== activePreset.url ||
+											auth_type !== 'bearer'}
+									>
+										{testingCredentials
+											? $i18n.t('Testing credentials…')
+											: $i18n.t('Test credentials')}
+									</button>
+									{#if credentialCheck}<p
+											role="status"
+											class="text-xs"
+											data-connector-status={credentialCheck.status}
+										>
+											{$i18n.t(credentialCheck.message)}
+										</p>{/if}
+								{/if}
+							{/if}
+						</div>
+					{/if}
 					<div class="px-1">
 						<div class="flex gap-2 mb-1.5">
 							<div class="flex w-full justify-between items-center">

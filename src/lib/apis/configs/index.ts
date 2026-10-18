@@ -833,3 +833,41 @@ export const setBanners = async (token: string, banners: Banner[]) => {
 
 	return res;
 };
+
+export interface ConnectorPreset {
+	id: string;
+	name: string;
+	type: 'openapi' | 'mcp';
+	url: string;
+	auth_type: 'bearer' | 'oauth_2.1';
+	description: string;
+	documentation_url: string;
+	scopes: string[];
+	read_only: boolean;
+	spec?: Record<string, unknown>;
+}
+
+export interface ConnectorCheck {
+	status: 'connected' | 'unauthorized' | 'forbidden' | 'rate_limited' | 'unavailable';
+	message: string;
+}
+
+async function connectorRequest(token: string, path: string, body?: object) {
+	const response = await fetch(`${WEBUI_API_BASE_URL}/configs/connectors/${path}`, {
+		method: body ? 'POST' : 'GET',
+		headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+		...(body ? { body: JSON.stringify(body) } : {})
+	});
+	if (!response.ok)
+		throw new Error('Connector request failed. Check your access and integration settings.');
+	return response.json();
+}
+
+export const getConnectorCatalog = (token: string): Promise<ConnectorPreset[]> =>
+	connectorRequest(token, 'catalog');
+
+export const testConnectorCredentials = (
+	token: string,
+	connector_id: string,
+	key: string
+): Promise<ConnectorCheck> => connectorRequest(token, 'test', { connector_id, key });

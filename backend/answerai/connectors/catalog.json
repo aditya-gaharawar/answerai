@@ -1,0 +1,820 @@
+[
+  {
+    "id": "github",
+    "name": "GitHub",
+    "type": "openapi",
+    "url": "https://api.github.com",
+    "auth_type": "bearer",
+    "description": "Read your profile, repositories, issues, and pull requests.",
+    "documentation_url": "https://docs.github.com/en/rest/authentication/permissions-required-for-fine-grained-personal-access-tokens",
+    "scopes": [
+      "Fine-grained PAT: only selected repositories; Metadata, Issues and Pull requests read permissions."
+    ],
+    "read_only": true,
+    "spec": {
+      "openapi": "3.0.3",
+      "info": {
+        "title": "GitHub",
+        "version": "1.0.0",
+        "description": "Read your profile, repositories, issues, and pull requests."
+      },
+      "servers": [
+        {
+          "url": "https://api.github.com"
+        }
+      ],
+      "paths": {
+        "/user": {
+          "get": {
+            "operationId": "github_get_profile",
+            "summary": "Read the authenticated GitHub profile",
+            "parameters": [],
+            "responses": {
+              "200": {
+                "description": "Provider response",
+                "content": {
+                  "application/json": {
+                    "schema": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "/user/repos": {
+          "get": {
+            "operationId": "github_list_repositories",
+            "summary": "List repositories accessible to your token",
+            "parameters": [
+              {
+                "name": "per_page",
+                "in": "query",
+                "required": false,
+                "description": "per_page",
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 100
+                }
+              },
+              {
+                "name": "page",
+                "in": "query",
+                "required": false,
+                "description": "page",
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              }
+            ],
+            "responses": {
+              "200": {
+                "description": "Provider response",
+                "content": {
+                  "application/json": {
+                    "schema": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "/repos/{owner}/{repo}/issues": {
+          "get": {
+            "operationId": "github_list_issues",
+            "summary": "List issues and pull requests in an accessible repository",
+            "parameters": [
+              {
+                "name": "owner",
+                "in": "path",
+                "required": true,
+                "description": "owner",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              {
+                "name": "repo",
+                "in": "path",
+                "required": true,
+                "description": "repo",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              {
+                "name": "state",
+                "in": "query",
+                "required": false,
+                "description": "state",
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "open",
+                    "closed",
+                    "all"
+                  ]
+                }
+              },
+              {
+                "name": "per_page",
+                "in": "query",
+                "required": false,
+                "description": "per_page",
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 100
+                }
+              }
+            ],
+            "responses": {
+              "200": {
+                "description": "Provider response",
+                "content": {
+                  "application/json": {
+                    "schema": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "/repos/{owner}/{repo}/pulls": {
+          "get": {
+            "operationId": "github_list_pull_requests",
+            "summary": "List repository pull requests",
+            "parameters": [
+              {
+                "name": "owner",
+                "in": "path",
+                "required": true,
+                "description": "owner",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              {
+                "name": "repo",
+                "in": "path",
+                "required": true,
+                "description": "repo",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              {
+                "name": "state",
+                "in": "query",
+                "required": false,
+                "description": "state",
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "open",
+                    "closed",
+                    "all"
+                  ]
+                }
+              }
+            ],
+            "responses": {
+              "200": {
+                "description": "Provider response",
+                "content": {
+                  "application/json": {
+                    "schema": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  {
+    "id": "gmail",
+    "name": "Gmail",
+    "type": "openapi",
+    "url": "https://gmail.googleapis.com/gmail/v1",
+    "auth_type": "bearer",
+    "description": "Search and read messages and threads. Sending, deleting, and modifying mail are not included.",
+    "documentation_url": "https://developers.google.com/workspace/gmail/api/auth/scopes",
+    "scopes": [
+      "https://www.googleapis.com/auth/gmail.readonly"
+    ],
+    "read_only": true,
+    "spec": {
+      "openapi": "3.0.3",
+      "info": {
+        "title": "Gmail",
+        "version": "1.0.0",
+        "description": "Search and read messages and threads. Sending, deleting, and modifying mail are not included."
+      },
+      "servers": [
+        {
+          "url": "https://gmail.googleapis.com/gmail/v1"
+        }
+      ],
+      "paths": {
+        "/users/me/messages": {
+          "get": {
+            "operationId": "gmail_search_messages",
+            "summary": "Search Gmail messages; fetch each returned message ID to read its content",
+            "parameters": [
+              {
+                "name": "q",
+                "in": "query",
+                "required": false,
+                "description": "Gmail search query such as from:alice@example.com newer_than:7d",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              {
+                "name": "maxResults",
+                "in": "query",
+                "required": false,
+                "description": "maxResults",
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 100
+                }
+              },
+              {
+                "name": "pageToken",
+                "in": "query",
+                "required": false,
+                "description": "pageToken",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            ],
+            "responses": {
+              "200": {
+                "description": "Provider response",
+                "content": {
+                  "application/json": {
+                    "schema": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "/users/me/messages/{message_id}": {
+          "get": {
+            "operationId": "gmail_read_message",
+            "summary": "Read a Gmail message; MIME body data is base64url encoded",
+            "parameters": [
+              {
+                "name": "message_id",
+                "in": "path",
+                "required": true,
+                "description": "message_id",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              {
+                "name": "format",
+                "in": "query",
+                "required": false,
+                "description": "format",
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "full",
+                    "metadata",
+                    "minimal"
+                  ]
+                }
+              }
+            ],
+            "responses": {
+              "200": {
+                "description": "Provider response",
+                "content": {
+                  "application/json": {
+                    "schema": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "/users/me/threads/{thread_id}": {
+          "get": {
+            "operationId": "gmail_read_thread",
+            "summary": "Read messages in a Gmail thread",
+            "parameters": [
+              {
+                "name": "thread_id",
+                "in": "path",
+                "required": true,
+                "description": "thread_id",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            ],
+            "responses": {
+              "200": {
+                "description": "Provider response",
+                "content": {
+                  "application/json": {
+                    "schema": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  {
+    "id": "slack",
+    "name": "Slack",
+    "type": "openapi",
+    "url": "https://slack.com/api",
+    "auth_type": "bearer",
+    "description": "Read accessible channels, channel history, and search messages with an eligible user token.",
+    "documentation_url": "https://docs.slack.dev/reference/scopes/",
+    "scopes": [
+      "channels:read and channels:history; groups:read and groups:history for private channels; search:read requires a user token."
+    ],
+    "read_only": true,
+    "spec": {
+      "openapi": "3.0.3",
+      "info": {
+        "title": "Slack",
+        "version": "1.0.0",
+        "description": "Read accessible channels, channel history, and search messages with an eligible user token."
+      },
+      "servers": [
+        {
+          "url": "https://slack.com/api"
+        }
+      ],
+      "paths": {
+        "/conversations.list": {
+          "get": {
+            "operationId": "slack_list_channels",
+            "summary": "List Slack conversations available to the configured token",
+            "parameters": [
+              {
+                "name": "types",
+                "in": "query",
+                "required": false,
+                "description": "Comma-separated public_channel,private_channel,mpim,im as allowed by token scopes",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              {
+                "name": "limit",
+                "in": "query",
+                "required": false,
+                "description": "limit",
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 200
+                }
+              },
+              {
+                "name": "cursor",
+                "in": "query",
+                "required": false,
+                "description": "cursor",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            ],
+            "responses": {
+              "200": {
+                "description": "Provider response",
+                "content": {
+                  "application/json": {
+                    "schema": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "/conversations.history": {
+          "get": {
+            "operationId": "slack_read_channel",
+            "summary": "Read accessible channel messages; API limits depend on Slack app distribution and workspace",
+            "parameters": [
+              {
+                "name": "channel",
+                "in": "query",
+                "required": true,
+                "description": "channel",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              {
+                "name": "limit",
+                "in": "query",
+                "required": false,
+                "description": "limit",
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 100
+                }
+              },
+              {
+                "name": "cursor",
+                "in": "query",
+                "required": false,
+                "description": "cursor",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            ],
+            "responses": {
+              "200": {
+                "description": "Provider response",
+                "content": {
+                  "application/json": {
+                    "schema": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "/search.messages": {
+          "get": {
+            "operationId": "slack_search_messages",
+            "summary": "Search Slack messages using a user token with search:read",
+            "parameters": [
+              {
+                "name": "query",
+                "in": "query",
+                "required": true,
+                "description": "query",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              {
+                "name": "count",
+                "in": "query",
+                "required": false,
+                "description": "count",
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 100
+                }
+              },
+              {
+                "name": "page",
+                "in": "query",
+                "required": false,
+                "description": "page",
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              }
+            ],
+            "responses": {
+              "200": {
+                "description": "Provider response",
+                "content": {
+                  "application/json": {
+                    "schema": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  {
+    "id": "google-drive",
+    "name": "Google Drive",
+    "type": "openapi",
+    "url": "https://www.googleapis.com/drive/v3",
+    "auth_type": "bearer",
+    "description": "Search accessible Drive files and read their metadata. File content import remains available through the existing Drive picker.",
+    "documentation_url": "https://developers.google.com/workspace/drive/api/guides/api-specific-auth",
+    "scopes": [
+      "https://www.googleapis.com/auth/drive.metadata.readonly"
+    ],
+    "read_only": true,
+    "spec": {
+      "openapi": "3.0.3",
+      "info": {
+        "title": "Google Drive",
+        "version": "1.0.0",
+        "description": "Search accessible Drive files and read their metadata. File content import remains available through the existing Drive picker."
+      },
+      "servers": [
+        {
+          "url": "https://www.googleapis.com/drive/v3"
+        }
+      ],
+      "paths": {
+        "/files": {
+          "get": {
+            "operationId": "drive_search_files",
+            "summary": "Search file metadata using Drive query syntax",
+            "parameters": [
+              {
+                "name": "q",
+                "in": "query",
+                "required": false,
+                "description": "Drive query such as trashed = false and name contains 'report'",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              {
+                "name": "fields",
+                "in": "query",
+                "required": false,
+                "description": "Response fields, e.g. files(id,name,mimeType,webViewLink),nextPageToken",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              {
+                "name": "pageSize",
+                "in": "query",
+                "required": false,
+                "description": "pageSize",
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 100
+                }
+              },
+              {
+                "name": "pageToken",
+                "in": "query",
+                "required": false,
+                "description": "pageToken",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            ],
+            "responses": {
+              "200": {
+                "description": "Provider response",
+                "content": {
+                  "application/json": {
+                    "schema": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "/files/{file_id}": {
+          "get": {
+            "operationId": "drive_read_file_metadata",
+            "summary": "Read metadata for an accessible file; this tool does not download file content",
+            "parameters": [
+              {
+                "name": "file_id",
+                "in": "path",
+                "required": true,
+                "description": "file_id",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              {
+                "name": "fields",
+                "in": "query",
+                "required": false,
+                "description": "Fields such as id,name,mimeType,description,webViewLink",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            ],
+            "responses": {
+              "200": {
+                "description": "Provider response",
+                "content": {
+                  "application/json": {
+                    "schema": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  {
+    "id": "google-calendar",
+    "name": "Google Calendar",
+    "type": "openapi",
+    "url": "https://www.googleapis.com/calendar/v3",
+    "auth_type": "bearer",
+    "description": "List accessible calendars and read events. Event creation and modification are not included.",
+    "documentation_url": "https://developers.google.com/workspace/calendar/api/auth",
+    "scopes": [
+      "https://www.googleapis.com/auth/calendar.readonly"
+    ],
+    "read_only": true,
+    "spec": {
+      "openapi": "3.0.3",
+      "info": {
+        "title": "Google Calendar",
+        "version": "1.0.0",
+        "description": "List accessible calendars and read events. Event creation and modification are not included."
+      },
+      "servers": [
+        {
+          "url": "https://www.googleapis.com/calendar/v3"
+        }
+      ],
+      "paths": {
+        "/users/me/calendarList": {
+          "get": {
+            "operationId": "calendar_list_calendars",
+            "summary": "List accessible calendars",
+            "parameters": [
+              {
+                "name": "maxResults",
+                "in": "query",
+                "required": false,
+                "description": "maxResults",
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 100
+                }
+              },
+              {
+                "name": "pageToken",
+                "in": "query",
+                "required": false,
+                "description": "pageToken",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            ],
+            "responses": {
+              "200": {
+                "description": "Provider response",
+                "content": {
+                  "application/json": {
+                    "schema": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "/calendars/{calendar_id}/events": {
+          "get": {
+            "operationId": "calendar_list_events",
+            "summary": "Read events; use primary for your primary calendar",
+            "parameters": [
+              {
+                "name": "calendar_id",
+                "in": "path",
+                "required": true,
+                "description": "calendar_id",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              {
+                "name": "timeMin",
+                "in": "query",
+                "required": false,
+                "description": "RFC3339 lower time bound with timezone",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              {
+                "name": "timeMax",
+                "in": "query",
+                "required": false,
+                "description": "RFC3339 upper time bound with timezone",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              {
+                "name": "q",
+                "in": "query",
+                "required": false,
+                "description": "q",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              {
+                "name": "singleEvents",
+                "in": "query",
+                "required": false,
+                "description": "singleEvents",
+                "schema": {
+                  "type": "boolean"
+                }
+              },
+              {
+                "name": "maxResults",
+                "in": "query",
+                "required": false,
+                "description": "maxResults",
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 100
+                }
+              },
+              {
+                "name": "pageToken",
+                "in": "query",
+                "required": false,
+                "description": "pageToken",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            ],
+            "responses": {
+              "200": {
+                "description": "Provider response",
+                "content": {
+                  "application/json": {
+                    "schema": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  {
+    "id": "notion",
+    "name": "Notion MCP",
+    "type": "mcp",
+    "url": "https://mcp.notion.com/mcp",
+    "auth_type": "oauth_2.1",
+    "description": "Connect your Notion account through its hosted MCP server. Available tools and write capabilities are determined by Notion and the account you authorize.",
+    "documentation_url": "https://developers.notion.com/docs/mcp",
+    "scopes": [
+      "Use the existing MCP OAuth registration and authorization flow. Review the workspace permissions in Notion."
+    ],
+    "read_only": false
+  }
+]
