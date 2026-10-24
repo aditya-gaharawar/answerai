@@ -933,7 +933,6 @@
 										<div class="flex shrink-0 flex-row items-center gap-1 self-center">
 											<ModelMenu
 												accessHandler={() => accessModal.open(model.id)}
-												user={$user}
 												{model}
 												writeAccess={model.write_access}
 												editHandler={() => {

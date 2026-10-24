@@ -30,7 +30,6 @@
 	export let chatId = '';
 	export let history: ChatHistory;
 	export let messageId: string;
-	export let selectedModels: string[] = [];
 
 	export let isLastMessage = false;
 	export let readOnly = false;
@@ -43,7 +42,7 @@
 	export let updateChat: Function;
 	export let editMessage: Function;
 	export let saveMessage: Function;
-	export let rateMessage: Function;
+
 	export let actionMessage: Function;
 
 	export let submitMessage: Function;
@@ -53,7 +52,6 @@
 	export let regenerateResponse: Function;
 	export let mergeResponses: Function;
 
-	export let addMessages: Function;
 	export let onToolCallResolved: Function = () => {};
 	export let forkHandler: Function | null = null;
 
@@ -293,7 +291,6 @@
 									{chatId}
 									{history}
 									messageId={message?.id}
-									{selectedModels}
 									isLastMessage={true}
 									siblings={groupedMessageIds[selectedModelIdx].messageIds}
 									gotoMessage={(message: HistoryNode, messageIdx: number) =>
@@ -304,7 +301,6 @@
 									{updateChat}
 									{editMessage}
 									{saveMessage}
-									{rateMessage}
 									{deleteMessage}
 									{actionMessage}
 									{submitMessage}
@@ -316,7 +312,6 @@
 										groupedMessageIdsIdx[selectedModelIdx] =
 											groupedMessageIds[selectedModelIdx].messageIds.length - 1;
 									}}
-									{addMessages}
 									{onToolCallResolved}
 									{forkHandler}
 									{readOnly}
@@ -349,6 +344,18 @@
 													$mobile ? 'min-w-full' : 'min-w-80'
 												}`
 									}`}"
+							role="button"
+							tabindex="0"
+							aria-label={$i18n.t('Response')}
+							on:keydown={(event) => {
+								if (
+									event.target === event.currentTarget &&
+									(event.key === 'Enter' || event.key === ' ')
+								) {
+									event.preventDefault();
+									onGroupClick(_messageId, modelIdx);
+								}
+							}}
 							on:click={async () => {
 								onGroupClick(_messageId, modelIdx);
 							}}
@@ -359,7 +366,6 @@
 										{chatId}
 										{history}
 										messageId={_messageId}
-										{selectedModels}
 										isLastMessage={true}
 										siblings={groupedMessageIds[modelIdx].messageIds}
 										gotoMessage={(message: HistoryNode, messageIdx: number) =>
@@ -370,7 +376,6 @@
 										{updateChat}
 										{editMessage}
 										{saveMessage}
-										{rateMessage}
 										{deleteMessage}
 										{allowDelete}
 										{actionMessage}
@@ -382,7 +387,6 @@
 											groupedMessageIdsIdx[modelIdx] =
 												groupedMessageIds[modelIdx].messageIds.length - 1;
 										}}
-										{addMessages}
 										{onToolCallResolved}
 										{forkHandler}
 										{readOnly}

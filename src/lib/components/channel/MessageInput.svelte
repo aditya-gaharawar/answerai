@@ -84,7 +84,6 @@
 
 	export let disabled = false;
 	export let acceptFiles = true;
-	export let showFormattingToolbar = true;
 
 	export let userSuggestions = false;
 	export let channelSuggestions = false;

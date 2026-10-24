@@ -1,5 +1,5 @@
 import { defineConfig, mergeConfig } from 'vitest/config';
-import viteConfig from './vite.config';
+import viteConfig from './vite.config.ts';
 
 // Historical workspace checkouts are evidence, not part of the current test suite.
 export default mergeConfig(

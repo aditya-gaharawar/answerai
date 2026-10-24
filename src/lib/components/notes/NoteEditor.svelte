@@ -15,7 +15,7 @@
 	import { equalEditorJSON } from '$lib/utils/editorJson';
 
 	import { goto, onNavigate } from '$app/navigation';
-	import { page } from '$app/stores';
+	import { page } from '$lib/stores/page';
 
 	import dayjs from '$lib/dayjs';
 	import calendar from 'dayjs/plugin/calendar';

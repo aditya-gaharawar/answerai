@@ -130,7 +130,7 @@
 							class="w-full h-full p-3 bg-transparent border border-gray-100/30 dark:border-gray-850/30 outline-hidden resize-none rounded-lg text-sm"
 							bind:value={text}
 							placeholder={$i18n.t("You're a helpful assistant.")}
-						/>
+						></textarea>
 					</div>
 				</div>
 			</div>
@@ -173,14 +173,3 @@
 		</div>
 	</div>
 </div>
-
-<style>
-	.scrollbar-hidden::-webkit-scrollbar {
-		display: none; /* for Chrome, Safari and Opera */
-	}
-
-	.scrollbar-hidden {
-		-ms-overflow-style: none; /* IE and Edge */
-		scrollbar-width: none; /* Firefox */
-	}
-</style>

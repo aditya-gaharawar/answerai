@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { page } from '$app/stores';
+	import { page } from '$lib/stores/page';
 
 	import Channel from '$lib/components/channel/Channel.svelte';
 </script>

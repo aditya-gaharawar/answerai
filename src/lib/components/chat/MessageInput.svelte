@@ -1846,7 +1846,7 @@
 							aria-label={$i18n.t('Generate message pair')}
 							class="hidden"
 							on:click={() => createMessagePair(prompt)}
-						/>
+						></button>
 
 						{#if askUser?.show}
 							<div class="mx-1">
@@ -2382,7 +2382,7 @@
 									{#if showWebSearchButton || showImageGenerationButton || showCodeInterpreterButton || showToolsButton || showSkillsButton || (toggleFilters && toggleFilters.length > 0)}
 										<div
 											class="flex self-center w-[0.0625rem] h-4 mx-1 bg-gray-200/50 dark:bg-gray-800/50 shrink-0"
-										/>
+										></div>
 
 										<IntegrationsMenu
 											selectedModels={selectedModelIds}
@@ -2823,7 +2823,7 @@
 								{@html DOMPurify.sanitize(marked($config?.license_metadata?.input_footer))}
 							</div>
 						{:else}
-							<div class="mb-0.5" />
+							<div class="mb-0.5"></div>
 						{/if}
 					</form>
 				</div>

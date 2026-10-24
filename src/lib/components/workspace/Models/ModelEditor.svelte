@@ -1747,7 +1747,7 @@
 											value={JSON.stringify(readOnly ? model : modelInfo, null, 2)}
 											disabled
 											readonly
-										/>
+										></textarea>
 									</div>
 								{/if}
 							</div>

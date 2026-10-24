@@ -32,7 +32,6 @@
 	const i18n = getContext('i18n');
 
 	export let history;
-	export let models: import('$lib/stores').Model[] = [];
 
 	export let chatId: string | null = null;
 	export let chatUser: (Partial<import('$lib/stores').SessionUser> & { id: string }) | null = null;
@@ -42,16 +41,12 @@
 	export let params = {};
 
 	export let bridge: import('$lib/utils/realtime').RealtimeCall;
-	export let callMode = 'current';
-	export let eventTarget: EventTarget;
-	export let submitPrompt: Function;
+
 	export let onAskFile:
 		| ((instruction: string, file: import('$lib/apis/terminal').FilesystemFile) => Promise<void>)
 		| null = null;
-	export let stopResponse: Function;
+
 	export let showMessage: Function;
-	export let files: import('$lib/types/notes').NoteAttachment[];
-	export let modelId;
 
 	export let codeInterpreterEnabled = false;
 
@@ -212,17 +207,7 @@
 					<div
 						class="h-full max-h-[100dvh] bg-white text-gray-700 dark:bg-black dark:text-gray-300 flex justify-center"
 					>
-						<CallPanel
-							{bridge}
-							bind:callMode
-							bind:files
-							{submitPrompt}
-							{stopResponse}
-							{modelId}
-							chatId={chatId ?? ''}
-							{eventTarget}
-							on:close={() => showControls.set(false)}
-						/>
+						<CallPanel {bridge} on:close={() => showControls.set(false)} />
 					</div>
 				{:else if $showEmbeds}
 					<Embeds />
@@ -309,7 +294,7 @@
 							{:else if activeTab === 'files' && codeInterpreterEnabled}
 								<PyodideFileNav />
 							{:else}
-								<Controls embed={true} {models} bind:chatFiles bind:params />
+								<Controls embed={true} bind:chatFiles bind:params />
 							{/if}
 						</div>
 					</div>
@@ -339,17 +324,7 @@
 			>
 				{#if $showCallOverlay}
 					<div class="w-full h-full flex justify-center">
-						<CallPanel
-							{bridge}
-							bind:callMode
-							bind:files
-							{submitPrompt}
-							{stopResponse}
-							{modelId}
-							chatId={chatId ?? ''}
-							{eventTarget}
-							on:close={() => showControls.set(false)}
-						/>
+						<CallPanel {bridge} on:close={() => showControls.set(false)} />
 					</div>
 				{:else if $showEmbeds}
 					<Embeds overlay={dragged} />
@@ -441,7 +416,7 @@
 							{:else if activeTab === 'files' && codeInterpreterEnabled}
 								<PyodideFileNav overlay={dragged} />
 							{:else}
-								<Controls embed={true} {models} bind:chatFiles bind:params />
+								<Controls embed={true} bind:chatFiles bind:params />
 							{/if}
 						</div>
 					</div>

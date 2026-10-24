@@ -12,13 +12,13 @@
 		lang = 'python',
 		onChange = () => {},
 		onSave = () => {}
-	} = $props<{
+	}: {
 		show?: boolean;
 		value?: string;
 		lang?: string;
 		onChange?: (value: string) => void;
 		onSave?: () => void;
-	}>();
+	} = $props();
 
 	let boilerplate = ``;
 

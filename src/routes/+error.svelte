@@ -1,5 +1,5 @@
 <script>
-	import { page } from '$app/stores';
+	import { page } from '$lib/stores/page';
 </script>
 
 <div class=" bg-white dark:bg-gray-800 min-h-screen">

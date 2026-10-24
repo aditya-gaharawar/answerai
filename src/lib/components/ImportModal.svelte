@@ -26,6 +26,12 @@
 		return func;
 	};
 
+	let wasOpen = show;
+	$: {
+		if (wasOpen && !show) onClose();
+		wasOpen = show;
+	}
+
 	let loading = false;
 	let url = '';
 

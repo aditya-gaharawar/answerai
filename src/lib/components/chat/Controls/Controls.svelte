@@ -10,7 +10,7 @@
 	import Collapsible from '$lib/components/common/Collapsible.svelte';
 
 	import { user, settings } from '$lib/stores';
-	export let models: import('$lib/stores').Model[] = [];
+
 	export let chatFiles: import('$lib/types/notes').NoteAttachment[] = [];
 	export let params: { system?: string; [key: string]: unknown } = {};
 	export let embed = false;
@@ -123,7 +123,7 @@
 								: compactSystemPromptTextareaClass}
 							rows="3"
 							placeholder={$i18n.t('Enter system prompt')}
-						/>
+						></textarea>
 					</div>
 				</Collapsible>
 			{/if}

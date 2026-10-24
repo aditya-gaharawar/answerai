@@ -3,7 +3,7 @@
 	const i18n = getContext('i18n');
 
 	import { toast } from 'svelte-sonner';
-	import { page } from '$app/stores';
+	import { page } from '$lib/stores/page';
 	import { goto } from '$app/navigation';
 
 	import { createNewChannel, deleteChannelById } from '$lib/apis/channels';

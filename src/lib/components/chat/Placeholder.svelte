@@ -169,6 +169,7 @@
 											src={`${WEBUI_API_BASE_URL}/models/model/profile/image?id=${model?.id}&lang=${$i18n.language}`}
 											class=" size-9 @sm:size-10 rounded-2xl"
 											aria-hidden="true"
+											alt=""
 											draggable="false"
 											on:error={(e) => {
 												// LICENSE covers this Open ANSWERAI fallback logo.

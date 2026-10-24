@@ -6,7 +6,7 @@
 	import Sortable from 'sortablejs';
 
 	import { goto } from '$app/navigation';
-	import { page } from '$app/stores';
+	import { page } from '$lib/stores/page';
 	import {
 		user,
 		chats,
@@ -896,12 +896,13 @@
 
 	<button
 		id="sidebar-new-chat-button"
+		aria-label={$i18n.t('New Chat')}
 		class="hidden"
 		on:click={() => {
 			goto('/');
 			newChatHandler();
 		}}
-	/>
+	></button>
 
 	{#if !$mobile && !$showSidebar}
 		<div

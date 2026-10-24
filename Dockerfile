@@ -25,7 +25,7 @@ ARG UID=0
 ARG GID=0
 
 ######## ANSWERAI frontend ########
-FROM --platform=$BUILDPLATFORM node:22-alpine3.20 AS build
+FROM --platform=$BUILDPLATFORM node:22-alpine AS build
 ARG BUILD_HASH
 ARG BUILD_CHANNEL
 ARG USE_SLIM
@@ -42,7 +42,7 @@ RUN apk add --no-cache git
 
 COPY package.json package-lock.json ./
 COPY vendor ./vendor
-RUN npm ci --force
+RUN npm ci
 
 COPY . .
 ENV APP_BUILD_HASH=${BUILD_HASH}

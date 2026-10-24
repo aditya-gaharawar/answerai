@@ -75,12 +75,7 @@
 	/** @type {import('./structuredOutput').OutputItem[]} */
 	export let output = [];
 
-	export let history;
 	export let messageId;
-
-	/** @type {string[]} */
-
-	export let selectedModels = [];
 
 	export let done = true;
 	/** @type {import('$lib/stores').Model | null | undefined} */

@@ -823,7 +823,7 @@
 								rows="6"
 								placeholder={`e.g. {"model": "my-modelfile", "from": "ollama:7b"})`}
 								disabled={createModelLoading}
-							/>
+							></textarea>
 						</div>
 
 						<div class="flex self-start">

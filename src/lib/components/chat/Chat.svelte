@@ -19,7 +19,7 @@
 	const i18n: Writable<i18nType> = getContext('i18n');
 
 	import { goto, beforeNavigate } from '$app/navigation';
-	import { page } from '$app/stores';
+	import { page } from '$lib/stores/page';
 
 	import { get, type Unsubscriber, type Writable } from 'svelte/store';
 	import type { i18n as i18nType } from 'i18next';
@@ -5068,7 +5068,7 @@
 				<div
 					class="pointer-events-none absolute top-0 left-0 w-full h-full bg-cover bg-center bg-no-repeat"
 					style="background-image: url({backgroundImage})"
-				/>
+				></div>
 				<div
 					class="pointer-events-none absolute top-0 left-0 w-full h-full bg-linear-to-t from-white to-white/85 dark:from-gray-900 dark:to-gray-900/90 z-0"
 				></div>
@@ -5192,7 +5192,6 @@
 										shareMode={chat?.chat?.share_mode ?? null}
 										bind:history
 										bind:autoScroll
-										bind:prompt
 										setInputText={(text: string) => {
 											messageInput?.setText(text);
 										}}
@@ -5200,13 +5199,11 @@
 										{atSelectedModel}
 										className={embedded ? 'h-full flex pt-4' : 'h-full flex pt-18'}
 										{sendMessage}
-										{showMessage}
 										{submitMessage}
 										{continueResponse}
 										{regenerateResponse}
 										{mergeResponses}
 										{chatActionHandler}
-										{addMessages}
 										{onToolCallResolved}
 										allowDelete={!(generating || taskIds?.length)}
 										forkHandler={handleForkChat}
@@ -5462,24 +5459,11 @@
 						bind:history
 						bind:chatFiles
 						bind:params
-						bind:files
 						chatId={$chatId}
 						chatUser={chatOwner}
-						modelId={selectedModelIds?.at(0) ?? null}
-						models={selectedModelIds.reduce<Model[]>((a, e, i, arr) => {
-							const model = $models.find((m) => m.id === e);
-							if (model) {
-								return [...a, model];
-							}
-							return a;
-						}, [])}
-						submitPrompt={submitHandler}
 						onAskFile={askFile}
-						{stopResponse}
 						{bridge}
-						bind:callMode
 						{showMessage}
-						{eventTarget}
 						{codeInterpreterEnabled}
 					/>
 				{/if}

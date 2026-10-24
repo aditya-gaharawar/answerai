@@ -380,7 +380,7 @@
 									resizeSystemTextarea();
 								}}
 								rows="4"
-							/>
+							></textarea>
 						</div>
 					</div>
 				</Collapsible>
@@ -471,7 +471,7 @@
 									Math.min(answeraiEventTarget.scrollHeight, 150) + 'px';
 							}}
 							rows="2"
-						/>
+						></textarea>
 					</div>
 
 					<div

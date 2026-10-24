@@ -4,7 +4,7 @@
 	import dayjs from '$lib/dayjs';
 	import { showSidebar } from '$lib/stores';
 	import { goto } from '$app/navigation';
-	import { page } from '$app/stores';
+	import { page } from '$lib/stores/page';
 
 	import { createNoteHandler } from '$lib/components/notes/utils';
 

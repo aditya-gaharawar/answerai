@@ -12,6 +12,12 @@
 	 * therefore force-closes whichever one is still up.
 	 */
 	let closeActiveHoverPreview: (() => void) | null = null;
+	function activatePreview(close: () => void) {
+		if (closeActiveHoverPreview !== close) {
+			closeActiveHoverPreview?.();
+			closeActiveHoverPreview = close;
+		}
+	}
 </script>
 
 <script lang="ts">
@@ -120,10 +126,7 @@
 		}
 	};
 
-	$: if (openPreview && closeActiveHoverPreview !== closeHoverPreview) {
-		closeActiveHoverPreview?.();
-		closeActiveHoverPreview = closeHoverPreview;
-	}
+	$: if (openPreview) activatePreview(closeHoverPreview);
 
 	// Local state: tracks the last updatedAt seen while the user was viewing
 	// this chat.  Survives prop refreshes from sidebar data re-fetches that

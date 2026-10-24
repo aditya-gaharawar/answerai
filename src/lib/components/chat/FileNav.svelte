@@ -4,6 +4,7 @@
 
 	// Persists across mount/unmount cycles (module-level, not per-instance)
 	let savedPath = '/';
+	const getSavedPath = () => savedPath;
 	/** @type {import('$lib/apis/terminal').TerminalFileRoot | null} */
 	let savedFileRoot: import('$lib/apis/terminal').TerminalFileRoot | null = null;
 	/** @type {Map<string, string[]>} */
@@ -651,7 +652,7 @@
 				}
 				// Chat just got created (null → real ID): persist the current
 				// browsed path as the new session's cwd — don't re-fetch.
-				setCwd(terminal.url, terminal.key, savedPath, chatId);
+				setCwd(terminal.url, terminal.key, getSavedPath(), chatId);
 			} else if (terminalChanged || chatChanged) {
 				++loadGeneration;
 				openedFile = null;
@@ -668,8 +669,8 @@
 						terminalEnabled = config?.features?.terminal !== false;
 					}
 
-					savedPath = applyCwd(await getCwd(terminal.url, terminal.key, chatId ?? undefined));
-					loadDir(savedPath);
+					const cwd = applyCwd(await getCwd(terminal.url, terminal.key, chatId ?? undefined));
+					loadDir(cwd);
 				})();
 			}
 		}
@@ -2256,8 +2257,11 @@
 				>
 			</div>{/if}
 		<!-- Content -->
+		<!-- svelte-ignore a11y_no_noninteractive_element_interactions (Delegates file selection and context menus from child controls; keyboard actions are handled by those controls.) -->
 		<div
 			bind:this={viewerRoot}
+			role="group"
+			aria-label="Files"
 			on:mouseup={captureSelection}
 			on:keyup={captureSelection}
 			class="flex-1 overflow-y-auto min-h-0 min-w-0"
@@ -2595,8 +2599,8 @@
 					<div class="relative cursor-row-resize group" on:mousedown={onHandleMouseDown}>
 						<div
 							class="h-px bg-transparent group-hover:bg-black/10 dark:group-hover:bg-white/10 transition"
-						/>
-						<div class="absolute inset-x-0 -top-1.5 -bottom-1.5" />
+						></div>
+						<div class="absolute inset-x-0 -top-1.5 -bottom-1.5"></div>
 					</div>
 				{/if}
 
@@ -2624,9 +2628,12 @@
 		/>
 
 		{#if directoryMenu}
+			<!-- svelte-ignore a11y_no_noninteractive_element_interactions (Stops bubbling from menu buttons without introducing another keyboard control.) -->
 			<div
 				class="fixed z-[9999999]"
 				style="left: {directoryMenu.x}px; top: {directoryMenu.y}px;"
+				role="group"
+				on:keydown|stopPropagation
 				on:click|stopPropagation
 			>
 				<DropdownMenu className="min-w-[9.375rem]">
@@ -2751,7 +2758,7 @@
 							submitFileAsk();
 						}
 					}}
-				/>
+				></textarea>
 				<button
 					type="submit"
 					disabled={asking || !fileAskInput.trim()}

@@ -37,8 +37,6 @@
 		setTerminalServerConnections
 	} from '$lib/apis/configs';
 
-	export let saveSettings: Function;
-
 	type ToolServerConnection = any;
 	type TerminalConnection = {
 		id?: string;

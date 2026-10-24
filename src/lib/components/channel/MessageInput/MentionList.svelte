@@ -19,7 +19,6 @@
 	export let command: (payload: { id: string; label: string }) => void;
 	export let selectedIndex = 0;
 
-	export let label = '';
 	export let triggerChar = '@';
 
 	export let modelSuggestions = false;

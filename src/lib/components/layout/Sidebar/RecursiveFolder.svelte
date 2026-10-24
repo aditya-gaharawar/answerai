@@ -1,5 +1,11 @@
 <script context="module" lang="ts">
 	let closeActiveHoverPreview: (() => void) | null = null;
+	function activatePreview(close: () => void) {
+		if (closeActiveHoverPreview !== close) {
+			closeActiveHoverPreview?.();
+			closeActiveHoverPreview = close;
+		}
+	}
 </script>
 
 <script lang="ts">
@@ -106,10 +112,7 @@
 		}
 	};
 
-	$: if (openPreview && closeActiveHoverPreview !== closeHoverPreview) {
-		closeActiveHoverPreview?.();
-		closeActiveHoverPreview = closeHoverPreview;
-	}
+	$: if (openPreview) activatePreview(closeHoverPreview);
 
 	let name = '';
 

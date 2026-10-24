@@ -5,7 +5,7 @@
 	import { onMount, getContext } from 'svelte';
 	const i18n = getContext('i18n');
 
-	import { page } from '$app/stores';
+	import { page } from '$lib/stores/page';
 	import { config, models, settings } from '$lib/stores';
 
 	import { getModelById, updateModelById } from '$lib/apis/models';

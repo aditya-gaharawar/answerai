@@ -6,7 +6,7 @@
 	const i18n = getContext('i18n');
 
 	import { getPromptById, updatePromptById } from '$lib/apis/prompts';
-	import { page } from '$app/stores';
+	import { page } from '$lib/stores/page';
 
 	import PromptEditor from '$lib/components/workspace/Prompts/PromptEditor.svelte';
 

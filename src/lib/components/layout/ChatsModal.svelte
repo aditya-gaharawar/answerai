@@ -30,8 +30,9 @@
 
 	export let show = false;
 
-	export let title = 'Chats';
 	export let emptyPlaceholder = '';
+	export let title = 'Chats';
+
 	export let shareUrl = false;
 	export let showUserInfo = false;
 	export let showSearch = true;
@@ -239,7 +240,7 @@
 								<div
 									class="text-xs text-gray-500 dark:text-gray-400 text-center px-5 min-h-20 w-full h-full flex justify-center items-center"
 								>
-									{$i18n.t('No results found')}
+									{emptyPlaceholder || $i18n.t('No results found')}
 								</div>
 							{/if}
 

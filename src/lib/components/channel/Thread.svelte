@@ -7,7 +7,7 @@
 		ChannelPinHandler
 	} from '$lib/types/channels';
 	import { goto } from '$app/navigation';
-	import { page } from '$app/stores';
+	import { page } from '$lib/stores/page';
 
 	import { socket, user } from '$lib/stores';
 

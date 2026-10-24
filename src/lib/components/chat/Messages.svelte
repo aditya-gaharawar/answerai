@@ -28,7 +28,6 @@
 	export let user: (Partial<import('$lib/stores').SessionUser> & { id: string }) | undefined =
 		$_user;
 
-	export let prompt = '';
 	export let history: ChatHistory = { messages: {}, currentId: null };
 	export let selectedModels: string[] = [];
 	export let atSelectedModel: Model | undefined = undefined;
@@ -43,9 +42,9 @@
 	export let mergeResponses: Function = () => {};
 
 	export let chatActionHandler: Function = () => {};
-	export let showMessage: Function = () => {};
+
 	export let submitMessage: Function = () => {};
-	export let addMessages: Function = () => {};
+
 	export let onToolCallResolved: Function = () => {};
 	export let forkHandler: Function | null = null;
 
@@ -540,7 +539,6 @@
 							<Message
 								{chatId}
 								bind:history
-								{selectedModels}
 								messageId={message.id}
 								idx={messageIdx}
 								{user}
@@ -551,14 +549,12 @@
 								{updateChat}
 								{editMessage}
 								{deleteMessage}
-								{rateMessage}
 								{actionMessage}
 								{saveMessage}
 								{submitMessage}
 								{regenerateResponse}
 								{continueResponse}
 								{mergeResponses}
-								{addMessages}
 								{onToolCallResolved}
 								{forkHandler}
 								{allowDelete}
@@ -573,9 +569,9 @@
 						{/each}
 					</ul>
 				</section>
-				<div class="pb-18" />
+				<div class="pb-18"></div>
 				{#if bottomPadding}
-					<div class="  pb-6" />
+					<div class="  pb-6"></div>
 				{/if}
 			{/key}
 		</div>

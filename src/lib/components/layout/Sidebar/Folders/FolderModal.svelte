@@ -10,7 +10,7 @@
 	import XMark from '../icons/XMark.svelte';
 
 	import { toast } from 'svelte-sonner';
-	import { page } from '$app/stores';
+	import { page } from '$lib/stores/page';
 	import { goto } from '$app/navigation';
 	import { user, config, models } from '$lib/stores';
 	import ModelSelector from '$lib/components/chat/ModelSelector/Selector.svelte';

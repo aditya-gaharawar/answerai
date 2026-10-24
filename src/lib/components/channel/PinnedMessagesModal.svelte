@@ -114,7 +114,6 @@
 												id="pinned"
 												className="rounded-xl px-2"
 												{message}
-												{channel}
 												onPin={async (message: ChannelMessage) => {
 													pinnedMessages = (pinnedMessages ?? []).filter(
 														(m) => m.id !== message.id

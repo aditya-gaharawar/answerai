@@ -28,7 +28,7 @@
 	<slot />
 
 	<div slot="content">
-		<DropdownMenu className="min-w-[10.625rem] ">
+		<DropdownMenu className="min-w-[10.625rem] {className}">
 			<button
 				class="flex h-[1.6875rem] w-full items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] transition hover:text-gray-900 dark:hover:text-gray-100"
 				on:click={async () => {

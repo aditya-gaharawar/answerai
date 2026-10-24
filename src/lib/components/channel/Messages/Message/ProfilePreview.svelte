@@ -7,6 +7,12 @@
 	 * therefore force-closes whichever one is still up.
 	 */
 	let closeActiveProfilePreview: (() => void) | null = null;
+	function activatePreview(close: () => void) {
+		if (closeActiveProfilePreview !== close) {
+			closeActiveProfilePreview?.();
+			closeActiveProfilePreview = close;
+		}
+	}
 </script>
 
 <script lang="ts">
@@ -31,10 +37,7 @@
 		}
 	};
 
-	$: if (openPreview && closeActiveProfilePreview !== closeProfilePreview) {
-		closeActiveProfilePreview?.();
-		closeActiveProfilePreview = closeProfilePreview;
-	}
+	$: if (openPreview) activatePreview(closeProfilePreview);
 
 	onDestroy(() => {
 		if (closeActiveProfilePreview === closeProfilePreview) {

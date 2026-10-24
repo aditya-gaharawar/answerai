@@ -88,17 +88,6 @@
 	role="status"
 	aria-live="polite"
 	class="group relative flex gap-2.5 text-left min-w-[var(--width)] w-full dark:bg-gray-850 dark:text-white bg-white text-black border border-gray-100 dark:border-gray-800 rounded-3xl px-4 py-3.5 cursor-pointer select-none"
-	on:dragstart|preventDefault
-	on:pointerdown={onPointerDown}
-	on:pointermove={onPointerMove}
-	on:pointerup={onPointerUp}
-	on:pointercancel={() => (moved = true)}
-	on:keydown={(e) => {
-		if (e.key === 'Enter' || e.key === ' ') {
-			e.preventDefault();
-			clickHandler();
-		}
-	}}
 >
 	<!-- Close button (visible on hover) -->
 	<button
@@ -110,20 +99,36 @@
 		<XMark className="size-3" />
 	</button>
 
-	<div class="shrink-0 self-top -translate-y-0.5">
-		<!-- LICENSE covers this Open WebUI notification logo.
+	<button
+		type="button"
+		class="flex gap-2.5 text-left w-full"
+		on:dragstart|preventDefault
+		on:pointerdown={onPointerDown}
+		on:pointermove={onPointerMove}
+		on:pointerup={onPointerUp}
+		on:pointercancel={() => (moved = true)}
+		on:keydown={(e) => {
+			if (e.key === 'Enter' || e.key === ' ') {
+				e.preventDefault();
+				clickHandler();
+			}
+		}}
+	>
+		<div class="shrink-0 self-top -translate-y-0.5">
+			<!-- LICENSE covers this Open WebUI notification logo.
 		Do not alter, remove, obscure, or replace it except as LICENSE permits:
 		https://docs.openwebui.com/license. -->
-		<img src="{WEBUI_BASE_URL}/static/favicon.png" alt="favicon" class="size-6 rounded-full" />
-	</div>
-
-	<div>
-		{#if title}
-			<div class=" text-[0.8125rem] font-normal mb-0.5 line-clamp-1">{title}</div>
-		{/if}
-
-		<div class=" line-clamp-2 text-xs self-center dark:text-gray-300 font-normal">
-			{@html DOMPurify.sanitize(marked(DOMPurify.sanitize(content, { ALLOWED_TAGS: [] })))}
+			<img src="{WEBUI_BASE_URL}/static/favicon.png" alt="favicon" class="size-6 rounded-full" />
 		</div>
-	</div>
+
+		<div>
+			{#if title}
+				<div class=" text-[0.8125rem] font-normal mb-0.5 line-clamp-1">{title}</div>
+			{/if}
+
+			<div class=" line-clamp-2 text-xs self-center dark:text-gray-300 font-normal">
+				{@html DOMPurify.sanitize(marked(DOMPurify.sanitize(content, { ALLOWED_TAGS: [] })))}
+			</div>
+		</div>
+	</button>
 </div>

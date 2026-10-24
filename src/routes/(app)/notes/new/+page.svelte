@@ -4,7 +4,7 @@
 	import type { i18n as I18n } from 'i18next';
 
 	import { goto } from '$app/navigation';
-	import { page } from '$app/stores';
+	import { page } from '$lib/stores/page';
 
 	import dayjs from '$lib/dayjs';
 	import { createNoteHandler } from '$lib/components/notes/utils';

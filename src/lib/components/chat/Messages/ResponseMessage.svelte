@@ -114,7 +114,6 @@
 	export let chatId = '';
 	export let history;
 	export let messageId;
-	export let selectedModels: string[] = [];
 
 	let messageSource = history.messages[messageId];
 	let message: MessageType = structuredClone(messageSource);
@@ -149,7 +148,7 @@
 	export let updateChat: Function;
 	export let editMessage: Function;
 	export let saveMessage: Function;
-	export let rateMessage: Function;
+
 	export let actionMessage: Function;
 	export let deleteMessage: Function;
 
@@ -158,7 +157,6 @@
 	export let regenerateResponse: Function;
 	export let forkHandler: Function | null = null;
 
-	export let addMessages: Function;
 	export let onToolCallResolved: Function = () => {};
 
 	export let isLastMessage = true;
@@ -853,7 +851,6 @@
 									id={`${chatId}-${message.id}`}
 									{chatId}
 									messageId={message.id}
-									{history}
 									content={message.content}
 									output={message.output}
 									sources={message.sources}
@@ -1429,6 +1426,7 @@
 											<button
 												type="button"
 												class="hidden regenerate-response-button"
+												aria-label={$i18n.t('Regenerate')}
 												on:click={() => {
 													showRateComment = false;
 													regenerateResponse(message);
@@ -1445,7 +1443,7 @@
 														});
 													});
 												}}
-											/>
+											></button>
 
 											<RegenerateMenu
 												onRegenerate={(prompt = null) => {

@@ -11,7 +11,7 @@
 		workspaceActions,
 		workspaceCounts
 	} from '$lib/stores';
-	import { page } from '$app/stores';
+	import { page } from '$lib/stores/page';
 	import { goto } from '$app/navigation';
 	import { getModelItems } from '$lib/apis/models';
 	import { searchKnowledgeBases } from '$lib/apis/knowledge';

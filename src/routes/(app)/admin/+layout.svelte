@@ -3,7 +3,7 @@
 	import { goto } from '$app/navigation';
 
 	import { WEBUI_NAME, config, mobile, showSettings, showSidebar, user } from '$lib/stores';
-	import { page } from '$app/stores';
+	import { page } from '$lib/stores/page';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 
 	import Sidebar from '$lib/components/icons/Sidebar.svelte';

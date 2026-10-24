@@ -1260,7 +1260,6 @@
 									</button>
 
 									<ModelMenu
-										user={$user}
 										{model}
 										deleteLabel={canResetModel(model) ? $i18n.t('Reset') : $i18n.t('Delete')}
 										deleteHandler={() => {

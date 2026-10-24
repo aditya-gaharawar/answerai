@@ -23,7 +23,7 @@
 
 	export let includeGroups = true;
 	export let includeUsers = true;
-	export let pagination = false;
+
 	export let includeSessionUser = false;
 	export let accessGrants: { principal_type: string; principal_id: string }[] = [];
 

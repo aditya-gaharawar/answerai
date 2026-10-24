@@ -3,7 +3,7 @@
 	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
 
-	import { page } from '$app/stores';
+	import { page } from '$lib/stores/page';
 	import { user, config } from '$lib/stores';
 	import { getAutomationById, type AutomationResponse } from '$lib/apis/automations';
 

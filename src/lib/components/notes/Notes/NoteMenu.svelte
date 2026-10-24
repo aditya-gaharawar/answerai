@@ -49,7 +49,7 @@
 	<slot />
 
 	<div slot="content">
-		<DropdownMenu className="min-w-[11.25rem]">
+		<DropdownMenu className="min-w-[11.25rem] {className}">
 			{#if onAccess}
 				<button
 					type="button"

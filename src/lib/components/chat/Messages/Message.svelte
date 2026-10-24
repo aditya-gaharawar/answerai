@@ -13,7 +13,7 @@
 	import UserMessage from './UserMessage.svelte';
 
 	export let chatId;
-	export let selectedModels: string[] = [];
+
 	export let idx = 0;
 
 	export let history: import('$lib/utils/chatHistory').ChatHistory;
@@ -30,7 +30,7 @@
 	export let editMessage;
 	export let saveMessage;
 	export let deleteMessage;
-	export let rateMessage;
+
 	export let actionMessage;
 	export let submitMessage;
 
@@ -38,7 +38,6 @@
 	export let continueResponse;
 	export let mergeResponses;
 
-	export let addMessages;
 	export let onToolCallResolved: Function = () => {};
 	export let forkHandler: Function | null = null;
 	export let triggerScroll;
@@ -100,7 +99,6 @@
 				{chatId}
 				{history}
 				{messageId}
-				{selectedModels}
 				isLastMessage={messageId === history.currentId}
 				siblings={history.messages[history.messages[messageId].parentId ?? '']?.childrenIds ?? []}
 				{setInputText}
@@ -110,14 +108,12 @@
 				{updateChat}
 				{editMessage}
 				{saveMessage}
-				{rateMessage}
 				{actionMessage}
 				{submitMessage}
 				{deleteMessage}
 				{allowDelete}
 				{continueResponse}
 				{regenerateResponse}
-				{addMessages}
 				{onToolCallResolved}
 				{forkHandler}
 				{readOnly}
@@ -133,13 +129,11 @@
 					bind:history
 					{chatId}
 					{messageId}
-					{selectedModels}
 					isLastMessage={messageId === history?.currentId}
 					{setInputText}
 					{updateChat}
 					{editMessage}
 					{saveMessage}
-					{rateMessage}
 					{actionMessage}
 					{submitMessage}
 					{deleteMessage}
@@ -148,7 +142,6 @@
 					{regenerateResponse}
 					{mergeResponses}
 					{triggerScroll}
-					{addMessages}
 					{onToolCallResolved}
 					{forkHandler}
 					{readOnly}

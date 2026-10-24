@@ -340,6 +340,17 @@
 							{#each files as file (file.id)}
 								<div
 									class="w-full flex justify-between items-center rounded-lg text-sm py-2 px-3 hover:bg-gray-50/70 dark:hover:bg-gray-850/50 cursor-pointer"
+									role="button"
+									tabindex="0"
+									on:keydown={(event) => {
+										if (
+											event.target === event.currentTarget &&
+											(event.key === 'Enter' || event.key === ' ')
+										) {
+											event.preventDefault();
+											openFileViewer(file);
+										}
+									}}
 									on:click={() => openFileViewer(file)}
 								>
 									<div class="basis-3/5 min-w-0">

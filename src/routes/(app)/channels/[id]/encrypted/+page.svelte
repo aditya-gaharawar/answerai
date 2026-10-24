@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { getContext, onMount, tick } from 'svelte';
 	import { beforeNavigate, goto } from '$app/navigation';
-	import { page } from '$app/stores';
+	import { page } from '$lib/stores/page';
 	import { get } from 'svelte/store';
 	import { socket, user, config, showSidebar, channels, settings, mobile } from '$lib/stores';
 	import { canUseEncryption, consumeEntry, Conversation, type State } from '$lib/encryption/client';
@@ -183,7 +183,6 @@
 						</p>
 					{:else}
 						<Message
-							channel={channelInfo}
 							disabled
 							showUserProfile={messageIdx === 0 ||
 								state.messages[messageIdx - 1].type === 'joined' ||

@@ -22,7 +22,6 @@
 
 	const i18n = getContext<any>('i18n');
 
-	export let user;
 	export let model;
 
 	export let editHandler: Function;

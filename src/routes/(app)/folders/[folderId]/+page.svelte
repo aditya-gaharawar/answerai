@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { page } from '$app/stores';
+	import { page } from '$lib/stores/page';
 	import { onDestroy } from 'svelte';
 	import { toast } from 'svelte-sonner';
 

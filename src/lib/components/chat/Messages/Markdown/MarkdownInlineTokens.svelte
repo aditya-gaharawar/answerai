@@ -106,7 +106,7 @@
 	{#if token.type === 'escape'}
 		{unescapeHtml(token.text)}
 	{:else if token.type === 'html'}
-		<HtmlToken {id} {token} />
+		<HtmlToken {token} />
 	{:else if token.type === 'link'}
 		{@const linkToken = getLinkToken(token)}
 		{#if linkToken.noteId && !markdown?.document && markdown?.allowRemoteContent !== false}
@@ -186,7 +186,7 @@
 		) || ''}
 	{:else if token.type === 'citation'}
 		{#if (sourceIds ?? []).length > 0}
-			<SourceToken {id} {token} {sourceIds} onClick={onSourceClick} />
+			<SourceToken {token} {sourceIds} onClick={onSourceClick} />
 		{:else}
 			<TextToken {token} {done} />
 		{/if}

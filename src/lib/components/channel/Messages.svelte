@@ -171,7 +171,6 @@
 				on:reply={(event) =>
 					receiveAppChannelReply({ ...event.detail, parent_id: thread ? id : null })}
 				{message}
-				{channel}
 				{thread}
 				{id}
 				replyToMessage={replyToMessage?.id === message.id}

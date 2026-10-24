@@ -73,6 +73,18 @@
 		dirty = savedSnapshot !== '' && getSnapshot() !== savedSnapshot;
 	};
 
+	$: if (!loading) {
+		// Observe bindings directly, including edits made without a pointer.
+		(defaultCapabilities,
+			defaultFeatureIds,
+			configuredParams,
+			builtinTools,
+			promptSuggestions,
+			useDefaultPromptSuggestions,
+			promptSuggestionsI18n);
+		updateDirty();
+	}
+
 	const resetPromptSuggestions = () => {
 		useDefaultPromptSuggestions = true;
 		promptSuggestions = resolveLocalizedPromptSuggestions(null, {});
@@ -211,7 +223,6 @@
 					{#if showCapabilities}
 						<div
 							class="max-h-[24rem] overflow-y-auto pb-2 pl-3 pr-1 scrollbar-hover"
-							on:click={updateDirty}
 							on:change={updateDirty}
 						>
 							<Capabilities
@@ -248,7 +259,6 @@
 					{#if showParameters}
 						<div
 							class="max-h-[24rem] overflow-y-auto pb-2 pl-3 pr-1 scrollbar-hover"
-							on:click={updateDirty}
 							on:change={updateDirty}
 							on:input={updateDirty}
 						>
@@ -282,7 +292,6 @@
 					{#if showPromptSuggestions}
 						<div
 							class="max-h-[24rem] space-y-2 overflow-y-auto pb-2 pl-3 pr-1 scrollbar-hover"
-							on:click={updateDirty}
 							on:change={updateDirty}
 							on:input={updateDirty}
 						>

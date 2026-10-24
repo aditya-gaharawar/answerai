@@ -16,8 +16,6 @@
 
 	const i18n: any = getContext('i18n');
 
-	export let saveHandler: Function;
-
 	let configImportInputElement: HTMLInputElement;
 	const actionButtonClass =
 		'text-xs text-gray-500 transition-colors hover:text-gray-900 dark:text-gray-500 dark:hover:text-white';

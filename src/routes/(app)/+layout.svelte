@@ -3,7 +3,7 @@
 	import { onMount, tick, getContext } from 'svelte';
 
 	import { goto } from '$app/navigation';
-	import { page } from '$app/stores';
+	import { page } from '$lib/stores/page';
 	import { fade } from 'svelte/transition';
 
 	import { getBackendConfig, getModels, getToolServersData, getVersionUpdates } from '$lib/apis';
@@ -225,13 +225,12 @@
 				: requestedSettings
 		);
 
-		const params = new URLSearchParams($page.url.searchParams);
+		const params = new URLSearchParams($page.url.searchParams.toString());
 		params.delete('settings');
 		const query = params.toString();
 		await goto(`${$page.url.pathname}${query ? `?${query}` : ''}${$page.url.hash}`, {
 			replaceState: true,
-			noScroll: true,
-			keepFocus: true
+			reset: false
 		});
 	};
 
@@ -508,47 +507,3 @@
 		</div>
 	</div>
 {/if}
-
-<style>
-	.loading {
-		display: inline-block;
-		clip-path: inset(0 1ch 0 0);
-		animation: l 1s steps(3) infinite;
-		letter-spacing: -0.5px;
-	}
-
-	@keyframes l {
-		to {
-			clip-path: inset(0 -1ch 0 0);
-		}
-	}
-
-	pre[class*='language-'] {
-		position: relative;
-		overflow: auto;
-
-		/* make space  */
-		margin: 0.3125rem 0;
-		padding: 1.75rem 0 1.75rem 1rem;
-		border-radius: 0.625rem;
-	}
-
-	pre[class*='language-'] button {
-		position: absolute;
-		top: 0.3125rem;
-		right: 0.3125rem;
-
-		font-size: 0.9rem;
-		padding: 0.15rem;
-		background-color: #828282;
-
-		border: ridge 1px #7b7b7c;
-		border-radius: 0.3125rem;
-		text-shadow: #c4c4c4 0 0 2px;
-	}
-
-	pre[class*='language-'] button:hover {
-		cursor: pointer;
-		background-color: #bcbabb;
-	}
-</style>

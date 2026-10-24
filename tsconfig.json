@@ -1,6 +1,22 @@
 {
-	"extends": "./.svelte-kit/tsconfig.json",
+	"extends": "$app/tsconfig",
+	"include": ["src", "test", "*"],
+	"exclude": [
+		"src/service-worker",
+		"node_modules",
+		"internal-workspace",
+		"src/lib/encryption/vendor"
+	],
 	"compilerOptions": {
+		"paths": { "$lib": ["./src/lib"], "$lib/*": ["./src/lib/*"] },
+		"types": [
+			"$app/types",
+			"dom-speech-recognition",
+			"gapi",
+			"gapi.client.drive-v3",
+			"google.accounts",
+			"google.picker"
+		],
 		"allowJs": true,
 		"checkJs": true,
 		"esModuleInterop": true,

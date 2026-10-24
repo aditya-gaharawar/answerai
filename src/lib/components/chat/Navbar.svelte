@@ -16,7 +16,7 @@
 	} from '$lib/stores';
 
 	import { slide } from 'svelte/transition';
-	import { page } from '$app/stores';
+	import { page } from '$lib/stores/page';
 	import { goto } from '$app/navigation';
 
 	import ShareChatModal from '../chat/ShareChatModal.svelte';
@@ -44,7 +44,7 @@
 	export let readOnly: boolean = false;
 	export let liveParticipants: { id: string; name: string }[] = [];
 	export let shareEnabled: boolean = false;
-	export let scrollTop = 0;
+
 	export let scrollToTop: (() => void) | null = null;
 
 	export let chat;
@@ -78,7 +78,7 @@
 		initNewChat();
 	}}
 	aria-label={$i18n.t('New Chat')}
-/>
+></button>
 
 <nav
 	class="sticky top-0 z-30 w-full {$mobile

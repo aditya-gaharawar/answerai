@@ -247,6 +247,7 @@
 	});
 </script>
 
+<!-- svelte-ignore a11y_no_noninteractive_tabindex a11y_no_noninteractive_element_interactions (This document widget handles page navigation, zoom, and focus through its keyboard handler.) -->
 <div
 	bind:this={rootEl}
 	role="application"

@@ -3,7 +3,7 @@
 	import { toast } from 'svelte-sonner';
 
 	import Chat from '$lib/components/chat/Chat.svelte';
-	import { page } from '$app/stores';
+	import { page } from '$lib/stores/page';
 
 	onMount(() => {
 		if ($page.url.searchParams.get('error')) {

@@ -59,7 +59,6 @@
 	export let className = '';
 
 	export let message: ChannelMessage;
-	export let channel: ChannelRecord | null = null;
 
 	export let showUserProfile = true;
 	export let thread = false;
@@ -186,6 +185,8 @@
 {#if message}
 	<div
 		class="swipe-reply-wrapper relative"
+		role="group"
+		aria-label={$i18n.t('Message')}
 		data-sidebar-no-gesture={disabled || edit ? undefined : ''}
 		on:touchstart={handleTouchStart}
 		on:touchmove={handleTouchMove}
@@ -546,7 +547,14 @@
 									{#if file.type === 'image' || (file?.content_type ?? '').startsWith('image/')}
 										<Image src={fileUrl} alt={file.name} imageClassName=" max-h-96 rounded-lg" />
 									{:else if file.type === 'video' || (file?.content_type ?? '').startsWith('video/')}
-										<video src={fileUrl} controls class=" max-h-96 rounded-lg"></video>
+										<!-- User-provided videos have no caption attachment yet; controls remain available. -->
+										<!-- svelte-ignore a11y_media_has_caption -->
+										<video
+											src={fileUrl}
+											controls
+											class=" max-h-96 rounded-lg"
+											aria-label={file.name ?? $i18n.t('Video player')}
+										></video>
 									{:else}
 										<FileItem
 											item={file}

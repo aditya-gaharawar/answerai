@@ -25,7 +25,8 @@ files = (
 failures = []
 checked = 0
 for name in sorted(set(files)):
-    if not name or name == 'scripts/audit-branding.py':
+    # Archived historical checkouts are evidence, not current application source.
+    if not name or name.startswith('internal-workspace/') or name == 'scripts/audit-branding.py':
         continue
     path = ROOT / name
     if not path.is_file() or path.name in LEGAL_FILES:

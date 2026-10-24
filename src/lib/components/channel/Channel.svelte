@@ -10,7 +10,7 @@
 
 	import { onDestroy, onMount, tick } from 'svelte';
 	import { goto } from '$app/navigation';
-	import { page } from '$app/stores';
+	import { page } from '$lib/stores/page';
 	import { v4 as uuidv4 } from 'uuid';
 	import type { Socket } from 'socket.io-client';
 
