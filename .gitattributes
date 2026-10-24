@@ -47,3 +47,5 @@
 # Misc
 *.env text eol=lf
 *.lock text eol=lf
+# Preserve the verified upstream encryption distribution byte for byte.
+src/lib/encryption/vendor/** -whitespace

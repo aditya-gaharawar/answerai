@@ -994,6 +994,25 @@
 		<div class="flex flex-col w-full">
 			<div class="flex w-full justify-between my-1">
 				<div class=" self-center text-xs font-normal">
+					{$i18n.t('Encrypted Channels')}
+				</div>
+				<Switch
+					bind:state={permissions.features.encrypted_channels}
+					ariaLabel={$i18n.t('Encrypted Channels')}
+				/>
+			</div>
+			{#if defaultPermissions?.features?.encrypted_channels && !permissions.features.encrypted_channels}
+				<div>
+					<div class="text-xs text-gray-500">
+						{$i18n.t('This is a default user permission and will remain enabled.')}
+					</div>
+				</div>
+			{/if}
+		</div>
+
+		<div class="flex flex-col w-full">
+			<div class="flex w-full justify-between my-1">
+				<div class=" self-center text-xs font-normal">
 					{$i18n.t('Folders')}
 				</div>
 				<Switch bind:state={permissions.features.folders} ariaLabel={$i18n.t('Folders')} />

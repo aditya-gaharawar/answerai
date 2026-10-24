@@ -43,7 +43,10 @@
 		}
 	};
 
-	export function alertComponent(token: Token): AlertData | false {
+	export function alertComponent(
+		token: Token,
+		lexer: (source: string) => Token[] = marked.lexer
+	): AlertData | false {
 		const regExpStr = `^(?:\\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\\])\\s*?\n*`;
 		const regExp = new RegExp(regExpStr);
 		const text = 'text' in token && typeof token.text === 'string' ? token.text : '';
@@ -52,7 +55,7 @@
 		if (matches && matches.length) {
 			const alertType = matches[1] as AlertType;
 			const newText = text.replace(regExp, '');
-			const newTokens = marked.lexer(newText);
+			const newTokens = lexer(newText);
 			return {
 				type: alertType,
 				text: newText,

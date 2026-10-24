@@ -74,6 +74,7 @@ export type ChannelNotificationEvent = {
 /** Payloads emitted by the chat socket protocol. */
 type InteractionPayload = { interaction_id?: string; tool_call?: unknown; [key: string]: unknown };
 type ChatEventPayloads = {
+	'chat:presence': { users?: { id: string; name: string }[] };
 	'voice:play_animation': { name?: string; model_id?: string };
 	'request:interaction:done': { interaction_id?: string };
 	'request:user_input': InteractionPayload;

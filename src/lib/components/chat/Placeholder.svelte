@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { Model } from '$lib/stores';
+	import type { TerminalContext } from '$lib/types';
 	import { toast } from 'svelte-sonner';
 	import { marked } from 'marked';
 	import DOMPurify from 'dompurify';
@@ -52,6 +53,7 @@
 	export let prompt = '';
 	export let files: import('$lib/types/notes').NoteAttachment[] = [];
 	export let messageInput: InstanceType<typeof MessageInput> | undefined = undefined;
+	export let terminalContext: TerminalContext | null = null;
 
 	export let selectedToolIds: string[] = [];
 	export let selectedSkillIds: string[] = [];
@@ -245,6 +247,7 @@
 			<div class="text-base font-normal @md:max-w-3xl w-full py-3 {atSelectedModel ? 'mt-2' : ''}">
 				{#if !($selectedFolder && folderReadOnly)}
 					<MessageInput
+						{terminalContext}
 						{callActive}
 						{callEnabled}
 						bind:this={messageInput}

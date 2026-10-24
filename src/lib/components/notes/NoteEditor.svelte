@@ -15,6 +15,7 @@
 	import { equalEditorJSON } from '$lib/utils/editorJson';
 
 	import { goto, onNavigate } from '$app/navigation';
+	import { page } from '$app/stores';
 
 	import dayjs from '$lib/dayjs';
 	import calendar from 'dayjs/plugin/calendar';
@@ -91,6 +92,30 @@
 	export let id: null | string = null;
 
 	let editor: Editor | null = null;
+	let revealedSearch = '';
+	$: if (editor && note?.id === id && $page.url.searchParams.get('search')) {
+		const query = $page.url.searchParams.get('search')!.trim().toLowerCase();
+		const key = `${id}:${query}`;
+		if (query && revealedSearch !== key) {
+			revealedSearch = key;
+			tick().then(() => {
+				if (!editor || note?.id !== id) return;
+				const activeEditor = editor;
+				let found = false;
+				activeEditor.state.doc.descendants((node, position) => {
+					if (found || !node.isText) return;
+					const text = (node.text ?? '').toLowerCase();
+					const term = [query, ...query.split(/\s+/)].find((term) => text.includes(term));
+					if (term) {
+						const from = position + text.indexOf(term);
+						activeEditor.commands.setTextSelection({ from, to: from + term.length });
+						activeEditor.commands.scrollIntoView();
+						found = true;
+					}
+				});
+			});
+		}
+	}
 	let autoFormat = true;
 	let note: NoteRecord | null = null;
 	let noteLoadVersion = 0;

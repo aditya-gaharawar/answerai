@@ -14,3 +14,6 @@ yarn.lock
 
 # Historical audit and workspace material is not application source.
 internal-workspace/
+# Generated and checksum-verified crypto distribution
+src/lib/encryption/vendor/
+crypto/encryption/target/

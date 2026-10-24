@@ -318,3 +318,6 @@ cypress/screenshots
 
 # Generated ONNX browser runtime assets
 static/wasm/
+
+# Generated from the verified encryption attribution artifact at build time.
+/static/licenses/encryption/

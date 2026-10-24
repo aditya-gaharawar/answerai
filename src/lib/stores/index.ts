@@ -142,7 +142,7 @@ export const visiblePinnedModels = derived([pinnedModels, models], ([$pinnedMode
 
 export const audioQueue = writable<AudioQueue | null>(null);
 export const chatRequestQueues: Writable<
-	Record<string, { id: string; prompt: string; files: any[] }[]>
+	Record<string, { id: string; prompt: string; files: any[]; error?: string }[]>
 > = writable({});
 
 export type ChannelQueuedMessage = {
@@ -469,6 +469,7 @@ export type Config = {
 		enable_onedrive_business?: boolean;
 		enable_ldap?: boolean;
 
+		enable_encrypted_channels?: boolean;
 		slim?: boolean;
 		auth: boolean;
 		auth_trusted_header: boolean;

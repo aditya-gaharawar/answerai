@@ -135,6 +135,7 @@
 		analysisContext = undefined;
 		if (context && context.state !== 'closed') void context.close().catch(console.error);
 	};
+	const closeAudioContext = () => stopAnalysis();
 	const analyseAudio = (stream: MediaStream) => {
 		stopAnalysis();
 		const audioContext = new AudioContext();
@@ -445,6 +446,7 @@
 		}
 
 		stream = null;
+		closeAudioContext();
 	};
 
 	const confirmRecording = async () => {
@@ -465,6 +467,7 @@
 		}
 
 		stream = null;
+		closeAudioContext();
 	};
 
 	let resizeObserver: ResizeObserver | undefined;
@@ -518,6 +521,7 @@
 		window.removeEventListener('keydown', handleKeyDown);
 		document.removeEventListener('visibilitychange', handleVisibilityChange);
 		releaseWakeLock();
+		closeAudioContext();
 		// remove resize observer
 		resizeObserver?.disconnect();
 	});

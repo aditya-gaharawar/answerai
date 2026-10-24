@@ -5,11 +5,13 @@ import io
 import logging
 import time
 from collections import Counter
+from copy import deepcopy
 from datetime import datetime, timedelta
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from fastapi.responses import FileResponse, Response, StreamingResponse
+from answerai.config import DEFAULT_USER_PERMISSIONS
 from answerai.constants import ERROR_MESSAGES
 from answerai.events import EVENTS, publish_event
 from answerai.env import ENABLE_PROFILE_IMAGE_URL_FORWARDING, PROFILE_IMAGE_ALLOWED_MIME_TYPES, STATIC_DIR
@@ -37,7 +39,7 @@ from answerai.models.access_grants import AccessGrants
 from answerai.models.knowledge import Knowledges
 from answerai.models.models import Models
 from answerai.models.tools import Tools
-from answerai.utils.access_control import get_permissions, has_permission
+from answerai.utils.access_control import fill_missing_permissions, get_permissions, has_permission
 from answerai.utils.auth import (
     get_admin_user,
     get_password_hash,
@@ -262,6 +264,7 @@ class FeaturesPermissions(BaseModel):
     api_keys: bool = False
     notes: bool = True
     channels: bool = True
+    encrypted_channels: bool = False
     folders: bool = True
     direct_tool_servers: bool = False
 
@@ -412,7 +415,9 @@ def _calculate_streaks(heatmap: list[dict]) -> dict[str, int]:
 
 @router.get('/default/permissions', response_model=UserPermissions)
 async def get_default_user_permissions(request: Request, user=Depends(get_admin_user)):
-    user_permissions = await Config.get('user.permissions')
+    user_permissions = fill_missing_permissions(
+        deepcopy(await Config.get('user.permissions') or {}), DEFAULT_USER_PERMISSIONS
+    )
     return {
         'workspace': WorkspacePermissions(**user_permissions.get('workspace', {})),
         'sharing': SharingPermissions(**user_permissions.get('sharing', {})),

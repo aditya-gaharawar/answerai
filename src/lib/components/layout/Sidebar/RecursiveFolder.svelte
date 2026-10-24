@@ -1,3 +1,7 @@
+<script context="module" lang="ts">
+	let closeActiveHoverPreview: (() => void) | null = null;
+</script>
+
 <script lang="ts">
 	import type { ChatSummary } from '$lib/types/chat';
 	import type { FolderRecord, FolderRegistry } from '$lib/types/folders';
@@ -52,7 +56,6 @@
 	import ChatItem from './ChatItem.svelte';
 	import FolderHoverPreview from './FolderHoverPreview.svelte';
 	import FolderMenu from './Folders/FolderMenu.svelte';
-	import FolderShareModal from './Folders/FolderShareModal.svelte';
 	import DeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import FolderModal from './Folders/FolderModal.svelte';
 	import Emoji from '$lib/components/common/Emoji.svelte';
@@ -83,7 +86,6 @@
 
 	let openPreview = false;
 	let showFolderModal = false;
-	let showShareModal = false;
 	let edit = false;
 
 	let showCreateSubFolderModal = false;
@@ -94,16 +96,19 @@
 
 	let clickTimer: ReturnType<typeof setTimeout> | null = null;
 
-	$: if (
-		$mobile ||
-		edit ||
-		dragged ||
-		parentDragged ||
-		draggedOver ||
-		showFolderModal ||
-		showShareModal
-	) {
+	$: if ($mobile || edit || dragged || parentDragged || draggedOver || showFolderModal) {
 		openPreview = false;
+	}
+
+	const closeHoverPreview = () => {
+		if (openPreview) {
+			openPreview = false;
+		}
+	};
+
+	$: if (openPreview && closeActiveHoverPreview !== closeHoverPreview) {
+		closeActiveHoverPreview?.();
+		closeActiveHoverPreview = closeHoverPreview;
 	}
 
 	let name = '';
@@ -452,6 +457,10 @@
 		clearTimeout(isExpandedUpdateTimeout);
 		delete folderRegistry[folderId];
 
+		if (closeActiveHoverPreview === closeHoverPreview) {
+			closeActiveHoverPreview = null;
+		}
+
 		if (folderElement) {
 			folderElement.removeEventListener('dragover', onDragOver);
 			folderElement.removeEventListener('drop', onDrop);
@@ -729,8 +738,6 @@
 	onSubmit={createSubFolderHandler}
 />
 
-<FolderShareModal bind:show={showShareModal} folder={folders[folderId]} />
-
 {#if dragged && x && y}
 	<DragGhost {x} {y}>
 		<div class=" bg-black/80 backdrop-blur-2xl px-2 py-1 rounded-lg w-fit max-w-40">
@@ -806,7 +813,9 @@
 					{/if}
 				</button>
 
-				<div class="translate-y-[0.5px] flex min-w-0 flex-1 items-center gap-1.5 pr-6 text-start">
+				<div
+					class="translate-y-[0.5px] flex min-w-0 flex-1 self-stretch items-center gap-1.5 pr-6 text-start"
+				>
 					{#if edit}
 						<input
 							id="folder-{folderId}-input"
@@ -842,7 +851,7 @@
 							<LinkPreview.Trigger
 								href={`/folders/${folderId}`}
 								draggable="false"
-								class="flex min-w-0 flex-1 items-center gap-1.5"
+								class="flex min-w-0 flex-1 self-stretch -my-1 items-center gap-1.5"
 								ondblclick={(e) => {
 									if (!isWritable || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
 									if (clickTimer) {
@@ -907,12 +916,8 @@
 						on:pointerdown={() => (openPreview = false)}
 					>
 						<FolderMenu
-							canShare={$user?.role === 'admin' || !folders[folderId]?.shared}
 							onEdit={() => {
 								showFolderModal = true;
-							}}
-							onShare={() => {
-								showShareModal = true;
 							}}
 							onDelete={() => {
 								showDeleteConfirm = true;

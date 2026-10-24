@@ -42,6 +42,10 @@ for name in sorted(set(files)):
     if name == 'src/lib/components/chat/Settings/About.svelte':
         # Copyright owner remains upstream; this is required attribution.
         text = text.replace('Open WebUI Inc.', '')
+    if name == 'crypto/encryption/src/lib.rs':
+        # The verified upstream crypto artifact uses this exact protocol domain
+        # separator. It is not displayed branding; changing it changes identity keys.
+        text = text.replace('Open WebUI temporary chat identity v1', '[encryption identity domain]')
     text = without_notices(text)
     for line, value in enumerate(text.splitlines(), 1):
         if BRAND.search(value):

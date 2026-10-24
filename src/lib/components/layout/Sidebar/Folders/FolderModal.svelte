@@ -5,6 +5,8 @@
 
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import Modal from '$lib/components/common/Modal.svelte';
+	import AccessButton from '$lib/components/common/AccessButton.svelte';
+	import FolderShareModal from './FolderShareModal.svelte';
 	import XMark from '../icons/XMark.svelte';
 
 	import { toast } from 'svelte-sonner';
@@ -25,7 +27,7 @@
 	export let parentId: string | null = null;
 	export let edit = false;
 
-	let folder = null;
+	let folder: import('$lib/types/folders').FolderRecord | null = null;
 	let name = '';
 	let meta: { background_image_url: string | null } = {
 		background_image_url: null
@@ -37,6 +39,7 @@
 	};
 
 	let loading = false;
+	let showAccessModal = false;
 
 	const submitHandler = async () => {
 		loading = true;
@@ -60,7 +63,12 @@
 		await onSubmit({
 			name,
 			meta,
-			data,
+			// Sharing saves separately; do not overwrite its mode with the editor's snapshot.
+			data: {
+				model_ids: data.model_ids,
+				system_prompt: data.system_prompt,
+				files: data.files
+			},
 			parent_id: edit ? undefined : parentId
 		});
 		show = false;
@@ -68,16 +76,16 @@
 	};
 
 	const init = async () => {
+		folder = null;
 		if (folderId) {
 			folder = await getFolderById(localStorage.token, folderId).catch((error) => {
 				toast.error(`${error}`);
 				return null;
 			});
+			if (!folder) return;
 
 			name = folder.name;
-			meta = folder.meta || {
-				background_image_url: null
-			};
+			meta = { background_image_url: null, ...folder.meta };
 			data = {
 				system_prompt: '',
 				files: [],
@@ -101,6 +109,7 @@
 	$: if (show) {
 		init();
 	}
+	$: if (!show) showAccessModal = false;
 
 	$: if (!show && !edit) {
 		name = '';
@@ -125,15 +134,20 @@
 					{$i18n.t('Create Folder')}
 				{/if}
 			</div>
-			<button
-				aria-label={$i18n.t('Close')}
-				class="self-center rounded-lg p-1 text-gray-500 transition hover:bg-gray-50 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200"
-				on:click={() => {
-					show = false;
-				}}
-			>
-				<XMark className={'size-4'} />
-			</button>
+			<div class="flex items-center gap-1">
+				{#if edit && folder && ($user?.role === 'admin' || folder.user_id === $user?.id)}
+					<AccessButton disabled={loading} on:click={() => (showAccessModal = true)} />
+				{/if}
+				<button
+					aria-label={$i18n.t('Close')}
+					class="self-center rounded-lg p-1 text-gray-500 transition hover:bg-gray-50 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200"
+					on:click={() => {
+						show = false;
+					}}
+				>
+					<XMark className={'size-4'} />
+				</button>
+			</div>
 		</div>
 
 		<div class="flex flex-col md:flex-row w-full px-4 pb-4 md:space-x-4 dark:text-gray-200">
@@ -312,3 +326,7 @@
 		</div>
 	</div>
 </Modal>
+
+{#if show && edit && folder && ($user?.role === 'admin' || folder.user_id === $user?.id)}
+	<FolderShareModal bind:show={showAccessModal} {folder} />
+{/if}

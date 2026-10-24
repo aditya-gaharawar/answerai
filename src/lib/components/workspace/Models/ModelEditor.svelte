@@ -451,7 +451,7 @@
 			}
 		}
 
-		if (defaultFeatureIds.length > 0) {
+		if (defaultFeatureIds.length > 0 || defaultMeta.defaultFeatureIds?.length > 0) {
 			modelInfo.meta.defaultFeatureIds = defaultFeatureIds;
 		} else {
 			if (modelInfo.meta.defaultFeatureIds) {
@@ -459,7 +459,10 @@
 			}
 		}
 
-		if (Object.keys(builtinTools).length > 0) {
+		if (
+			Object.keys(builtinTools).length > 0 ||
+			Object.keys(defaultMeta.builtinTools ?? {}).length > 0
+		) {
 			modelInfo.meta.builtinTools = builtinTools;
 		} else {
 			if (modelInfo.meta.builtinTools) {

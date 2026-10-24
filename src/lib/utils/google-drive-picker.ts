@@ -16,10 +16,7 @@ async function getCredentials() {
 		throw new Error('Google Drive API credentials not configured');
 	}
 }
-const SCOPE = [
-	'https://www.googleapis.com/auth/drive.readonly',
-	'https://www.googleapis.com/auth/drive.file'
-];
+const SCOPE = ['https://www.googleapis.com/auth/drive.file'];
 
 // Validate required credentials
 const validateCredentials = () => {
@@ -133,6 +130,7 @@ export const createPicker = () => {
 
 				.addView(
 					new google.picker.DocsView()
+						.setMode(google.picker.DocsViewMode.LIST)
 						.setIncludeFolders(false)
 						.setSelectFolderEnabled(false)
 						.setMimeTypes(
@@ -141,7 +139,8 @@ export const createPicker = () => {
 				)
 				.setOAuthToken(token)
 				.setDeveloperKey(API_KEY)
-				// Remove app ID setting as it's not needed and can cause 404 errors
+				// drive.file only grants access to picked files when the picker knows the project number
+				.setAppId(CLIENT_ID.split('-')[0])
 				.setCallback(async (data: any) => {
 					if (data[google.picker.Response.ACTION] === google.picker.Action.PICKED) {
 						try {

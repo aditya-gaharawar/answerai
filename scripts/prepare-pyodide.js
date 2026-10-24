@@ -272,3 +272,10 @@ for (const name of await readdir('node_modules/onnxruntime-web/dist')) {
 		await copyFile(`node_modules/onnxruntime-web/dist/${name}`, `static/wasm/${name}`);
 	}
 }
+
+// Keep the verified encryption dependency attribution available in dev and production.
+await mkdir('static/licenses/encryption', { recursive: true });
+await copyFile(
+	'src/lib/encryption/vendor/THIRD_PARTY_LICENSES.txt',
+	'static/licenses/encryption/THIRD_PARTY_LICENSES.txt'
+);

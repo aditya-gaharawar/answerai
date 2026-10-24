@@ -1,4 +1,5 @@
 import logging
+from copy import deepcopy
 from typing import Any
 
 from answerai.config import DEFAULT_USER_PERMISSIONS
@@ -12,7 +13,6 @@ from answerai.models.access_grants import (
 )
 from answerai.models.groups import Groups
 from answerai.models.users import UserModel
-from answerai.utils.json_codec import JSONCodec
 from sqlalchemy.ext.asyncio import AsyncSession
 
 log = logging.getLogger(__name__)
@@ -25,7 +25,7 @@ def fill_missing_permissions(permissions: dict[str, Any], default_permissions: d
     """
     for key, value in default_permissions.items():
         if key not in permissions:
-            permissions[key] = value
+            permissions[key] = deepcopy(value)
         elif isinstance(value, dict) and isinstance(permissions[key], dict):  # Both are nested dictionaries
             permissions[key] = fill_missing_permissions(permissions[key], value)
 
@@ -61,7 +61,7 @@ async def get_permissions(
     user_groups = await Groups.get_groups_by_member_id(user_id, db=db, include_inherited=True)
 
     # Deep copy default permissions to avoid modifying the original dict
-    permissions = JSONCodec.loads(JSONCodec.dumps(default_permissions))
+    permissions = fill_missing_permissions(deepcopy(default_permissions or {}), DEFAULT_USER_PERMISSIONS)
 
     # Combine permissions from all user groups
     for group in user_groups:
@@ -122,7 +122,7 @@ async def has_permission(
             return True
 
     # Check default permissions afterward if the group permissions don't allow it
-    default_permissions = fill_missing_permissions(default_permissions, DEFAULT_USER_PERMISSIONS)
+    default_permissions = fill_missing_permissions(deepcopy(default_permissions or {}), DEFAULT_USER_PERMISSIONS)
     return get_permission(default_permissions, permission_hierarchy)
 
 

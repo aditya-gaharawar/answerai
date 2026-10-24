@@ -1,6 +1,6 @@
 const path = require('node:path');
 const catalog = require('../../backend/answerai/connectors/catalog.json');
-const output = path.resolve('docs/screenshots/connectors');
+const output = path.resolve(process.env.SCREENSHOT_DIR || 'docs/screenshots/connectors');
 require('node:fs').mkdirSync(output, { recursive: true });
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
 (async () => {

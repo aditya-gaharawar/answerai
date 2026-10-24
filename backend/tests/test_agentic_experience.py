@@ -13,6 +13,12 @@ ROOT = Path(__file__).parents[1] / 'answerai'
 
 
 def load_function(path, name, namespace):
+    if name == 'execute_tool_call':
+        namespace['resolve_tool_call'] = load_function(
+            'utils/tool_search.py',
+            'resolve_tool_call',
+            {'CALL_TOOL_NAME': 'call_tool', 'JSONCodec': SimpleNamespace(loads=json.loads, dumps=json.dumps)},
+        )
     source = ROOT / path
     node = next(
         n

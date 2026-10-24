@@ -382,6 +382,9 @@
 		}
 	};
 
+	// Chrome on Android caps open audio outputs at 10.
+	const closeAudioContext = () => stopAnalysis();
+
 	const stopAudioStream = async () => {
 		stopAnalysis();
 		try {
@@ -391,6 +394,8 @@
 		} catch (error) {
 			console.log('Error stopping audio stream:', error);
 		}
+
+		closeAudioContext();
 
 		if (!audioStream) return;
 

@@ -650,7 +650,8 @@
 		}
 
 		await tick();
-		if (!isDestroyed && targetQueueKey === queueKey) chatInputElement?.focus();
+		if (!isDestroyed && targetQueueKey === queueKey)
+			chatInputElement?.focus({ preventScroll: true });
 	};
 
 	$: if (content) {
@@ -1049,6 +1050,10 @@
 											}}
 											on:keydown={async (event) => {
 												const e = event.detail.event;
+												// IME confirmation must finish before a shortcut can send and clear the editor.
+												if (e.isComposing || e.keyCode === 229 || inputEditor?.view.composing)
+													return;
+
 												const isCtrlPressed = e.ctrlKey || e.metaKey; // metaKey is for Cmd key on Mac
 
 												const suggestionsContainerElement =

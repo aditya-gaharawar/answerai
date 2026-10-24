@@ -19,3 +19,13 @@ export const clampDocumentTargetPage = (page: number | null | undefined, pageCou
 
 	return Math.min(Math.max(1, page), pageCount);
 };
+
+/** PDF.js 6 exposes point conversion rather than rectangle conversion. */
+export function projectPdfRectangle(
+	viewport: { convertToViewportPoint(x: number, y: number): number[] },
+	rect: readonly number[]
+): [number, number, number, number] {
+	const start = viewport.convertToViewportPoint(rect[0], rect[1]);
+	const end = viewport.convertToViewportPoint(rect[2], rect[3]);
+	return [start[0], start[1], end[0], end[1]];
+}

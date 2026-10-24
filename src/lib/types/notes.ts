@@ -9,6 +9,8 @@ export type NoteAttachment = {
 	content_type?: string;
 	collection_name?: string;
 	itemId?: string;
+	terminal_id?: string;
+	session_id?: string | null;
 	file?: unknown;
 	status?: string;
 	size?: number;

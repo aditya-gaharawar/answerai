@@ -34,6 +34,7 @@ export interface ChannelMessageData {
 	[key: string]: unknown;
 }
 export interface ChannelMessage {
+	client_id?: string;
 	id: string;
 	channel_id: string;
 	content: string;
