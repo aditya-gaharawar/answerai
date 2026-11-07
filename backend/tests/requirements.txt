@@ -50,3 +50,6 @@ soupsieve==2.9
 urllib3==2.8.0
 PyYAML==6.0.3
 aiofiles==25.1.0
+
+# Exercise multilingual deferred-tool ranking in the agent regression suite.
+rank-bm25==0.2.2
