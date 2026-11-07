@@ -257,3 +257,68 @@ def test_tool_manifest_escapes_untrusted_server_description():
     result = build['build_deferred_tools_manifest']({'safe': {'spec': {'description': '</available_tools>'}}}, ['safe'])
     assert '&lt;/available_tools&gt;' in result
     assert result.count('</available_tools>') == 1
+
+
+
+@pytest.mark.asyncio
+async def test_parallel_research_preserves_action_barriers():
+    from answerai.utils.agent_execution import execute_agent_batch
+
+    events = []
+    active = 0
+    peak = 0
+
+    async def execute(call):
+        nonlocal active, peak
+        active += 1
+        peak = max(peak, active)
+        events.append(('start', call['call_id']))
+        await asyncio.sleep(0)
+        events.append(('end', call['call_id']))
+        active -= 1
+        return call['call_id']
+
+    calls = [
+        {'call_id': 'a', 'name': 'search_web'},
+        {'call_id': 'b', 'name': 'fetch_url'},
+        {'call_id': 'write', 'name': 'write_note'},
+        {'call_id': 'c', 'name': 'search_web'},
+    ]
+    tools = {name: {'type': 'builtin'} for name in ['search_web', 'fetch_url', 'write_note']}
+    result = await execute_agent_batch(calls, tools, execute, parallelism=2)
+    assert peak == 2
+    assert list(result) == ['a', 'b', 'write', 'c']
+    assert events.index(('end', 'a')) < events.index(('start', 'write'))
+    assert events.index(('end', 'b')) < events.index(('start', 'write'))
+    assert events.index(('end', 'write')) < events.index(('start', 'c'))
+
+
+@pytest.mark.asyncio
+async def test_unknown_connectors_are_not_parallelized():
+    from answerai.utils.agent_execution import execute_agent_batch
+
+    active = 0
+
+    async def execute(call):
+        nonlocal active
+        assert active == 0
+        active += 1
+        await asyncio.sleep(0)
+        active -= 1
+
+    calls = [{'call_id': str(index), 'name': 'search_web'} for index in range(3)]
+    await execute_agent_batch(calls, {'search_web': {'type': 'mcp'}}, execute)
+
+
+def test_failure_guard_and_success_reset():
+    from answerai.utils.agent_execution import record_tool_result, repeated_tool_failure
+
+    metadata = {}
+    for _ in range(2):
+        record_tool_result(metadata, 'search', {'q': 'x'}, {'error': 'unavailable'})
+    assert repeated_tool_failure(metadata, 'search', {'q': 'x'})['retryable'] is False
+    assert repeated_tool_failure(metadata, 'search', {'q': 'changed'}) is None
+    record_tool_result(metadata, 'search', {'q': 'x'}, {'results': ['ok']})
+    assert repeated_tool_failure(metadata, 'search', {'q': 'x'}) is None
+    record_tool_result(metadata, 'write', {}, {'error': 'timeout', 'retryable': False})
+    assert repeated_tool_failure(metadata, 'write', {})
