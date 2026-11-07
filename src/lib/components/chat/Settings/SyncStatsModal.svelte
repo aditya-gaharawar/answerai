@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { errorText } from '$lib/utils/errorText';
+
 	import { Confetti } from 'svelte-confetti';
 	import { toast } from 'svelte-sonner';
 	import { getContext, onMount, onDestroy, tick } from 'svelte';
@@ -46,7 +48,7 @@
 					window.opener.postMessage(
 						{
 							type: 'verify:chat:error',
-							error: err?.detail || err?.message || 'Failed to verify chat',
+							error: errorText(err) || errorText(err) || 'Failed to verify chat',
 							chatId: chatId,
 							requestId: event.data.requestId ?? null
 						},
@@ -171,7 +173,7 @@
 				}
 
 				const res = await exportChatStats(localStorage.token, page, searchParams).catch((err) => {
-					throw new Error(err?.detail || err?.message || 'Failed to export chat stats');
+					throw new Error(errorText(err) || errorText(err) || 'Failed to export chat stats');
 				});
 
 				if (!res) {
@@ -200,7 +202,7 @@
 			syncing = false;
 			completed = true;
 		} catch (err: any) {
-			handleError(err?.message || 'An unexpected error occurred');
+			handleError(errorText(err) || 'An unexpected error occurred');
 		}
 	};
 
@@ -241,7 +243,7 @@
 				searchParams.updated_at
 			).catch((err) => {
 				throw new Error(
-					err?.detail || 'Failed to connect to the server. Please check your connection.'
+					errorText(err) || 'Failed to connect to the server. Please check your connection.'
 				);
 			});
 
@@ -303,10 +305,10 @@
 			}
 		} catch (err: any) {
 			// Don't show error if user cancelled the download
-			if (err?.name === 'AbortError' || err?.message?.includes('aborted')) {
+			if (err?.name === 'AbortError' || errorText(err)?.includes('aborted')) {
 				// User cancelled - just reset state silently
 			} else {
-				handleError(err?.message || 'Download failed. Please try again.');
+				handleError(errorText(err) || 'Download failed. Please try again.');
 				toast.error(errorMessage);
 			}
 		} finally {
@@ -323,7 +325,12 @@
 	};
 </script>
 
-<Modal bind:show size="md" className="bg-white dark:bg-gray-900 rounded-4xl">
+<Modal
+	ariaLabel={$i18n.t('Sync Usage Stats')}
+	bind:show
+	size="md"
+	className="bg-white dark:bg-gray-900 rounded-4xl"
+>
 	<div class="w-full">
 		{#if completed}
 			<div class="px-5.5 py-5">
@@ -366,7 +373,7 @@
 			<div class="flex justify-between px-4 pt-3 pb-1">
 				<div class="text-sm font-medium self-center">{$i18n.t('Sync Usage Stats')}</div>
 				<button
-					class="self-center rounded-lg p-1 text-gray-500 transition hover:bg-gray-50 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200"
+					class="self-center rounded-lg py-1 text-gray-500 transition hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 px-0"
 					aria-label={$i18n.t('Close modal')}
 					on:click={() => {
 						show = false;
@@ -379,14 +386,14 @@
 
 			<div class="px-5 pt-2 pb-5">
 				<div class="text-sm text-gray-500 dark:text-gray-400">
-					<!-- LICENSE covers this Open WebUI Community wordmark.
+					<!-- LICENSE covers this Open ANSWERAI Community wordmark.
 					Do not alter, remove, obscure, or replace it except as LICENSE permits:
 					https://docs.openwebui.com/license. -->
 					{$i18n.t('Do you want to sync your usage stats with ANSWERAI Community?')}
 				</div>
 
 				<div class="mt-2 text-xs text-gray-500">
-					<!-- LICENSE covers this Open WebUI wordmark.
+					<!-- LICENSE covers this Open ANSWERAI wordmark.
 					Do not alter, remove, obscure, or replace it except as LICENSE permits:
 					https://docs.openwebui.com/license. -->
 					{$i18n.t(
@@ -399,7 +406,7 @@
 						{$i18n.t('What is shared:')}
 					</div>
 					<ul class="list-disc list-inside space-y-0.5 ml-1 mb-2">
-						<!-- LICENSE covers this Open WebUI wordmark.
+						<!-- LICENSE covers this Open ANSWERAI wordmark.
 						Do not alter, remove, obscure, or replace it except as LICENSE permits:
 						https://docs.openwebui.com/license. -->
 						<li>{$i18n.t('ANSWERAI version')}</li>

@@ -83,10 +83,12 @@
 
 		<AdminSettingSection title={$i18n.t('settings.admin.db.sections.config.title')} first>
 			<AdminSettingRow
+				let:labelId
 				label={$i18n.t('settings.admin.db.importConfig.label')}
 				description={$i18n.t('settings.admin.db.importConfig.description')}
 			>
 				<button
+					id={`${labelId}-control`}
 					class={actionButtonClass}
 					on:click={() => {
 						configImportInputElement.click();
@@ -98,10 +100,12 @@
 			</AdminSettingRow>
 
 			<AdminSettingRow
+				let:labelId
 				label={$i18n.t('settings.admin.db.exportConfig.label')}
 				description={$i18n.t('settings.admin.db.exportConfig.description')}
 			>
 				<button
+					id={`${labelId}-control`}
 					class={actionButtonClass}
 					on:click={async () => {
 						const config = await exportConfig(localStorage.token);
@@ -120,10 +124,12 @@
 		{#if $config?.features.enable_admin_export ?? true}
 			<AdminSettingSection title={$i18n.t('settings.admin.db.sections.export.title')}>
 				<AdminSettingRow
+					let:labelId
 					label={$i18n.t('settings.admin.db.database.label')}
 					description={$i18n.t('settings.admin.db.database.description')}
 				>
 					<button
+						id={`${labelId}-control`}
 						class={actionButtonClass}
 						on:click={() => {
 							downloadDatabase(localStorage.token).catch((error) => {
@@ -137,19 +143,31 @@
 				</AdminSettingRow>
 
 				<AdminSettingRow
+					let:labelId
 					label={$i18n.t('settings.admin.db.allChats.label')}
 					description={$i18n.t('settings.admin.db.allChats.description')}
 				>
-					<button class={actionButtonClass} on:click={exportAllUserChats} type="button">
+					<button
+						id={`${labelId}-control`}
+						class={actionButtonClass}
+						on:click={exportAllUserChats}
+						type="button"
+					>
 						{$i18n.t('Export')}
 					</button>
 				</AdminSettingRow>
 
 				<AdminSettingRow
+					let:labelId
 					label={$i18n.t('settings.admin.db.users.label')}
 					description={$i18n.t('settings.admin.db.users.description')}
 				>
-					<button class={actionButtonClass} on:click={exportUsers} type="button">
+					<button
+						id={`${labelId}-control`}
+						class={actionButtonClass}
+						on:click={exportUsers}
+						type="button"
+					>
 						{$i18n.t('Export')}
 					</button>
 				</AdminSettingRow>

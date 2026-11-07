@@ -1,3 +1,4 @@
+import { errorText } from '$lib/utils/errorText';
 import { OLLAMA_API_BASE_URL } from '$lib/constants';
 
 export const verifyOllamaConnection = async (
@@ -22,7 +23,7 @@ export const verifyOllamaConnection = async (
 			return res.json();
 		})
 		.catch((err) => {
-			error = `Ollama: ${err?.error?.message ?? 'Network Problem'}`;
+			error = `Ollama: ${errorText(err) ?? 'Network Problem'}`;
 			return [];
 		});
 
@@ -533,16 +534,3 @@ export const uploadModel = async (
 	}
 	return res;
 };
-
-// export const pullModel = async (token: string, tagName: string) => {
-// 	return await fetch(`${OLLAMA_API_BASE_URL}/pull`, {
-// 		method: 'POST',
-// 		headers: {
-// 			'Content-Type': 'text/event-stream',
-// 			Authorization: `Bearer ${token}`
-// 		},
-// 		body: JSON.stringify({
-// 			name: tagName
-// 		})
-// 	});
-// };

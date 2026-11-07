@@ -305,7 +305,7 @@
 						href="https://answerai.in/blob/main/docs/CONTRIBUTING.md#-translations-and-internationalization"
 						target="_blank"
 					>
-						<!-- LICENSE covers this Open WebUI wordmark.
+						<!-- LICENSE covers this Open ANSWERAI wordmark.
 						Do not alter, remove, obscure, or replace it except as LICENSE permits:
 						https://docs.openwebui.com/license. -->
 						{$i18n.t('Help us translate ANSWERAI!')}
@@ -334,10 +334,12 @@
 				title={$i18n.t('settings.personal.general.sections.advancedParameters.title')}
 			>
 				<UserSettingRow
+					let:labelId
 					description={$i18n.t('settings.personal.general.modelParameters.description')}
 				>
 					<span slot="label">{$i18n.t('settings.personal.general.modelParameters.label')}</span>
 					<button
+						id={`${labelId}-control`}
 						class={actionButtonClass}
 						type="button"
 						aria-expanded={showAdvanced}

@@ -1,7 +1,10 @@
 <script>
+	import { connectedUserTerminals } from '$lib/stores';
+
 	import { workerRequest } from '$lib/utils/workerRequest';
 	import { splitStream } from '$lib/utils/streamText';
 	import { CleanupScope } from '$lib/utils/cleanupScope';
+	import CommentsHost from '$lib/components/comments/CommentsHost.svelte';
 	import { io } from 'socket.io-client';
 	import { spring } from 'svelte/motion';
 	import { createPyodideWorker } from '$lib/pyodide/createPyodideWorker';
@@ -27,6 +30,7 @@
 		chatId,
 		tags,
 		temporaryChatEnabled,
+		openTemporaryChatIds,
 		isLastActiveTab,
 		isApp,
 		appInfo,
@@ -37,15 +41,14 @@
 		channelId,
 		channelRequestQueues,
 		terminalServers,
-		connectedUserTerminals,
-		showControls,
+		showTabs,
 		showFileNavPath,
 		showFileNavDir,
 		pyodideWorker,
 		desktopEvent
 	} from '$lib/stores';
 	import { refreshChatList } from '$lib/stores/chatList';
-	import { getFileContentById } from '$lib/apis/files';
+	import { getFileBlobById, getFileContentById } from '$lib/apis/files';
 	import { goto } from '$app/navigation';
 	import { page } from '$lib/stores/page';
 	import { beforeNavigate } from '$app/navigation';
@@ -80,7 +83,6 @@
 	import { setTextScale } from '$lib/utils/text-scale';
 
 	import NotificationToast from '$lib/components/NotificationToast.svelte';
-	import AppSidebar from '$lib/components/app/AppSidebar.svelte';
 	import SyncStatsModal from '$lib/components/chat/Settings/SyncStatsModal.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import MfaManagement from '$lib/components/auth/MfaManagement.svelte';
@@ -533,7 +535,7 @@
 				if (result?.exists !== false) {
 					displayFileHandler(
 						result?.path ?? params.path,
-						{ showControls, showFileNavPath },
+						{ showTabs, showFileNavPath },
 						{ page: params?.page }
 					);
 				}
@@ -578,7 +580,7 @@
 		// This prevents notifications from being sent to other tabs/devices
 		// for privacy, since temporary chats are not meant to be persisted or visible elsewhere.
 		const isTemporaryChat = isTemporaryChatId(event.chat_id);
-		if (isTemporaryChat && event.chat_id !== $chatId) {
+		if (isTemporaryChat && event.chat_id !== $chatId && !$openTemporaryChatIds.has(event.chat_id)) {
 			return;
 		}
 
@@ -646,11 +648,18 @@
 					const connection = resolveTerminalConnection(
 						data.terminal_id,
 						[],
-						$settings?.terminalServers ?? [],
+						$config?.features?.enable_direct_integrations ? ($settings?.terminalServers ?? []) : [],
 						localStorage.token
 					);
 					if (!connection) throw new Error('Terminal Not Found');
-					const result = await terminalRequest(connection, event.chat_id, data.path);
+					let options = {};
+					if (data.file) {
+						const blob = await getFileBlobById(localStorage.token, data.file.id);
+						const body = new FormData();
+						body.append('file', blob, data.file.name);
+						options = { method: 'POST', body };
+					}
+					const result = await terminalRequest(connection, event.chat_id, data.path, options);
 					cb?.({ data: result });
 				} catch (error) {
 					cb?.({ error: `${error}` });
@@ -750,6 +759,7 @@
 
 		if (
 			!event?.internal &&
+			!$openTemporaryChatIds.has(event.chat_id) &&
 			((event.chat_id !== $chatId && !$temporaryChatEnabled) || isInBackground)
 		) {
 			if (type === 'chat:completion') {
@@ -1462,6 +1472,14 @@
 			'high-contrast',
 			$settings?.highContrastMode ?? false
 		);
+
+		const viewport = document.querySelector('meta[name="viewport"]');
+		if (viewport instanceof HTMLMetaElement) {
+			viewport.content = viewport.content.replace(
+				/maximum-scale=[\d.]+/,
+				`maximum-scale=${$settings?.highContrastMode ? 5 : 1}`
+			);
+		}
 	}
 
 	onDestroy(() => {
@@ -1502,40 +1520,39 @@
 {/if}
 
 {#if loaded}
-	{#if mfaManagement}
-		<MfaManagement flow={mfaManagement} onClose={() => (mfaManagement = null)} />
-	{:else if $isApp}
-		<div class="flex flex-row h-screen">
-			<AppSidebar />
-
-			<div class="w-full flex-1 max-w-[calc(100%-4.5rem)]">
+	<div class="flex h-dvh w-full overflow-hidden">
+		<div class="min-w-0 flex-1">
+			{#if mfaManagement}
+				<MfaManagement flow={mfaManagement} onClose={() => (mfaManagement = null)} />
+			{:else}
 				<slot />
-			</div>
+			{/if}
 		</div>
-	{:else}
-		<slot />
-	{/if}
+		<CommentsHost />
+	</div>
 {/if}
 
 {#if $config?.features.enable_community_sharing}
 	<SyncStatsModal bind:show={showSyncStatsModal} eventData={syncStatsEventData} />
 {/if}
 
-<Toaster
-	theme={$theme.includes('dark')
-		? 'dark'
-		: $theme === 'system'
-			? window.matchMedia('(prefers-color-scheme: dark)').matches
-				? 'dark'
-				: 'light'
-			: 'light'}
-	richColors
-	position="top-right"
-	closeButton
-	toastOptions={{
-		classes: {
-			closeButton:
-				'!bg-white/80 !text-gray-500 !border-gray-200 hover:!bg-gray-50 hover:!text-gray-700 dark:!bg-gray-850 dark:!text-gray-400 dark:!border-gray-700 dark:hover:!bg-gray-800 dark:hover:!text-gray-200'
-		}
-	}}
-/>
+<div aria-live="polite">
+	<Toaster
+		theme={$theme.includes('dark')
+			? 'dark'
+			: $theme === 'system'
+				? window.matchMedia('(prefers-color-scheme: dark)').matches
+					? 'dark'
+					: 'light'
+				: 'light'}
+		richColors
+		position="top-right"
+		closeButton
+		toastOptions={{
+			classes: {
+				closeButton:
+					'!bg-white/80 !text-gray-500 !border-gray-200 hover:!bg-gray-50 hover:!text-gray-700 dark:!bg-gray-850 dark:!text-gray-400 dark:!border-gray-700 dark:hover:!bg-gray-800 dark:hover:!text-gray-200'
+			}
+		}}
+	/>
+</div>

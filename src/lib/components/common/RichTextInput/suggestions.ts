@@ -3,7 +3,7 @@ import type { SuggestionProps, SuggestionKeyDownProps } from '@tiptap/suggestion
 import type { SuggestionCommand } from '$lib/types/editor';
 import { createClassComponent } from 'svelte/legacy';
 
-import tippy, { type Instance as TippyInstance } from 'tippy.js';
+import tippy, { type Instance } from 'tippy.js';
 
 export function getSuggestionRenderer(
 	Component: any,
@@ -19,7 +19,8 @@ export function getSuggestionRenderer(
 			| null = null;
 		let container: HTMLDivElement | null = null;
 
-		let popup: TippyInstance | null = null;
+		let popup: Instance | null = null;
+		let resizeObserver: ResizeObserver | null = null;
 		let refEl: HTMLDivElement | null = null; // dummy reference
 
 		return {
@@ -62,6 +63,7 @@ export function getSuggestionRenderer(
 					interactive: true,
 					trigger: 'manual',
 					theme: 'transparent',
+					maxWidth: 'none',
 					placement: 'top-start',
 					offset: [-10, -2],
 					arrow: false,
@@ -71,7 +73,7 @@ export function getSuggestionRenderer(
 							{
 								name: 'preventOverflow',
 								options: {
-									boundary: 'viewport', // keep within the viewport
+									rootBoundary: 'viewport', // keep within the viewport
 									altAxis: true, // also prevent overflow on the cross axis (X)
 									tether: true,
 									padding: 8
@@ -80,8 +82,10 @@ export function getSuggestionRenderer(
 							{
 								name: 'flip',
 								options: {
-									boundary: 'viewport',
-									fallbackPlacements: ['top-end', 'bottom-start', 'bottom-end']
+									rootBoundary: 'viewport',
+									fallbackPlacements: ['bottom-start'],
+									altAxis: false,
+									padding: 8
 								}
 							},
 							// Ensure transforms don’t cause layout widening in some browsers
@@ -91,6 +95,9 @@ export function getSuggestionRenderer(
 					// Helps avoid accidental focus/hover “linking” from far away elements
 					interactiveBorder: 8
 				});
+				// Async suggestions can change the menu size after its initial placement.
+				resizeObserver = new ResizeObserver(() => popup?.popperInstance?.update());
+				resizeObserver.observe(container);
 				popup?.show();
 			},
 
@@ -119,6 +126,8 @@ export function getSuggestionRenderer(
 			},
 
 			onExit: () => {
+				resizeObserver?.disconnect();
+				resizeObserver = null;
 				popup?.destroy();
 				popup = null;
 

@@ -321,3 +321,5 @@ static/wasm/
 
 # Generated from the verified encryption attribution artifact at build time.
 /static/licenses/encryption/
+
+/static/licenses/novnc/

@@ -1,5 +1,6 @@
 <script>
 	import { getContext } from 'svelte';
+	import { WEBUI_NAME } from '$lib/stores';
 	const i18n = getContext('i18n');
 
 	export let show = true;
@@ -41,7 +42,7 @@
 {#if show}
 	<div class="relative h-screen max-h-[100dvh] w-full overflow-hidden text-white">
 		<div class="fixed top-6 left-6 z-50 sm:top-10 sm:left-10">
-			<!-- LICENSE covers this Open WebUI onboarding logo.
+			<!-- LICENSE covers this Open ANSWERAI onboarding logo.
 			Do not alter, remove, obscure, or replace it except as LICENSE permits:
 			https://docs.openwebui.com/license. -->
 			<img
@@ -49,7 +50,7 @@
 				crossorigin="anonymous"
 				src="/static/favicon.png"
 				class="size-6 rounded-full"
-				alt="logo"
+				alt="{$WEBUI_NAME} logo"
 			/>
 		</div>
 
@@ -72,14 +73,16 @@
 		<div class="relative z-10 flex h-screen max-h-[100dvh] w-full">
 			<div class="flex w-full flex-col justify-end px-6 pb-8 sm:px-10 sm:pb-10 lg:px-16 lg:pb-14">
 				<div class="max-w-3xl">
-					<!-- LICENSE covers this Open WebUI welcome identifier.
+					<!-- LICENSE covers this Open ANSWERAI welcome identifier.
 					Do not alter, remove, obscure, or replace it except as LICENSE permits:
 					https://docs.openwebui.com/license. -->
 					<div class="mb-4 text-[0.6875rem] font-medium tracking-[0.18em] uppercase opacity-35">
 						ANSWERAI
 					</div>
 
-					<h1 class="m-0 max-w-3xl text-2xl leading-[1.15] font-light tracking-tight lg:text-4xl">
+					<h1
+						class="m-0 max-w-3xl text-[22px] leading-[1.15] font-light tracking-tight lg:text-[33px]"
+					>
 						{$i18n.t('Welcome to your AI home.')}
 					</h1>
 
@@ -92,14 +95,14 @@
 					<div class="mt-8 flex flex-col items-start gap-6 sm:flex-row sm:items-center sm:gap-7">
 						<button
 							aria-label={$i18n.t('Get started')}
-							class="group relative z-20 inline-flex min-w-40 items-center justify-center gap-2 bg-white px-8 py-3 text-sm font-normal text-black transition hover:bg-white/90 focus:ring-2 focus:ring-white/50 focus:outline-hidden"
+							class="group relative z-20 inline-flex h-10 w-[220px] max-w-full items-center justify-between gap-2 rounded-none bg-white px-4 text-[13px] font-normal text-black transition hover:bg-white/90 focus:ring-2 focus:ring-white/50 focus:outline-hidden"
 							on:click={() => {
 								getStartedHandler();
 							}}
 						>
 							{$i18n.t('Get started')}
 							<svg
-								class="h-4 w-4 transition group-hover:translate-x-0.5"
+								class="h-3.5 w-3.5 shrink-0 transition group-hover:translate-x-0.5"
 								fill="none"
 								viewBox="0 0 24 24"
 								stroke="currentColor"

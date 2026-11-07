@@ -33,6 +33,7 @@
 		background_image_url: null
 	};
 	let data = {
+		description: '',
 		model_ids: [] as string[],
 		system_prompt: '',
 		files: [] as import('$lib/apis').ModelKnowledgeReference[]
@@ -65,6 +66,7 @@
 			meta,
 			// Sharing saves separately; do not overwrite its mode with the editor's snapshot.
 			data: {
+				description: data.description.trim(),
 				model_ids: data.model_ids,
 				system_prompt: data.system_prompt,
 				files: data.files
@@ -90,6 +92,7 @@
 				system_prompt: '',
 				files: [],
 				...folder.data,
+				description: typeof folder.data?.description === 'string' ? folder.data.description : '',
 				model_ids: folder.data?.model_ids ?? []
 			};
 		}
@@ -117,6 +120,7 @@
 			background_image_url: null
 		};
 		data = {
+			description: '',
 			model_ids: [],
 			system_prompt: '',
 			files: [] as import('$lib/apis').ModelKnowledgeReference[]
@@ -124,7 +128,7 @@
 	}
 </script>
 
-<Modal size="md" bind:show>
+<Modal ariaLabel={edit ? $i18n.t('Edit Folder') : $i18n.t('Create Folder')} size="md" bind:show>
 	<div>
 		<div class=" flex justify-between dark:text-gray-300 px-4 pt-3 pb-1">
 			<div class=" text-sm self-center">
@@ -135,12 +139,12 @@
 				{/if}
 			</div>
 			<div class="flex items-center gap-1">
-				{#if edit && folder && ($user?.role === 'admin' || folder.user_id === $user?.id)}
+				{#if edit && folder && ($user?.role === 'admin' || (folder.user_id === $user?.id && $user?.permissions?.sharing?.folders))}
 					<AccessButton disabled={loading} on:click={() => (showAccessModal = true)} />
 				{/if}
 				<button
 					aria-label={$i18n.t('Close')}
-					class="self-center rounded-lg p-1 text-gray-500 transition hover:bg-gray-50 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200"
+					class="self-center rounded-lg py-1 text-gray-500 transition hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 px-0"
 					on:click={() => {
 						show = false;
 					}}
@@ -159,7 +163,9 @@
 					}}
 				>
 					<div class="flex flex-col w-full mt-1">
-						<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Folder Name')}</div>
+						<label for="folder-name" class="block mb-1 text-xs text-gray-500"
+							>{$i18n.t('Folder Name')}</label
+						>
 
 						<div class="flex-1">
 							<input
@@ -171,6 +177,20 @@
 								autocomplete="off"
 							/>
 						</div>
+					</div>
+
+					<div class="my-2">
+						<label for="folder-description" class="mb-1 block text-xs text-gray-500">
+							{$i18n.t('Description')}
+						</label>
+						<Textarea
+							id="folder-description"
+							ariaLabel={$i18n.t('Description')}
+							className="w-full text-sm bg-transparent placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-hidden"
+							placeholder={$i18n.t('Enter description')}
+							maxSize={200}
+							bind:value={data.description}
+						/>
 					</div>
 
 					<input
@@ -211,11 +231,13 @@
 					/>
 
 					<div class="flex justify-between w-full mt-1 items-center">
-						<div class="text-xs text-gray-500">{$i18n.t('Folder Background Image')}</div>
+						<div id="folder-background-image-label" class="text-xs text-gray-500">
+							{$i18n.t('Folder Background Image')}
+						</div>
 
 						<div class="">
 							<button
-								aria-labelledby="chat-background-label background-image-url-state"
+								aria-labelledby="folder-background-image-label folder-background-image-state"
 								class="p-1 px-3 text-xs flex rounded-sm transition"
 								on:click={() => {
 									if (meta?.background_image_url !== null) {
@@ -229,7 +251,7 @@
 								}}
 								type="button"
 							>
-								<span class="ml-2 self-center" id="background-image-url-state"
+								<span class="ml-2 self-center" id="folder-background-image-state"
 									>{(meta?.background_image_url ?? null) === null
 										? $i18n.t('Upload')
 										: $i18n.t('Reset')}</span
@@ -269,7 +291,7 @@
 								<button
 									type="button"
 									aria-label={$i18n.t('Reset')}
-									class="shrink-0 p-1 text-gray-500 hover:text-gray-700 dark:hover:text-gray-200"
+									class="shrink-0 py-1 text-gray-500 hover:text-gray-700 dark:hover:text-gray-200 px-0"
 									on:click={() => (data.model_ids = [])}
 								>
 									<XMark className="size-3" />

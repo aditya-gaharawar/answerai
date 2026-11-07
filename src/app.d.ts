@@ -11,6 +11,10 @@ declare global {
 	const APP_BUILD_CHANNEL: 'main' | 'dev' | 'unknown';
 
 	namespace App {
+		interface PageState {
+			inbox?: boolean;
+			inboxUserId?: string;
+		}
 		// interface Error {}
 		// interface Locals {}
 		// interface PageData {}
@@ -30,5 +34,12 @@ declare module 'svelte' {
 declare module '@tiptap/core' {
 	interface Storage {
 		files?: import('$lib/types/notes').NoteAttachment[];
+	}
+}
+
+// Application notifications dispatched by the comments panel.
+declare module 'svelte/elements' {
+	interface SvelteWindowAttributes {
+		'on:comments:updated'?: (event: CustomEvent) => void;
 	}
 }

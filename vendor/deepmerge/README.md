@@ -1,0 +1,1 @@
+Vendored from TehShrike/deepmerge 4.3.1 (MIT). Its CommonJS distribution is retained with one security change: mergeObject writes own data properties with Object.defineProperty in both copy paths. A JSON **proto** key cannot invoke the legacy prototype setter on the returned object. Replace with a compatible patched upstream release when available.

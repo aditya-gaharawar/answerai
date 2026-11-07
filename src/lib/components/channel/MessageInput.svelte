@@ -1,7 +1,8 @@
 <script lang="ts">
 	import { captureScreenFrame } from '$lib/utils/screenCapture';
 	import { readDataUrl } from '$lib/utils/readDataUrl';
-	import { chatDirection } from '$lib/stores';
+
+	import MessageComposerShell from '$lib/components/common/MessageComposerShell.svelte';
 	import { toast } from 'svelte-sonner';
 	import { v4 as uuidv4 } from 'uuid';
 
@@ -31,6 +32,7 @@
 	import {
 		convertHeicToJpeg,
 		isHeicImage,
+		normalizeImageFile,
 		compressImage,
 		extractInputVariables,
 		getAge,
@@ -94,6 +96,7 @@
 
 	let loaded = false;
 	let draggedOver = false;
+	let shiftKey = false;
 
 	let recording = false;
 	let content = '';
@@ -181,6 +184,14 @@
 
 			if (email) {
 				text = text.replaceAll('{{USER_EMAIL}}', email);
+			}
+		}
+
+		if (text.includes('{{USER_ROLE}}')) {
+			const role = sessionUser?.role || '';
+
+			if (role) {
+				text = text.replaceAll('{{USER_ROLE}}', role);
 			}
 		}
 
@@ -358,7 +369,7 @@
 	};
 
 	const inputFilesHandler = async (inputFiles: File[]) => {
-		for (const file of inputFiles) {
+		for (let file of inputFiles) {
 			console.info('Processing file:', {
 				name: file.name,
 				type: file.type,
@@ -382,6 +393,7 @@
 				continue;
 			}
 
+			file = await normalizeImageFile(file);
 			const image = file.type.startsWith('image/') || isHeicImage(file);
 			await uploadFileHandler(file, !image, image);
 		}
@@ -391,7 +403,7 @@
 		const compressImageHandler = async (imageUrl: string, settings: any = {}, config: any = {}) => {
 			// Quick shortcut so we don’t do unnecessary work.
 			const settingsCompression =
-				(settings?.imageCompression && settings?.imageCompressionInChannels) ?? false;
+				(settings?.imageCompression ?? false) && (settings?.imageCompressionInChannels ?? true);
 			const configWidth = config?.file?.image_compression?.width ?? null;
 			const configHeight = config?.file?.image_compression?.height ?? null;
 
@@ -517,9 +529,23 @@
 	};
 
 	const handleKeyDown = (event: KeyboardEvent) => {
+		if (event.key === 'Shift') {
+			shiftKey = true;
+		}
+
 		if (event.key === 'Escape') {
 			draggedOver = false;
 		}
+	};
+
+	const handleKeyUp = (event: KeyboardEvent) => {
+		if (event.key === 'Shift') {
+			shiftKey = false;
+		}
+	};
+
+	const handleBlur = () => {
+		shiftKey = false;
 	};
 
 	const onDragOver = (e: DragEvent) => {
@@ -686,6 +712,24 @@
 				: []),
 			{
 				char: '/',
+				command: ({ editor, range, props }) => {
+					if (props?.type === 'prompt') {
+						void insertTextAtCursor(props.content ?? '');
+						return;
+					}
+
+					editor
+						.chain()
+						.focus()
+						.insertContentAt(range, [
+							{
+								type: 'mention',
+								attrs: { ...props, mentionSuggestionChar: '/' }
+							},
+							{ type: 'text', text: ' ' }
+						])
+						.run();
+				},
 				render: getSuggestionRenderer(CommandSuggestionList, {
 					i18n,
 					onSelect: (e) => {
@@ -749,6 +793,8 @@
 		}, 100);
 
 		window.addEventListener('keydown', handleKeyDown);
+		window.addEventListener('keyup', handleKeyUp);
+		window.addEventListener('blur', handleBlur);
 
 		let dropzoneElement: HTMLElement | null = null;
 		const initialize = async () => {
@@ -769,6 +815,8 @@
 			isDestroyed = true;
 
 			window.removeEventListener('keydown', handleKeyDown);
+			window.removeEventListener('keyup', handleKeyUp);
+			window.removeEventListener('blur', handleBlur);
 
 			if (dropzoneElement) {
 				dropzoneElement.removeEventListener('dragover', onDragOver);
@@ -918,11 +966,7 @@
 								{/each}
 							</div>
 						{/if}
-						<div
-							id="message-input-container"
-							class="flex-1 flex flex-col relative w-full shadow-sm rounded-2xl border border-gray-100/60 dark:border-gray-800/50 hover:border-gray-100 focus-within:border-gray-100 hover:dark:border-gray-800 focus-within:dark:border-gray-800 transition bg-white dark:bg-gray-400/5 dark:text-gray-100"
-							dir={$chatDirection}
-						>
+						<MessageComposerShell id="message-input-container">
 							{#if replyToMessage !== null}
 								<div class="px-3 pt-2 text-left w-full flex flex-col z-10">
 									<div class="flex items-center justify-between w-full">
@@ -939,7 +983,7 @@
 										</div>
 										<div>
 											<button
-												class="flex size-6 shrink-0 items-center justify-center rounded-md text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800 dark:text-gray-400"
+												class="flex h-6 shrink-0 items-center justify-center rounded-md text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 px-0"
 												aria-label={$i18n.t('Cancel')}
 												type="button"
 												on:click={() => {
@@ -1038,7 +1082,7 @@
 													navigator.maxTouchPoints > 0 ||
 													navigator.maxTouchPoints > 0
 												)}
-											largeTextAsFile={$settings?.largeTextAsFile ?? false}
+											largeTextAsFile={($settings?.largeTextAsFile ?? false) && !shiftKey}
 											floatingMenuPlacement={'top-start'}
 											{suggestions}
 											on:pasted={resolveInputMentions}
@@ -1120,7 +1164,7 @@
 												if (clipboardData && clipboardData.items) {
 													for (const item of clipboardData.items) {
 														if (item.type === 'text/plain') {
-															if ($settings?.largeTextAsFile ?? false) {
+															if (($settings?.largeTextAsFile ?? false) && !shiftKey) {
 																const text = clipboardData.getData('text/plain');
 
 																if (text.length > PASTED_TEXT_CHARACTER_LIMIT) {
@@ -1287,7 +1331,7 @@
 									</div>
 								</div>
 							</div>
-						</div>
+						</MessageComposerShell>
 					</form>
 				{/if}
 			</div>

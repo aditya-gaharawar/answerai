@@ -81,6 +81,7 @@
 						{#if displaySpec.properties[property]?.enum ?? null}
 							<select
 								class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-hidden border border-gray-100/30 dark:border-gray-850/30"
+								aria-label={displaySpec.properties[property].title}
 								value={displaySpec.properties[property].enum.findIndex((option: unknown) =>
 									Object.is(option, valves[property])
 								)}
@@ -111,10 +112,12 @@
 
 								<div class=" pr-2">
 									<Switch
-										bind:state={
-											() => valves[property] === true,
-											(value: boolean) => (valves[property] = value)
-										}
+										ariaLabel={displaySpec.properties[property].title}
+										state={Boolean(valves[property])}
+										on:change={(event) => {
+											valves[property] = event.detail;
+											dispatch('change');
+										}}
 										on:change={() => {
 											dispatch('change');
 										}}
@@ -134,10 +137,38 @@
 									dispatch('change');
 								}}
 							/>
+						{:else if displaySpec.properties[property]?.input?.type === 'range'}
+							<div class="flex space-x-2">
+								<div class=" flex-1">
+									<input
+										type="range"
+										aria-label={displaySpec.properties[property].title}
+										min={displaySpec.properties[property]?.minimum}
+										max={displaySpec.properties[property]?.maximum}
+										step={displaySpec.properties[property]?.input?.step}
+										bind:value={valves[property]}
+										on:change
+										class="w-full h-2 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
+									/>
+								</div>
+								<div>
+									<input
+										bind:value={valves[property]}
+										on:change
+										type="number"
+										aria-label={displaySpec.properties[property].title}
+										class=" bg-transparent text-center w-14"
+										min={displaySpec.properties[property]?.minimum}
+										max={displaySpec.properties[property]?.maximum}
+										step={displaySpec.properties[property]?.input?.step}
+									/>
+								</div>
+							</div>
 						{:else if (displaySpec.properties[property]?.type ?? null) !== 'string'}
 							<input
 								class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-hidden border border-gray-100/30 dark:border-gray-850/30"
 								type="text"
+								aria-label={displaySpec.properties[property].title}
 								placeholder={displaySpec.properties[property].title}
 								bind:value={
 									() => valveText(valves[property]), (value: string) => (valves[property] = value)
@@ -184,6 +215,7 @@
 									<div class="relative size-6">
 										<input
 											type="color"
+											aria-label={displaySpec.properties[property].title}
 											class="size-6 rounded cursor-pointer border border-gray-200 dark:border-gray-700"
 											value={valveText(valves[property]) || '#000000'}
 											on:input={(e) => {
@@ -200,6 +232,7 @@
 									<input
 										type="text"
 										class="flex-1 rounded-lg py-2 text-sm dark:text-gray-300 dark:bg-gray-850 outline-hidden border border-gray-100/30 dark:border-gray-850/30"
+										aria-label={displaySpec.properties[property].title}
 										placeholder={$i18n.t('Enter hex color (e.g. #FF0000)')}
 										bind:value={
 											() => valveText(valves[property]),
@@ -227,6 +260,7 @@
 										<input
 											type="text"
 											class=" w-full rounded-lg py-1 text-left text-sm dark:text-gray-300 dark:bg-gray-850 outline-hidden border border-gray-100/30 dark:border-gray-850/30"
+											aria-label={displaySpec.properties[property].title}
 											placeholder={$i18n.t('Enter coordinates (e.g. 51.505, -0.09)')}
 											bind:value={
 												() => valveText(valves[property]),
@@ -243,6 +277,7 @@
 						{:else}
 							<textarea
 								class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-hidden border border-gray-100/30 dark:border-gray-850/30"
+								aria-label={displaySpec.properties[property].title}
 								placeholder={displaySpec.properties[property].title}
 								bind:value={
 									() => valveText(valves[property]), (value: string) => (valves[property] = value)

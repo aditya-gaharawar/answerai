@@ -1,4 +1,6 @@
 export type MessageStatus = {
+	checkpoint_message_id?: string;
+	context_summary?: string;
 	action?: string;
 	description?: string;
 	done?: boolean;

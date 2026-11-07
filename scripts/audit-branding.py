@@ -38,6 +38,9 @@ for name in sorted(set(files)):
     except UnicodeError:
         continue
     checked += 1
+    if name == 'README.de.md':
+        # Retain the translated licensing notice's upstream branding requirement.
+        text = text.replace('Open-WebUI-Brandings', '[upstream branding term]')
     if name == 'README.md':
         text = text.split('## License and attribution')[0]
     if name == 'src/lib/components/chat/Settings/About.svelte':

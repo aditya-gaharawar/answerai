@@ -2,7 +2,7 @@
 <html lang="en">
 	<head>
 		<meta charset="utf-8" />
-		<!-- LICENSE covers this Open WebUI branding surface, including name, logo,
+		<!-- LICENSE covers this Open ANSWERAI branding surface, including name, logo,
 		visual, textual, symbolic identifiers, metadata, and surrounding UI.
 		Do not alter, remove, obscure, or replace it except as LICENSE permits:
 		https://docs.openwebui.com/license. -->
@@ -47,6 +47,13 @@
 		<script>
 			// On page load or when changing themes, best to add inline in `head` to avoid FOUC
 			(() => {
+				document.documentElement.classList.toggle(
+					'native-scrollbars',
+					/Android|iPhone|iPad|iPod/i.test(navigator.userAgent) ||
+						// iPadOS can report a desktop Mac user agent.
+						(/Macintosh/i.test(navigator.userAgent) && navigator.maxTouchPoints > 1)
+				);
+
 				const metaThemeColorTag = document.querySelector('meta[name="theme-color"]');
 				const prefersDarkTheme = window.matchMedia('(prefers-color-scheme: dark)').matches;
 
@@ -75,7 +82,7 @@
 					metaThemeColorTag.setAttribute('content', '#171717');
 				}
 
-				// LICENSE covers these Open WebUI splash logo assets.
+				// LICENSE covers these Open ANSWERAI splash logo assets.
 				// Do not alter, remove, obscure, or replace them except as LICENSE permits:
 				// https://docs.openwebui.com/license.
 				const preloadHref = document.documentElement.classList.contains('dark')
@@ -109,10 +116,11 @@
 					'position: absolute; width: auto; height: 6rem; top: 44%; left: 50%; transform: translateX(-50%); display:block;';
 				logo.loading = 'eager';
 				logo.fetchPriority = 'high';
-				// LICENSE covers this Open WebUI splash logo.
+				// LICENSE covers this Open ANSWERAI splash logo.
 				// Do not alter, remove, obscure, or replace it except as LICENSE permits:
 				// https://docs.openwebui.com/license.
 				logo.src = isDarkMode ? '/static/splash-dark.png' : '/static/splash.png';
+				logo.alt = '';
 
 				document.addEventListener('DOMContentLoaded', function () {
 					const splash = document.getElementById('splash-screen');
@@ -157,11 +165,12 @@
 					align-items: center;
 				"
 			>
-				<!-- LICENSE covers this Open WebUI splash logo.
+				<!-- LICENSE covers this Open ANSWERAI splash logo.
 				Do not alter, remove, obscure, or replace it except as LICENSE permits:
 				https://docs.openwebui.com/license. -->
 				<img
 					id="logo-her"
+					alt=""
 					style="width: auto; height: 13rem"
 					src="/static/splash.png"
 					loading="eager"

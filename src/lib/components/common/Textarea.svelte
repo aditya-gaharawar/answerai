@@ -2,7 +2,7 @@
 	import { onMount } from 'svelte';
 	import type { HTMLTextareaAttributes } from 'svelte/elements';
 
-	export let value = '';
+	export let value: string | null | undefined = '';
 	export let placeholder = '';
 	export let rows = 1;
 	export let minSize: number | null = null;
@@ -33,9 +33,7 @@
 
 	const resize = () => {
 		if (textareaElement) {
-			// Find all ancestors that currently have an active scroll offset.
-			// This is extremely fast because reading `scrollTop` on a clean layout doesn't trigger reflow,
-			// and it makes the fix 100% robust without relying on hardcoded CSS classes.
+			// Remember scrolled ancestors before resizing; typing should not rearrange the scenery.
 			const activeScrollParents: { el: HTMLElement; top: number }[] = [];
 			let p = textareaElement.parentNode;
 			while (p && p !== document.body) {
@@ -58,8 +56,7 @@
 
 			textareaElement.style.height = `${height}px`;
 
-			// Only restore scroll for elements that were actually scrolled.
-			// This prevents layout thrashing that happens if we blindly set `.scrollTop` on every parent.
+			// Restore only changed offsets; the rest of the page can stay seated.
 			activeScrollParents.forEach((p) => {
 				if (p.el.scrollTop !== p.top) p.el.scrollTop = p.top;
 			});
@@ -95,5 +92,5 @@
 		resize();
 	}}
 	on:blur={onBlur}
-	on:keydown={onKeydown}
+	on:change
 ></textarea>

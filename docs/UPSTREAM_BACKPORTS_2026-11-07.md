@@ -1,5 +1,7 @@
 # Upstream backports — 7 November 2026
 
+> Historical backport stage, superseded by the [complete upstream merge](UPSTREAM_FULL_MERGE_2026-11-07.md). The integration now includes upstream main 0.13.0 with real merge ancestry.
+
 Compared upstream main `c38885a1a737da4968f157092f304f3b5481d0bf` (0.13.0) with the previously integrated `91ea4e3421d1d8069f13d4a463fcb5986d94ea60` (0.12.3). Upstream has 679 additional commits and changes 673 files. A trial full merge produced 233 conflicted paths and was aborted. This branch backports the eight changes below; it does **not** claim the full 0.13.0 release or record unintegrated upstream ancestry as merged.
 
 | Upstream commit | Behavior brought into ANSWERAI                                                                                    |

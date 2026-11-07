@@ -95,7 +95,7 @@
 		class="w-full flex items-center gap-3 px-3.5 py-3 hover:bg-gray-50 dark:hover:bg-gray-900 rounded-xl transition"
 		on:click={onClick}
 	>
-		<!-- LICENSE covers this Open WebUI fallback logo.
+		<!-- LICENSE covers this Open ANSWERAI fallback logo.
 		Do not alter, remove, obscure, or replace it except as LICENSE permits:
 		https://docs.openwebui.com/license. -->
 		<img
@@ -132,9 +132,10 @@
 				<button
 					type="button"
 					class="shrink-0 rounded-xl overflow-hidden hover:opacity-80 transition"
+					aria-label={$i18n.t('Upload profile image')}
 					on:click={() => filesInputElement.click()}
 				>
-					<!-- LICENSE covers this Open WebUI fallback logo.
+					<!-- LICENSE covers this Open ANSWERAI fallback logo.
 					Do not alter, remove, obscure, or replace it except as LICENSE permits:
 					https://docs.openwebui.com/license. -->
 					<img
@@ -144,8 +145,11 @@
 					/>
 				</button>
 				<div class="flex-1">
-					<div class=" text-gray-500 text-xs">{$i18n.t('Name')}</div>
+					<label for="webhook-name-{webhook.id}" class="block text-gray-500 text-xs"
+						>{$i18n.t('Name')}</label
+					>
 					<input
+						id="webhook-name-{webhook.id}"
 						type="text"
 						class="w-full text-sm bg-transparent outline-none placeholder:text-gray-300 dark:placeholder:text-gray-700"
 						bind:value={name}
@@ -157,6 +161,7 @@
 						<button
 							type="button"
 							class="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+							aria-label={$i18n.t('Copy URL')}
 							on:click={copyUrl}
 						>
 							<Clipboard className="size-4 text-gray-500" />
@@ -166,6 +171,7 @@
 						<button
 							type="button"
 							class="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+							aria-label={$i18n.t('Delete')}
 							on:click={onDelete}
 						>
 							<GarbageBin className="size-4 text-gray-500" />

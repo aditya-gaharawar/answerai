@@ -1,9 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# ---------------------------------------------------------------------------
 # Build and run the ANSWERAI Docker container locally.
-# ---------------------------------------------------------------------------
 
 readonly IMAGE="answerai"
 readonly CONTAINER="answerai"

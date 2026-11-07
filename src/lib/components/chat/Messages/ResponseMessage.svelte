@@ -17,6 +17,8 @@
 	import type { i18n as i18nType, t } from 'i18next';
 
 	const i18n = getContext<Writable<i18nType>>('i18n');
+	const contextCompactions =
+		getContext<Writable<Record<string, 'in_progress' | { error: string }>>>('contextCompactions');
 
 	const dispatch = createEventDispatcher();
 
@@ -31,7 +33,8 @@
 		settings,
 		temporaryChatEnabled,
 		TTSWorker,
-		user
+		user,
+		visibleControls
 	} from '$lib/stores';
 	import { synthesizeOpenAISpeech } from '$lib/apis/audio';
 	import { imageGenerations } from '$lib/apis/images';
@@ -64,6 +67,7 @@
 	import Citations from './Citations.svelte';
 	import CodeExecutions from './CodeExecutions.svelte';
 	import ContentRenderer from './ContentRenderer.svelte';
+	import ContextCompactionLabel from './ContextCompactionLabel.svelte';
 	import { KokoroWorker } from '$lib/workers/KokoroWorker';
 	import FileItem from '$lib/components/common/FileItem.svelte';
 	import FollowUps from './ResponseMessage/FollowUps.svelte';
@@ -72,6 +76,7 @@
 	import RegenerateMenu from './ResponseMessage/RegenerateMenu.svelte';
 	import StatusHistory from './ResponseMessage/StatusHistory.svelte';
 	import FullHeightIframe from '$lib/components/common/FullHeightIframe.svelte';
+	import MCPApp from '$lib/components/chat/Messages/MCPApp.svelte';
 	import OutputEditView from './OutputEditView.svelte';
 	import { getOutputText, replaceOutputMessageText, type OutputItem } from './structuredOutput';
 
@@ -82,7 +87,8 @@
 		model: string;
 		content: string;
 		output?: OutputItem[];
-		files?: (Omit<import('$lib/types/notes').NoteAttachment, 'id'> & { id?: string | null })[];
+		contextSummary?: string;
+		files?: { type: string; url: string; name?: string; content_type?: string; size?: number }[];
 		timestamp: number;
 		role: string;
 		statusHistory?: MessageStatus[];
@@ -106,7 +112,7 @@
 		annotation?: MessageAnnotation;
 		feedbackId?: string;
 		arena?: boolean;
-		embeds?: string[];
+		embeds?: (string | import('$lib/components/chat/Messages/MCPApp.svelte').MCPAppEmbed)[];
 		citations?: unknown[];
 		followUps?: string[];
 	}
@@ -114,6 +120,7 @@
 	export let chatId = '';
 	export let history;
 	export let messageId;
+	$: compactionStatus = $contextCompactions?.[messageId];
 
 	let messageSource = history.messages[messageId];
 	let message: MessageType = structuredClone(messageSource);
@@ -249,7 +256,7 @@
 
 		speaking = true;
 
-		if ($config?.audio?.tts?.engine === '') {
+		if ($config?.audio?.tts.engine === '' && $settings.audio?.tts?.engine !== 'browser-kokoro') {
 			let voices = [];
 			const getVoicesLoop = setInterval(() => {
 				if (signal.aborted) {
@@ -322,6 +329,7 @@
 				await speechWorker.init();
 				for (const [, sentence] of messageContentParts.entries()) {
 					if (signal.aborted) return;
+					if (!speaking) break;
 
 					const worker = $TTSWorker;
 					if (!worker) throw new Error('Speech worker is unavailable');
@@ -344,6 +352,7 @@
 			} else {
 				for (const [, sentence] of messageContentParts.entries()) {
 					if (signal.aborted) return;
+					if (!speaking) break;
 
 					const res = await synthesizeOpenAISpeech(localStorage.token, voiceId, sentence).catch(
 						(error) => {
@@ -705,6 +714,10 @@
 				</Name>
 			{/if}
 
+			{#if message.contextSummary && !compactionStatus}
+				<ContextCompactionLabel summary={message.contextSummary} {compactPreview} />
+			{/if}
+
 			<div>
 				<div class="chat-{message.role} w-full min-w-full">
 					<div>
@@ -740,13 +753,17 @@
 							>
 								{#each message.embeds as embed, idx}
 									<div class="my-2 w-full" id={`${message.id}-embeds-${idx}`}>
-										<FullHeightIframe
-											src={embed}
-											allowScripts={true}
-											allowForms={$settings?.iframeSandboxAllowForms ?? true}
-											allowSameOrigin={$settings?.iframeSandboxAllowSameOrigin ?? false}
-											allowPopups={true}
-										/>
+										{#if typeof embed === 'object' && embed?.type === 'mcp_app'}
+											{#key embed}<MCPApp app={embed} />{/key}
+										{:else if typeof embed === 'string'}
+											<FullHeightIframe
+												src={embed}
+												allowScripts={true}
+												allowForms={$settings?.iframeSandboxAllowForms ?? true}
+												allowSameOrigin={$settings?.iframeSandboxAllowSameOrigin ?? false}
+												allowPopups={true}
+											/>
+										{/if}
 									</div>
 								{/each}
 							</div>
@@ -770,6 +787,7 @@
 								{:else}
 									<!-- Legacy textarea for messages without output -->
 									<textarea
+										aria-label={$i18n.t('Message')}
 										id="message-edit-{message.id}"
 										bind:this={editTextAreaElement}
 										class=" bg-transparent outline-hidden focus-visible:outline-none! w-full resize-none text-[0.9375rem]"
@@ -906,7 +924,11 @@
 								/>
 							{/if}
 
-							{#if !message.done && !message.error && (hasResponseContent || !hasVisibleStatus)}
+							{#if compactionStatus}
+								<ContextCompactionLabel status={compactionStatus} {compactPreview} />
+							{/if}
+
+							{#if !compactionStatus && !message.done && !message.error && (hasResponseContent || !hasVisibleStatus)}
 								<div class="text-[0.9375rem] leading-relaxed">
 									<span
 										class="inline-block w-[0.125rem] h-3.5 bg-gray-400 dark:bg-gray-500 ml-0.5 animate-cursor-pulse align-text-bottom"
@@ -1010,6 +1032,7 @@
 											class="text-sm flex justify-center font-normal self-center dark:text-gray-500 min-w-fit"
 										>
 											<input
+												aria-label={$i18n.t('Message number')}
 												id="message-index-input-{message.id}"
 												type="number"
 												value={siblings.indexOf(message.id) + 1}
@@ -1186,23 +1209,23 @@
 									</Tooltip>
 								{/if}
 
-								{#if message.usage}
+								{#if Object.keys(message.usage ?? {}).some((key) => key !== 'incomplete') && $visibleControls['chat.usage']}
+									{@const usage = JSON.stringify(message.usage, null, 2)
+										.replace(/"([^(")"]+)":/g, '$1:')
+										.slice(1, -1)
+										.split('\n')
+										.map((line) => line.slice(2))
+										.map((line) => (line.endsWith(',') ? line.slice(0, -1) : line))
+										.join('\n')}
+									<span id="usage-{message.id}" hidden>{usage}</span>
 									<Tooltip
-										content={message.usage
-											? `<pre>${sanitizeResponseContent(
-													JSON.stringify(message.usage, null, 2)
-														.replace(/"([^(")"]+)":/g, '$1:')
-														.slice(1, -1)
-														.split('\n')
-														.map((line) => line.slice(2))
-														.map((line) => (line.endsWith(',') ? line.slice(0, -1) : line))
-														.join('\n')
-												)}</pre>`
-											: ''}
+										content={`<pre>${sanitizeResponseContent(usage)}</pre>`}
+										allowHTML={true}
 										placement="bottom"
 									>
 										<button
-											aria-hidden="true"
+											aria-label={$i18n.t('Info')}
+											aria-describedby="usage-{message.id}"
 											class=" {isLastMessage || ($settings?.highContrastMode ?? false)
 												? 'visible'
 												: 'hover-reveal'} inline-flex size-7 shrink-0 items-center justify-center p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-gray-400 hover:text-gray-600 transition whitespace-pre-wrap"
@@ -1242,7 +1265,7 @@
 									</Tooltip>
 								{/if}
 
-								{#if $user && message.done && forkHandler && ($user?.role === 'admin' || ($user?.permissions?.chat?.import ?? true))}
+								{#if $user && message.done && forkHandler && ($user?.role === 'admin' || ($user?.permissions?.chat?.import ?? true)) && $visibleControls['chat.fork']}
 									<Tooltip content={$i18n.t('Fork chat')} placement="bottom">
 										<button
 											aria-label={$i18n.t('Fork chat')}

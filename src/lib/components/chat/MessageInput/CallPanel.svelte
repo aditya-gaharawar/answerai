@@ -1,5 +1,7 @@
 <script lang="ts">
-	import { showCallOverlay, showControls } from '$lib/stores';
+	import { createEventDispatcher } from 'svelte';
+	const dispatch = createEventDispatcher();
+	import { showCallOverlay } from '$lib/stores';
 	import type { RealtimeCall } from '$lib/utils/realtime';
 	import LiveCallOverlay from './CallOverlay/LiveCallOverlay.svelte';
 
@@ -7,7 +9,7 @@
 
 	function close() {
 		showCallOverlay.set(false);
-		showControls.set(false);
+		dispatch('close');
 	}
 </script>
 

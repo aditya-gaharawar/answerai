@@ -48,29 +48,30 @@
 		$sessionUser &&
 		($sessionUser.role === 'admin' || ($sessionUser.permissions?.chat?.import ?? true));
 
+	// Reading history here would rerun this on every history change.
 	$: if ($page.params.id) {
-		(async () => {
-			if (await loadSharedChat()) {
-				loaded = true;
-				await tick();
-				const target = $page.url.searchParams.get('message');
-				if (target && history.messages[target]) {
-					autoScroll = false;
-					history.currentId = getDeepestChildId(history, target);
-					await tick();
-					await messagesComponent?.scrollToMessage(target);
-				} else messagesComponent?.scrollToBottom();
-			} else if (localStorage.token) {
-				await goto('/');
-			} else {
-				await goto(`/auth?redirect=${encodeURIComponent($page.url.pathname)}`);
-			}
-		})();
+		loadAndScroll();
 	}
 
-	//////////////////////////
 	// Web functions
-	//////////////////////////
+
+	const loadAndScroll = async () => {
+		if (await loadSharedChat()) {
+			loaded = true;
+			await tick();
+			const target = $page.url.searchParams.get('message');
+			if (target && history.messages[target]) {
+				autoScroll = false;
+				history.currentId = getDeepestChildId(history, target);
+				await tick();
+				await messagesComponent?.scrollToMessage(target);
+			} else messagesComponent?.scrollToBottom();
+		} else if (localStorage.token) {
+			await goto('/');
+		} else {
+			await goto(`/auth?redirect=${encodeURIComponent($page.url.pathname)}`);
+		}
+	};
 
 	const loadSharedChat = async () => {
 		const token = localStorage.token ?? '';
@@ -198,7 +199,7 @@
 </script>
 
 <svelte:head>
-	<!-- LICENSE covers this Open WebUI browser-title identifier.
+	<!-- LICENSE covers this Open ANSWERAI browser-title identifier.
 	Do not alter, remove, obscure, or replace it except as LICENSE permits:
 	https://docs.openwebui.com/license. -->
 	<title>

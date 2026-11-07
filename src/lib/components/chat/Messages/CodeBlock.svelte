@@ -6,7 +6,7 @@
 	import { getContext, onMount, tick, onDestroy } from 'svelte';
 	import type { Writable } from 'svelte/store';
 	import type { i18n as i18nType } from 'i18next';
-	import { config, pyodideWorker as pyodideWorkerStore } from '$lib/stores';
+	import { config, pyodideWorker as pyodideWorkerStore, visibleControls } from '$lib/stores';
 
 	import { createPyodideWorker } from '$lib/pyodide/createPyodideWorker';
 	import { executeCode } from '$lib/apis/utils';
@@ -153,6 +153,7 @@
 		result = null;
 		stdout = null;
 		stderr = null;
+		files = null;
 
 		executing = true;
 
@@ -393,7 +394,7 @@
 						on:click={copyCode}>{copied ? $i18n.t('Copied') : $i18n.t('Copy')}</button
 					>
 
-					{#if preview && ['html', 'svg'].includes(lang)}
+					{#if preview && ['html', 'svg'].includes(lang) && $visibleControls['chat.code_preview']}
 						<button
 							class="run-code-button flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg px-2.5 text-xs font-normal text-gray-600 transition hover:bg-gray-100 hover:text-gray-900 disabled:opacity-60 dark:text-gray-400 dark:hover:bg-gray-850 dark:hover:text-white"
 							on:click={previewCode}
@@ -418,10 +419,12 @@
 				{#if !collapsed}
 					{#if isDiff && !(edit && editingDiff)}
 						<DiffBlock code={_code} />
-					{:else if edit}
+					{:else if edit || markdown?.allowRemoteContent === false}
 						<CodeEditor
 							value={_code}
+							readOnly={!edit}
 							{id}
+							ariaLabel={$i18n.t('Code Editor')}
 							{lang}
 							onSave={() => {
 								saveCode();

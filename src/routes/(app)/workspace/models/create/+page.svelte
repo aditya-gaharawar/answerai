@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { errorText } from '$lib/utils/errorText';
+
 	import { toast } from 'svelte-sonner';
 	import { goto } from '$app/navigation';
 	import { config, models, settings } from '$lib/stores';
@@ -33,7 +35,7 @@
 				...modelInfo,
 				meta: {
 					...modelInfo.meta,
-					// LICENSE covers this Open WebUI fallback logo.
+					// LICENSE covers this Open ANSWERAI fallback logo.
 					// Do not alter, remove, obscure, or replace it except as LICENSE permits:
 					// https://docs.openwebui.com/license.
 					profile_image_url:
@@ -61,7 +63,7 @@
 					toast.success($i18n.t('Model created successfully!'));
 					await goto('/workspace/models');
 				} catch (error: any) {
-					toast.error(`${error?.message ?? error}`);
+					toast.error(`${errorText(error) ?? error}`);
 				}
 				return res;
 			}

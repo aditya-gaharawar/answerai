@@ -23,6 +23,7 @@
 
 	export let className = ' p-2.5 w-full max-w-full';
 
+	export let confirmButtonId = 'confirm-recording-button';
 	export let onCancel = () => {};
 	export let onConfirm: (data: { text?: string; file?: File; blob?: Blob }) => void = () => {};
 
@@ -176,12 +177,6 @@
 					// if (domainData.some((value) => value > 0)) {
 					// 	lastSoundTime = Date.now();
 					// }
-
-					// if (recording && Date.now() - lastSoundTime > 3000) {
-					// 	if ($settings?.speechAutoSend ?? false) {
-					// 		confirmRecording();
-					// 	}
-					// }
 				}
 
 				analysisFrame = window.requestAnimationFrame(processFrame);
@@ -297,6 +292,11 @@
 			console.log('Recording started');
 			loading = false;
 			startDurationCounter();
+
+			if (document.activeElement === document.body || !document.activeElement?.checkVisibility()) {
+				await tick();
+				document.getElementById(confirmButtonId)?.focus();
+			}
 
 			await requestWakeLock();
 			if (destroyed || version !== recordingVersion) return;
@@ -520,6 +520,7 @@
 		void stopRecording();
 		window.removeEventListener('keydown', handleKeyDown);
 		document.removeEventListener('visibilitychange', handleVisibilityChange);
+		stopRecording();
 		releaseWakeLock();
 		closeAudioContext();
 		// remove resize observer
@@ -544,6 +545,7 @@
 
 
              rounded-full"
+			aria-label={$i18n.t('Cancel')}
 			on:click={async () => {
 				cancelRecording();
 				onCancel();
@@ -684,7 +686,7 @@
 				</div>
 			{:else}
 				<button
-					id="confirm-recording-button"
+					id={confirmButtonId}
 					type="button"
 					aria-label={$i18n.t('Confirm recording')}
 					class="p-1.5 bg-indigo-500 text-white dark:bg-indigo-500 dark:text-blue-950 rounded-full"

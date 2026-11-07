@@ -38,7 +38,14 @@ export type RootChatEvent = {
 				}>;
 		  }
 		| { type: 'execute:tool'; data: ToolExecutionRequest }
-		| { type: 'request:terminal'; data: SessionPayload<{ terminal_id: string; path: string }> }
+		| {
+				type: 'request:terminal';
+				data: SessionPayload<{
+					terminal_id: string;
+					path: string;
+					file?: { id: string; name: string };
+				}>;
+		  }
 		| {
 				type: 'request:chat:completion';
 				data: SessionPayload<{
@@ -120,6 +127,7 @@ type ChatEventPayloads = {
 	notification: { type?: string; content?: string };
 	execute: { code: string };
 	input: {
+		interaction_id?: string;
 		title: string;
 		message: string;
 		placeholder: string;

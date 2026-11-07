@@ -12,7 +12,7 @@ log = logging.getLogger(__name__)
 
 # SearXNG request headers — identifies the bot to instance operators.
 _SEARXNG_HEADERS = {
-    # LICENSE covers this Open WebUI user-agent identifier.
+    # LICENSE covers this Open ANSWERAI user-agent identifier.
     # Do not alter, remove, obscure, or replace it except as LICENSE permits:
     # https://docs.openwebui.com/license.
     'User-Agent': 'ANSWERAI (https://answerai.in) RAG Bot',

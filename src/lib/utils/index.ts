@@ -1,3 +1,5 @@
+import { errorText } from '$lib/utils/errorText';
+import type { ResourceComment } from '$lib/apis/comments';
 import type { Writable } from 'svelte/store';
 import { v4 as uuidv4 } from 'uuid';
 import { sha256 } from 'js-sha256';
@@ -28,11 +30,9 @@ import markedKatexExtension from '$lib/utils/marked/katex-extension';
 import hljs from 'highlight.js';
 import { decode } from 'html-entities';
 
-//////////////////////////
 // Helper functions
 // No one thanks the foundation, but without it the
 // house falls. Let the quiet work here hold.
-//////////////////////////
 
 export const resolveDefaultModelIds = (
 	models: { id: string; info?: { meta?: { hidden?: boolean } } }[],
@@ -599,32 +599,28 @@ export const extractCurlyBraceWords = (text: string) => {
 
 export const removeLastWordFromString = (inputString: string, wordString: string) => {
 	console.log('inputString', inputString);
-	// Split the string by newline characters to handle lines separately
+	// Only edit the final line; preserve earlier lines verbatim.
 	const lines = inputString.split('\n');
 
 	// Take the last line to operate only on it
 	const lastLine = lines.pop() ?? '';
 
-	// Split the last line into an array of words
 	const words = lastLine.split(' ');
 
-	// Conditional to check for the last word removal
+	// Remove the final token if it matches, or the escaped hash marker when wordString is empty.
 	if (words.at(-1) === wordString || (wordString === '' && words.at(-1) === '\\#')) {
-		words.pop(); // Remove last word if condition is satisfied
+		words.pop();
 	}
 
-	// Join the remaining words back into a string and handle space correctly
 	let updatedLastLine = words.join(' ');
 
-	// Add a trailing space to the updated last line if there are still words
+	// Append a space to any nonempty result, even when no token was removed.
 	if (updatedLastLine !== '') {
 		updatedLastLine += ' ';
 	}
 
-	// Combine the lines together again, placing the updated last line back in
 	const resultString = [...lines, updatedLastLine].join('\n');
 
-	// Return the final string
 	console.log('resultString', resultString);
 
 	return resultString;
@@ -637,7 +633,7 @@ export const removeFirstHashWord = (inputString: string) => {
 	// Find the index of the first word that starts with #
 	const index = words.findIndex((word: string) => word.startsWith('#'));
 
-	// Remove the first word with #
+	// Retire the first hashtag; the rest of the sentence keeps its job.
 	if (index !== -1) {
 		words.splice(index, 1);
 	}
@@ -652,10 +648,10 @@ export const transformFileName = (fileName: string) => {
 	// Convert to lowercase
 	const lowerCaseFileName = fileName.toLowerCase();
 
-	// Remove special characters using regular expression
+	// Strip punctuation; word characters and whitespace make the guest list.
 	const sanitizedFileName = lowerCaseFileName.replace(/[^\w\s]/g, '');
 
-	// Replace spaces with dashes
+	// Give each whitespace run one dash, regardless of its enthusiasm.
 	const finalFileName = sanitizedFileName.replace(/\s+/g, '-');
 
 	return finalFileName;
@@ -673,7 +669,7 @@ export function getUserPosition(
 	raw: boolean
 ): Promise<string | { latitude: number; longitude: number }>;
 export async function getUserPosition(
-	raw = false
+	raw: boolean = false
 ): Promise<string | { latitude: number; longitude: number }> {
 	// Get the user's location using the Geolocation API
 	const position = await new Promise<GeolocationPosition>((resolve, reject) => {
@@ -737,11 +733,7 @@ export const isYoutubeUrl = (url: string) => {
 };
 
 export const removeEmojis = (str: string) => {
-	// Use Unicode property escape with the 'v' flag (ES2024) to match all
-	// standardised emoji sequences, including text-presentation emoji + variation
-	// selector (e.g. ❤️, ☀️, ✅), keycap sequences (e.g. 1️⃣), ZWJ families
-	// (e.g. 👨‍👩‍👧‍👦) and flag sequences (e.g. 🏳️‍🌈).
-	// The previous surrogate-pair regex missed the entire BMP emoji category.
+	// Match complete emoji sequences with RGI_Emoji, including variation selectors, keycaps, and ZWJ groups.
 	const emojiRegex = /\p{RGI_Emoji}/gv;
 
 	// Replace emojis with an empty string
@@ -909,14 +901,7 @@ export const extractSentencesForAudio = (text: string) => {
 };
 
 export const getMessageContentParts = (content: string, splitOn: string = 'punctuation') => {
-	// Strip <details> blocks directly on the full string before any
-	// code-block-aware processing. removeAllDetails (which callers use)
-	// applies the regex via replaceOutsideCode, which splits on triple-
-	// backtick code fences first. If a <details> block contains code
-	// fences (e.g. reasoning with code examples), the opening and
-	// closing tags land in separate segments and the regex fails,
-	// leaking thinking content into TTS. Applying the strip here on
-	// the full string catches those cases. (Fixes #22197)
+	// Strip details before splitting code fences, which can separate their tags and leak reasoning into TTS (#22197).
 	content = content.replace(/<details[^>]*>[\s\S]*?<\/details>/gi, '');
 
 	const messageContentParts: string[] = [];
@@ -1477,6 +1462,29 @@ export const getAge = (birthDate: string | number | Date) => {
 	return age.toString();
 };
 
+export const normalizeImageFile = async (file: File): Promise<File> => {
+	if (file.type && file.type !== 'application/octet-stream') return file;
+
+	// Some drag sources (e.g. macOS Photos) omit both the MIME type and extension.
+	try {
+		const header = String.fromCharCode(...new Uint8Array(await file.slice(0, 12).arrayBuffer()));
+		let type = '';
+		if (header.startsWith('\xff\xd8\xff')) type = 'image/jpeg';
+		else if (header.startsWith('\x89PNG\r\n\x1a\n')) type = 'image/png';
+		else if (header.startsWith('GIF87a') || header.startsWith('GIF89a')) type = 'image/gif';
+		else if (header.startsWith('RIFF') && header.slice(8, 12) === 'WEBP') type = 'image/webp';
+		else if (header.slice(4, 8) === 'ftyp') {
+			const brand = header.slice(8, 12);
+			if (['avif', 'avis'].includes(brand)) type = 'image/avif';
+			else if (['heic', 'heix', 'hevc', 'hevx', 'heim', 'heis'].includes(brand))
+				type = 'image/heic';
+		}
+		return type ? new File([file], file.name, { type, lastModified: file.lastModified }) : file;
+	} catch {
+		return file;
+	}
+};
+
 const HEIC_EXTENSION_PATTERN = /\.(heic|heif)$/i;
 
 // Browsers label HEIC photos inconsistently (Firefox uses image/heif, some leave it empty).
@@ -1490,7 +1498,7 @@ export const convertHeicToJpeg = async (file: File) => {
 		const jpegName = `${file.name.replace(HEIC_EXTENSION_PATTERN, '')}.jpg`;
 		return new File([jpegBlob], jpegName, { type: 'image/jpeg' });
 	} catch (err: any) {
-		if (err?.message?.includes('already browser readable')) {
+		if (errorText(err)?.includes('already browser readable')) {
 			return file;
 		}
 		throw err;
@@ -1739,11 +1747,7 @@ export const getCodeBlockContents = (content: string) => {
 
 	let codeBlocks: { lang: string; code: string }[] = [];
 
-	// Groups of related HTML/CSS/JS blocks. Each HTML block starts a new group;
-	// CSS and JS blocks attach to the current (most recent) group.
-	// This preserves the existing behaviour for "dumb" models that output
-	// separate html/css/js blocks meant to form a single page, while also
-	// allowing multiple distinct HTML blocks to produce separate artifacts.
+	// Each HTML block starts an artifact; subsequent CSS and JS join the most recent group.
 	let htmlGroups: Array<{ html: string; css: string; js: string }> = [];
 
 	const initDefaultGroup = () => {
@@ -1848,12 +1852,61 @@ export const formatSkillName = (name: string) => {
  */
 export const displayFileHandler = (
 	path: string,
-	stores: { showControls: Writable<boolean>; showFileNavPath: Writable<FileNavOpenRequest | null> },
+	stores: {
+		showTabs: Pick<Writable<boolean>, 'set'>;
+		showFileNavPath: Writable<FileNavOpenRequest | null>;
+	},
 	options: { page?: unknown } = {}
 ) => {
 	if (path) {
-		stores.showControls.set(true);
+		stores.showTabs.set(true);
 		const page = normalizeDocumentTargetPage(options.page);
 		stores.showFileNavPath.set(page ? { path, page } : path);
 	}
 };
+
+export function groupReplies(items: ResourceComment[], parentId: string) {
+	const children = new Map<string, ResourceComment[]>();
+	for (const comment of [...items].sort(
+		(a, b) => a.created_at - b.created_at || a.id.localeCompare(b.id)
+	)) {
+		const target = comment.reply_to_id ?? parentId;
+		const siblings = children.get(target) ?? [];
+		siblings.push(comment);
+		children.set(target, siblings);
+	}
+	return children;
+}
+
+export function scrollToComment(id: string) {
+	const element = document.getElementById(`comment-${id}`);
+	element?.scrollIntoView({ block: 'center' });
+	element?.animate([{ backgroundColor: '#a5a5c544' }, { backgroundColor: 'transparent' }], {
+		duration: 2200
+	});
+}
+
+export function commentLink(
+	comment: Pick<
+		ResourceComment,
+		'id' | 'resource_type' | 'resource_id' | 'target_type' | 'target_id'
+	>
+) {
+	const query = new URLSearchParams({ comment: comment.id });
+	let path = '/';
+	if (comment.resource_type === 'chat') path = `/c/${encodeURIComponent(comment.resource_id)}`;
+	if (comment.resource_type === 'note') path = `/notes/${encodeURIComponent(comment.resource_id)}`;
+	if (['model', 'skill', 'tool'].includes(comment.resource_type)) {
+		path = `/workspace/${comment.resource_type}s/edit`;
+		query.set('id', comment.resource_id);
+	}
+	if (comment.resource_type === 'prompt')
+		path = `/workspace/prompts/${encodeURIComponent(comment.resource_id)}`;
+	if (comment.resource_type === 'knowledge')
+		path = `/workspace/knowledge/${encodeURIComponent(comment.resource_id)}`;
+	if (comment.target_type === 'chat_message' && comment.target_id)
+		query.set('message', comment.target_id);
+	if (comment.target_type === 'note_page' && comment.target_id)
+		query.set('page', comment.target_id);
+	return `${path}?${query}`;
+}

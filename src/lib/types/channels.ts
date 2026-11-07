@@ -52,7 +52,7 @@ export interface ChannelMessage {
 	pinned_at?: number | null;
 	latest_reply_at?: number | null;
 	reply_count?: number;
-	reactions: { name: string; users: ChannelUser[]; count: number }[];
+	reactions: { reacted?: boolean; name: string; users: ChannelUser[]; count: number }[];
 	data?: ChannelMessageData | boolean | null;
 	meta?: { done?: boolean; model_id?: string; model_name?: string; [key: string]: unknown } | null;
 }

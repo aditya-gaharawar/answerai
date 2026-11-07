@@ -573,7 +573,7 @@ Conversation:
             'messages': [
                 {
                     'role': 'system',
-                    # LICENSE covers this Open WebUI system identifier.
+                    # LICENSE covers this Open ANSWERAI system identifier.
                     # Do not alter, remove, obscure, or replace it except as LICENSE permits:
                     # https://docs.openwebui.com/license.
                     'content': "You are ANSWERAI's private memory reviewer. Return only valid JSON.",

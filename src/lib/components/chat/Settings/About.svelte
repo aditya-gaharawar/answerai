@@ -5,7 +5,7 @@
 	import { getVersionUpdates } from '$lib/apis';
 	import { getOllamaVersion } from '$lib/apis/ollama';
 	import { WEBUI_BUILD_CHANNEL, WEBUI_VERSION } from '$lib/constants';
-	import { WEBUI_NAME, config, showChangelog } from '$lib/stores';
+	import { WEBUI_NAME, config, settings, showChangelog } from '$lib/stores';
 	import { compareVersion } from '$lib/utils';
 	import { onMount, getContext } from 'svelte';
 
@@ -57,7 +57,7 @@
 	</h2>
 
 	<div class="flex-1 min-h-0 overflow-y-auto scrollbar-hover pr-1.5">
-		<!-- LICENSE covers this Open WebUI About identifier.
+		<!-- LICENSE covers this Open ANSWERAI About identifier.
 		Do not alter, remove, obscure, or replace it except as LICENSE permits:
 		https://docs.openwebui.com/license. -->
 		<UserSettingSection
@@ -66,14 +66,24 @@
 		>
 			<UserSettingRow description={$i18n.t('settings.personal.about.seeWhatSNew.description')}>
 				<div slot="label" class="flex flex-col text-xs text-gray-600 dark:text-gray-400">
-					<div class="flex flex-wrap gap-1">
+					<div
+						class="flex flex-wrap {($settings?.highContrastMode ?? false)
+							? 'items-center'
+							: ''} gap-1"
+					>
 						<BuildVersion />
 
 						{#if WEBUI_BUILD_CHANNEL === 'main' && $config?.features?.enable_version_update_check}
 							{#if version.latest === null}
 								<span>{$i18n.t('Could not check for updates')}</span>
 							{:else}
-								<a href="https://answerai.in/releases/tag/v{version.latest}" target="_blank">
+								<a
+									class={($settings?.highContrastMode ?? false)
+										? 'inline-flex min-h-6 items-center'
+										: ''}
+									href="https://github.com/answerai/answerai/releases/tag/v{version.latest}"
+									target="_blank"
+								>
 									{updateAvailable === null
 										? $i18n.t('Checking for updates...')
 										: updateAvailable
@@ -85,7 +95,9 @@
 					</div>
 
 					<button
-						class="self-start {actionButtonClass}"
+						class="self-start {($settings?.highContrastMode ?? false)
+							? 'inline-flex min-h-6 items-center'
+							: ''} {actionButtonClass}"
 						on:click={() => {
 							showChangelog.set(true);
 						}}
@@ -117,7 +129,7 @@
 
 		<UserSettingSection title={$i18n.t('settings.personal.about.sections.community.title')}>
 			{#if $config?.license_metadata}
-				<!-- LICENSE covers this Open WebUI license attribution.
+				<!-- LICENSE covers this Open ANSWERAI license attribution.
 				Do not alter, remove, obscure, or replace it except as LICENSE permits:
 				https://docs.openwebui.com/license. -->
 				<div class="text-xs text-gray-600 dark:text-gray-400">
@@ -158,7 +170,7 @@
 			</div>
 
 			<div class="text-xs text-gray-400 dark:text-gray-500">
-				<!-- LICENSE covers this Open WebUI copyright attribution.
+				<!-- LICENSE covers this Open ANSWERAI copyright attribution.
 				Do not alter, remove, obscure, or replace it except as LICENSE permits:
 				https://docs.openwebui.com/license. -->
 				{$i18n.t('Copyright (c)')}

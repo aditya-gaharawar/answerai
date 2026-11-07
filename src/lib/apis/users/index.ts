@@ -1,3 +1,4 @@
+import { errorText } from '$lib/utils/errorText';
 import { WEBUI_API_BASE_URL } from '$lib/constants';
 import { getUserPosition } from '$lib/utils';
 
@@ -289,7 +290,7 @@ export const getUserSettings = async (token: string, raw = false) => {
 		})
 		.catch((err) => {
 			console.error(err);
-			error = err?.detail ?? err;
+			error = errorText(err) ?? err;
 			return null;
 		});
 
@@ -755,5 +756,25 @@ export const revokeUserSessions = async (token: string, userId: string) => {
 	});
 	const result = await response.json();
 	if (!response.ok) throw new Error(result.detail || 'Failed to revoke sessions');
+	return result;
+};
+
+export const rotateUserAPIKeyById = async (token: string, userId: string): Promise<string> => {
+	const response = await fetch(`${WEBUI_API_BASE_URL}/users/${userId}/api_key/rotate`, {
+		method: 'POST',
+		headers: { Authorization: `Bearer ${token}` }
+	});
+	const result = await response.json();
+	if (!response.ok) throw new Error(result.detail || 'Failed to rotate API key');
+	return result.api_key;
+};
+
+export const deleteUserAPIKeyById = async (token: string, userId: string) => {
+	const response = await fetch(`${WEBUI_API_BASE_URL}/users/${userId}/api_key`, {
+		method: 'DELETE',
+		headers: { Authorization: `Bearer ${token}` }
+	});
+	const result = await response.json();
+	if (!response.ok) throw new Error(result.detail || 'Failed to delete API key');
 	return result;
 };

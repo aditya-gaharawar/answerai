@@ -2,7 +2,7 @@
 	import { toast } from 'svelte-sonner';
 	import { createEventDispatcher, onMount, onDestroy, getContext } from 'svelte';
 
-	import { user, settings, config } from '$lib/stores';
+	import { user, settings, config, visibleControls } from '$lib/stores';
 	import { getVoices as _getVoices } from '$lib/apis/audio';
 
 	import Switch from '$lib/components/common/Switch.svelte';
@@ -34,7 +34,7 @@
 	let TTSModelProgress: import('@huggingface/transformers').ProgressInfo | null = null;
 	let TTSModelLoading = false;
 
-	let voices: { id?: string; name: string; localService?: boolean }[] = [];
+	let voices: { id?: string; name: string; localService?: boolean; voiceURI?: string }[] = [];
 	let voice = '';
 
 	// Audio speed control
@@ -163,12 +163,13 @@
 		const promise = (async () => {
 			try {
 				const { KokoroTTS } = await import('kokoro-js');
-				if (destroyed || version !== loadVersion) return;
+				const adapter = await navigator?.gpu?.requestAdapter().catch(() => null);
 				const model = await KokoroTTS.from_pretrained('onnx-community/Kokoro-82M-v1.0-ONNX', {
-					dtype,
-					device: 'gpu' in navigator ? 'webgpu' : 'wasm',
-					progress_callback: (progress) => {
-						if (!destroyed && version === loadVersion) TTSModelProgress = progress;
+					dtype, // Options: "fp32", "fp16", "q8", "q4", "q4f16"
+					device: adapter ? 'webgpu' : 'wasm', // Detect WebGPU
+					progress_callback: (e) => {
+						TTSModelProgress = e;
+						console.log(e);
 					}
 				});
 				if (destroyed || version !== loadVersion || TTSEngine !== 'browser-kokoro') {
@@ -232,19 +233,21 @@
 	<div class="flex-1 min-h-0 overflow-y-auto scrollbar-hover pr-1.5">
 		<UserSettingSection title={$i18n.t('settings.personal.audio.sections.sttSettings.title')} first>
 			{#if $config?.audio?.stt?.engine !== 'web'}
-				<UserSettingRow
-					label={$i18n.t('settings.personal.audio.speechToTextEngine.label')}
-					description={$i18n.t('settings.personal.audio.speechToTextEngine.description')}
-				>
-					<SettingsSelect
-						bind:value={STTEngine}
-						ariaLabel={$i18n.t('settings.personal.audio.speechToTextEngine.label')}
-						placeholder={$i18n.t('Select an engine')}
+				{#if $visibleControls['settings.speech_to_text_engine']}
+					<UserSettingRow
+						label={$i18n.t('settings.personal.audio.speechToTextEngine.label')}
+						description={$i18n.t('settings.personal.audio.speechToTextEngine.description')}
 					>
-						<option value="">{$i18n.t('Default')}</option>
-						<option value="web">{$i18n.t('Web API')}</option>
-					</SettingsSelect>
-				</UserSettingRow>
+						<SettingsSelect
+							bind:value={STTEngine}
+							ariaLabel={$i18n.t('settings.personal.audio.speechToTextEngine.label')}
+							placeholder={$i18n.t('Select an engine')}
+						>
+							<option value="">{$i18n.t('Default')}</option>
+							<option value="web">{$i18n.t('Web API')}</option>
+						</SettingsSelect>
+					</UserSettingRow>
+				{/if}
 
 				<UserSettingRow
 					label={$i18n.t('settings.personal.audio.language.label')}
@@ -268,12 +271,14 @@
 			{/if}
 
 			<UserSettingRow
+				let:labelId
 				label={$i18n.t('settings.personal.audio.instantAutoSendAfterVoiceTranscription.label')}
 				description={$i18n.t(
 					'settings.personal.audio.instantAutoSendAfterVoiceTranscription.description'
 				)}
 			>
 				<Switch
+					ariaLabelledbyId={labelId}
 					state={speechAutoSend}
 					ariaLabel={$i18n.t(
 						'settings.personal.audio.instantAutoSendAfterVoiceTranscription.label'
@@ -286,19 +291,21 @@
 		</UserSettingSection>
 
 		<UserSettingSection title={$i18n.t('settings.personal.audio.sections.ttsSettings.title')}>
-			<UserSettingRow
-				label={$i18n.t('settings.personal.audio.textToSpeechEngine.label')}
-				description={$i18n.t('settings.personal.audio.textToSpeechEngine.description')}
-			>
-				<SettingsSelect
-					bind:value={TTSEngine}
-					ariaLabel={$i18n.t('settings.personal.audio.textToSpeechEngine.label')}
-					placeholder={$i18n.t('Select an engine')}
+			{#if $visibleControls['settings.text_to_speech_engine']}
+				<UserSettingRow
+					label={$i18n.t('settings.personal.audio.textToSpeechEngine.label')}
+					description={$i18n.t('settings.personal.audio.textToSpeechEngine.description')}
 				>
-					<option value="">{$i18n.t('Default')}</option>
-					<option value="browser-kokoro">{$i18n.t('Kokoro.js (Browser)')}</option>
-				</SettingsSelect>
-			</UserSettingRow>
+					<SettingsSelect
+						bind:value={TTSEngine}
+						ariaLabel={$i18n.t('settings.personal.audio.textToSpeechEngine.label')}
+						placeholder={$i18n.t('Select an engine')}
+					>
+						<option value="">{$i18n.t('Default')}</option>
+						<option value="browser-kokoro">{$i18n.t('Kokoro.js (Browser)')}</option>
+					</SettingsSelect>
+				</UserSettingRow>
+			{/if}
 
 			{#if TTSEngine === 'browser-kokoro'}
 				<UserSettingRow
@@ -320,10 +327,12 @@
 			{/if}
 
 			<UserSettingRow
+				let:labelId
 				label={$i18n.t('settings.personal.audio.autoPlaybackResponse.label')}
 				description={$i18n.t('settings.personal.audio.autoPlaybackResponse.description')}
 			>
 				<Switch
+					ariaLabelledbyId={labelId}
 					state={responseAutoPlayback}
 					ariaLabel={$i18n.t('settings.personal.audio.autoPlaybackResponse.label')}
 					on:change={(event) => {
@@ -404,18 +413,19 @@
 						<option value="" selected={voice !== ''}>{$i18n.t('Default')}</option>
 						{#each voices.filter((v) => nonLocalVoices || v.localService === true) as _voice}
 							<option
-								value={_voice.name}
+								value={_voice.voiceURI}
 								class="bg-gray-100 dark:bg-gray-700"
-								selected={voice === _voice.name}>{_voice.name}</option
+								selected={voice === _voice.voiceURI}>{_voice.name}</option
 							>
 						{/each}
 					</SettingsSelect>
 				</UserSettingField>
 				<UserSettingRow
+					let:labelId
 					label={$i18n.t('settings.personal.audio.allowNonLocalVoices.label')}
 					description={$i18n.t('settings.personal.audio.allowNonLocalVoices.description')}
 				>
-					<Switch bind:state={nonLocalVoices} />
+					<Switch ariaLabelledbyId={labelId} bind:state={nonLocalVoices} />
 				</UserSettingRow>
 			</UserSettingSection>
 		{:else if $config?.audio?.tts?.engine !== ''}

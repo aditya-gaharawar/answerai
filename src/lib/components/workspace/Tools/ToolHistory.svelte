@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { errorText } from '$lib/utils/errorText';
+
 	import { getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
@@ -36,9 +38,9 @@
 	let deleting = false;
 	let selection = 0;
 	const message = (error: any) =>
-		typeof error?.detail === 'string'
+		typeof errorText(error) === 'string'
 			? error.detail
-			: error?.message || $i18n.t('Failed to load tool version');
+			: errorText(error) || $i18n.t('Failed to load tool version');
 
 	async function loadHistory() {
 		loading = true;

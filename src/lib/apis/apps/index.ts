@@ -1,3 +1,4 @@
+import { errorText } from '$lib/utils/errorText';
 import { WEBUI_API_BASE_URL } from '$lib/constants';
 
 export type Embed = {
@@ -44,7 +45,7 @@ export const getApps = async (token: string = ''): Promise<App[]> => {
 			return res.json();
 		})
 		.catch((err) => {
-			error = err?.detail ?? err;
+			error = errorText(err) ?? err;
 			console.error(err);
 			return null;
 		});
@@ -72,7 +73,7 @@ export const getAppById = async (token: string = '', app_id: string) => {
 			return res.json();
 		})
 		.catch((err) => {
-			error = err?.detail ?? err;
+			error = errorText(err) ?? err;
 			console.error(err);
 			return null;
 		});
@@ -101,7 +102,7 @@ export const createNewApp = async (token: string = '', app: object) => {
 			return res.json();
 		})
 		.catch((err) => {
-			error = err?.detail ?? err;
+			error = errorText(err) ?? err;
 			console.error(err);
 			return null;
 		});
@@ -130,7 +131,7 @@ export const updateAppById = async (token: string = '', app_id: string, app: obj
 			return res.json();
 		})
 		.catch((err) => {
-			error = err?.detail ?? err;
+			error = errorText(err) ?? err;
 			console.error(err);
 			return null;
 		});
@@ -158,7 +159,7 @@ export const deleteAppById = async (token: string = '', app_id: string) => {
 			return res.json();
 		})
 		.catch((err) => {
-			error = err?.detail ?? err;
+			error = errorText(err) ?? err;
 			console.error(err);
 			return null;
 		});
@@ -191,7 +192,7 @@ export const previewAppManifest = async (
 			return res.json();
 		})
 		.catch((err) => {
-			error = err?.detail ?? err;
+			error = errorText(err) ?? err;
 			console.error(err);
 			return null;
 		});
@@ -224,7 +225,7 @@ export const connectAppById = async (
 			return res.json();
 		})
 		.catch((err) => {
-			error = err?.detail ?? err;
+			error = errorText(err) ?? err;
 			console.error(err);
 			return null;
 		});
@@ -257,7 +258,7 @@ export const createAppInteraction = async (
 			return res.json();
 		})
 		.catch((err) => {
-			error = err?.detail ?? err;
+			error = errorText(err) ?? err;
 			console.error(err);
 			return null;
 		});

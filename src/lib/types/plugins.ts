@@ -39,6 +39,7 @@ export interface FunctionSummary {
 	created_at?: number;
 }
 export interface ToolSummary {
+	is_active?: boolean;
 	authenticated?: boolean;
 	id: string;
 	name: string;

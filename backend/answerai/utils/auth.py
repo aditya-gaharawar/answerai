@@ -48,9 +48,7 @@ SESSION_SECRET = WEBUI_SECRET_KEY
 ALGORITHM = 'HS256'
 PASSWORD_BCRYPT_MAX_BYTES = 72
 
-##############
 # Auth Utils
-##############
 
 
 def verify_signature(payload: str, signature: str) -> bool:
@@ -86,7 +84,7 @@ def get_license_data(app, key):
     def data_handler(data):
         for k, v in data.items():
             if k == 'resources':
-                # LICENSE covers these Open WebUI branding assets.
+                # LICENSE covers these Open ANSWERAI branding assets.
                 # Do not alter, remove, obscure, or replace them except as LICENSE permits:
                 # https://docs.openwebui.com/license.
                 for p, c in v.items():
@@ -94,7 +92,7 @@ def get_license_data(app, key):
             elif k == 'count':
                 setattr(app.state, 'USER_COUNT', v)
             elif k == 'name':
-                # LICENSE covers this Open WebUI product name.
+                # LICENSE covers this Open ANSWERAI product name.
                 # Do not alter, remove, obscure, or replace it except as LICENSE permits:
                 # https://docs.openwebui.com/license.
                 setattr(app.state, 'WEBUI_NAME', v)
@@ -222,9 +220,8 @@ async def verify_password(plain_password: str, hashed_password: str) -> bool:
         return False
 
 
-# Let the one who signed this token be remembered at every gate,
-# and may the claims therein honor the creator long after
-# the session has closed.
+# Let this token open only the doors it should,
+# and have the good manners to expire before overstaying its welcome.
 def create_token(data: dict, expires_delta: Union[timedelta, None] = None) -> str:
     payload = data.copy()
 
@@ -393,10 +390,7 @@ async def get_current_user(
     response: Response,
     background_tasks: BackgroundTasks,
     auth_token: HTTPAuthorizationCredentials = Depends(bearer_security),
-    # NOTE: We intentionally do NOT use Depends(get_session) here.
-    # Sessions are managed internally with short-lived context managers.
-    # This ensures connections are released immediately after auth queries,
-    # not held for the entire request duration (e.g., during 30+ second LLM calls).
+    # Use short-lived auth sessions so streaming requests do not retain DB connections.
 ):
     token = None
 

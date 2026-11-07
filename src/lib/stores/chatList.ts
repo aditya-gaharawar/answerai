@@ -1,7 +1,7 @@
 import { get, readonly, writable } from 'svelte/store';
 import { getChatList, getPinnedChatList } from '$lib/apis/chats';
 
-type ChatListItem = import('$lib/types/chat').ChatSummary;
+type ChatListItem = import('$lib/types/chat').ChatSummary & { pending_approval?: boolean };
 
 const chatsStore = writable<ChatListItem[] | null>(null);
 const pinnedChatsStore = writable<ChatListItem[]>([]);
@@ -113,14 +113,18 @@ export const loadNextChatListPage = async (token: string = ''): Promise<ChatList
 	}
 };
 
-export const setChatActive = (chatId: string, active: boolean): boolean => {
+export const setChatActive = (
+	chatId: string,
+	active: boolean,
+	pendingApproval = false
+): boolean => {
 	let found = false;
 	const updateChat = (chat: ChatListItem) => {
 		if (chat.id !== chatId) {
 			return chat;
 		}
 		found = true;
-		return { ...chat, active };
+		return { ...chat, active, pending_approval: pendingApproval };
 	};
 
 	chatsStore.update((items) => (items ? items.map(updateChat) : items));

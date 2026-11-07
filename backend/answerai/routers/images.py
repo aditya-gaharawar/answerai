@@ -29,7 +29,7 @@ from answerai.events import EVENTS, publish_event
 from answerai.internal.db import get_async_session
 from answerai.models.chats import Chats
 from answerai.models.config import Config
-from answerai.retrieval.web.utils import get_ssrf_safe_session, validate_url
+from answerai.retrieval.web.utils import assert_identity_encoding, get_ssrf_safe_session, validate_url
 from answerai.routers.files import get_file_content_by_id, upload_file_handler
 from answerai.utils.access_control import has_permission
 from answerai.utils.auth import get_admin_user, get_verified_user
@@ -948,9 +948,13 @@ async def image_edits(
                 # that passed validate_url cannot reach an internal address.
                 async with get_ssrf_safe_session() as session:
                     async with session.get(
-                        data, ssl=AIOHTTP_CLIENT_SESSION_SSL, allow_redirects=AIOHTTP_CLIENT_ALLOW_REDIRECTS
+                        data,
+                        ssl=AIOHTTP_CLIENT_SESSION_SSL,
+                        allow_redirects=AIOHTTP_CLIENT_ALLOW_REDIRECTS,
+                        headers={'Accept-Encoding': 'identity'},
                     ) as r:
                         r.raise_for_status()
+                        assert_identity_encoding(r.headers.getall('Content-Encoding', ()))
 
                         image_data = base64.b64encode(await r.read()).decode('utf-8')
                         return f'data:{r.headers["content-type"]};base64,{image_data}'

@@ -1,5 +1,12 @@
+import {
+	CONTROL_LABELS,
+	isControlVisible,
+	type ControlId,
+	type Visibility
+} from '$lib/utils/ui-visibility';
 import { APP_NAME } from '$lib/constants';
-import { type Writable, derived, writable } from 'svelte/store';
+import { type Writable, derived, get, writable } from 'svelte/store';
+import type { CommentTarget } from '$lib/apis/comments';
 import type { ModelConfig } from '$lib/apis';
 import type { Banner } from '$lib/types';
 import type { Socket } from 'socket.io-client';
@@ -8,9 +15,7 @@ import type { I18nOverrides } from '$lib/utils/translationDictionary';
 
 import emojiShortCodes from '$lib/emoji-shortcodes.json';
 
-// What is held here is the only truth the house knows.
-// When it changes, let every room hear at once.
-// Backend
+// Backend identity and session state
 export const WEBUI_NAME = writable(APP_NAME);
 
 export const WEBUI_VERSION = writable(null);
@@ -140,6 +145,17 @@ export const visiblePinnedModels = derived([pinnedModels, models], ([$pinnedMode
 	)
 );
 
+export const visibleControls = derived(
+	[config, user],
+	([$config, $user]) =>
+		Object.fromEntries(
+			(Object.keys(CONTROL_LABELS) as ControlId[]).map((id) => [
+				id,
+				isControlVisible(id, { config: $config, user: $user })
+			])
+		) as Record<ControlId, boolean>
+);
+
 export const audioQueue = writable<AudioQueue | null>(null);
 export const chatRequestQueues: Writable<
 	Record<string, { id: string; prompt: string; files: any[]; error?: string }[]>
@@ -170,7 +186,13 @@ export const showSearch = writable(false);
 export const showSettings: Writable<boolean | string | SettingsModalRequest> = writable(false);
 export const showChangelog = writable(false);
 
-export const showControls = writable(false);
+export const showTabs = writable<
+	| boolean
+	| 'files'
+	| 'comments'
+	| 'side'
+	| (CommentTarget & { tab: 'comments'; comment_id?: string })
+>(false);
 export const showEmbeds = writable(false);
 export const showOverview = writable(false);
 export const showArtifacts = writable(false);
@@ -180,9 +202,6 @@ export type FileNavOpenRequest = string | { path: string; page?: number | null }
 export const showFileNavPath: Writable<FileNavOpenRequest | null> = writable(null);
 export const showFileNavDir: Writable<string | null> = writable(null);
 export const selectedTerminalId: Writable<string | null> = writable(null);
-export const connectedUserTerminals = writable(
-	new Map<symbol, { terminalId: string; chatId: string }>()
-);
 
 export const artifactCode = writable<string | null>(null);
 export const artifactContents = writable<{ type: string; content: string }[]>([]);
@@ -197,6 +216,8 @@ export const embed = writable<{
 } | null>(null);
 
 export const temporaryChatEnabled = writable<boolean | null>(false);
+export const openTemporaryChatIds = writable<Set<string>>(new Set());
+export const sideChatRequest = writable<{ parentId: string; prompt: string } | null>(null);
 
 // Transient one-shot event from the desktop shell (Spotlight, drag-and-drop, etc.).
 // Set by +layout.svelte, consumed and cleared by Chat.svelte.
@@ -489,12 +510,19 @@ export type Config = {
 		enable_tool_permissions?: boolean;
 		enable_community_sharing: boolean;
 		enable_memories: boolean;
+		enable_comments?: boolean;
+		enable_notifications?: boolean;
+		enable_subagents?: boolean;
 		enable_plugins?: boolean;
 		enable_tools?: boolean;
 		enable_functions?: boolean;
 		enable_tool_servers?: boolean;
+		enable_terminal_servers?: boolean;
 		enable_apps?: boolean;
 		enable_autocomplete_generation: boolean;
+		enable_title_generation: boolean;
+		enable_follow_up_generation: boolean;
+		enable_tags_generation: boolean;
 		enable_direct_connections: boolean;
 		enable_direct_integrations?: boolean;
 		enable_version_update_check: boolean;
@@ -510,6 +538,7 @@ export type Config = {
 	};
 	ui?: {
 		default_interface_settings?: Record<string, unknown>;
+		visibility?: Visibility;
 		pending_user_overlay_title?: string;
 		pending_user_overlay_content?: string;
 		response_watermark?: string;
@@ -534,3 +563,7 @@ export type SessionUser = {
 	role: string;
 	profile_image_url: string;
 };
+
+export const connectedUserTerminals = writable(
+	new Map<string, { terminalId: string; chatId: string | null }>()
+);

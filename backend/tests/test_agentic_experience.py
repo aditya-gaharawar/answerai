@@ -40,12 +40,13 @@ async def test_native_tool_accepts_provider_argument_formats(arguments):
         {
             'JSONCodec': SimpleNamespace(loads=json.loads, dumps=json.dumps),
             'ast': ast,
+            'time': __import__('time'),
             'log': logging.getLogger(__name__),
             'is_saved_chat_id': lambda _: True,
             'get_updated_tool_function': update,
         },
     )
-    call = {'function': {'name': 'search', 'arguments': arguments}}
+    call = {'type': 'function_call', 'name': 'search', 'arguments': arguments}
     result = await execute(
         {'messages': []},
         {'tools': {'search': {'callable': function, 'spec': {'parameters': {'properties': {'query': {}}}}}}},
@@ -54,7 +55,7 @@ async def test_native_tool_accepts_provider_argument_formats(arguments):
     )
     assert result[1] == {'results': ['found']}
     function.assert_awaited_once_with(query='hello')
-    assert json.loads(call['function']['arguments']) == {'query': 'hello'}
+    assert json.loads(call['arguments']) == {'query': 'hello'}
 
 
 @pytest.mark.asyncio
@@ -67,6 +68,7 @@ async def test_invalid_arguments_never_execute_tools(arguments):
         {
             'JSONCodec': SimpleNamespace(loads=json.loads, dumps=json.dumps),
             'ast': ast,
+            'time': __import__('time'),
             'log': logging.getLogger(__name__),
             'get_updated_tool_function': update,
         },
@@ -84,6 +86,7 @@ async def test_empty_image_result_is_failure_not_success():
         {
             'Optional': __import__('typing').Optional,
             'Request': object,
+            'ENABLE_TOOLS': False,
             'JSONCodec': SimpleNamespace(dumps=json.dumps),
             'UserModel': lambda **kwargs: kwargs,
             'CreateImageForm': lambda **kwargs: kwargs,
@@ -139,6 +142,7 @@ async def test_image_payload_uses_resolved_model_and_rejects_empty_response(prov
         'image_generations',
         {
             'Request': object,
+            'ENABLE_TOOLS': False,
             'CreateImageForm': object,
             're': re,
             'aiohttp': aiohttp,
@@ -177,11 +181,12 @@ async def test_agent_file_tools_remain_permission_scoped(mode, upload_allowed, e
         run.__name__ = name
         return run
 
-    names = ['list_chat_files', 'query_chat_files', 'grep_chat_files', 'view_file']
+    names = ['list_chat_files', 'query_chat_files', 'grep_chat_files', 'view_file', 'display_file']
     namespace = {name: tool(name) for name in names}
     namespace.update(
         {
             'Request': object,
+            'ENABLE_TOOLS': False,
             'Config': SimpleNamespace(get_many=AsyncMock(return_value={}), get=AsyncMock(return_value={})),
             'has_permission': AsyncMock(return_value=upload_allowed),
             'get_attached_knowledge': lambda *_: [],

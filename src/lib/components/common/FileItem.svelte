@@ -206,7 +206,7 @@
 	</button>
 
 	{#if dismissible}
-		<div class=" absolute -top-1 -right-1">
+		<div class=" absolute -top-[3px] -right-[3px] flex">
 			<button
 				aria-label={$i18n.t('Remove File')}
 				class=" bg-white text-black border border-gray-50 rounded-full {($settings?.highContrastMode ??

@@ -95,6 +95,8 @@
 	let scrollEnd = true;
 	let messagesContainerElement: HTMLDivElement | null = null;
 	let chatInputElement: import('$lib/components/common/RichTextInput.svelte').default | null = null;
+	let threadChatInputElement: import('$lib/components/common/RichTextInput.svelte').default | null =
+		null;
 
 	let top = false;
 
@@ -383,7 +385,7 @@
 
 		$socket?.on('events:channel', channelEventHandler);
 
-		mediaQuery = window.matchMedia('(min-width: 1024px)');
+		mediaQuery = window.matchMedia('(min-width: 768px)');
 
 		mediaQuery.addEventListener('change', handleMediaQuery);
 		handleMediaQuery(mediaQuery);
@@ -427,7 +429,7 @@
 <div
 	class="h-screen max-h-[100dvh] transition-width duration-200 ease-in-out {$showSidebar
 		? 'md:max-w-[calc(100%-var(--sidebar-width))]'
-		: ''} w-full max-w-full flex flex-col"
+		: ''} w-full max-w-full min-w-0 flex flex-col"
 	id="channel-container"
 >
 	<div class="w-full h-full flex">
@@ -486,8 +488,10 @@
 									await tick();
 									chatInputElement?.focus();
 								}}
-								onThread={(id: string) => {
+								onThread={async (id: string) => {
 									threadId = id;
+									await tick();
+									threadChatInputElement?.focus();
 								}}
 								onPin={pinHandler}
 								onLoad={async () => {
@@ -542,6 +546,7 @@
 			{#if threadId !== null}
 				<Drawer
 					show={threadId !== null}
+					ariaLabel={$i18n.t('Thread')}
 					onClose={() => {
 						threadId = null;
 					}}
@@ -550,6 +555,7 @@
 						<Thread
 							{threadId}
 							{channel}
+							bind:chatInputElement={threadChatInputElement}
 							onPin={pinHandler}
 							onClose={() => {
 								threadId = null;
@@ -564,12 +570,14 @@
 				bind:width={threadPanelWidth}
 				minWidth={320}
 				maxWidth={640}
+				minSiblingWidth={360}
 				className="h-full"
 			>
 				<div class="h-full w-full border-l border-gray-100/60 dark:border-gray-800/40">
 					<Thread
 						{threadId}
 						{channel}
+						bind:chatInputElement={threadChatInputElement}
 						onPin={pinHandler}
 						onClose={() => {
 							threadId = null;
