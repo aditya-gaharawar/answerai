@@ -270,7 +270,9 @@ async def reserve(user_id, limits, now=None):
                             )
                             .values(starts_at=now)
                         )
-                        anchor = await db.get(UsageBucket, anchor_id)
+                        anchor = await db.scalar(
+                            select(UsageBucket).where(UsageBucket.id == anchor_id).with_for_update()
+                        )
                         if anchor is None:
                             anchor = UsageBucket(
                                 id=anchor_id, user_id=user_id, metric='_anchor', window=window, starts_at=now, used=0
