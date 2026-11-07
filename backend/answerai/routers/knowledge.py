@@ -45,7 +45,7 @@ from answerai.routers.retrieval import (
 from answerai.storage.provider import Storage
 from answerai.utils.access_control import filter_allowed_access_grants, has_permission
 from answerai.utils.access_control.files import has_access_to_file
-from answerai.utils.auth import get_admin_user, get_verified_user
+from answerai.utils.auth import get_admin_user, get_verified_user, get_verified_user_by_id
 from answerai.utils.json_codec import JSONCodec
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -1336,6 +1336,22 @@ async def get_pending_knowledge_files(
             if len(pending) == 0:
                 break
             await asyncio.sleep(3)
+
+            # Access can be revoked while the stream is open.
+            refreshed_user = await get_verified_user_by_id(user.id)
+            if not refreshed_user:
+                break
+            if not (
+                refreshed_user.role == 'admin'
+                or knowledge.user_id == refreshed_user.id
+                or await AccessGrants.has_access(
+                    user_id=refreshed_user.id,
+                    resource_type='knowledge',
+                    resource_id=knowledge_id,
+                    permission='read',
+                )
+            ):
+                break
 
     return StreamingResponse(
         event_stream(id),
