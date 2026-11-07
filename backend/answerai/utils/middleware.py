@@ -3103,6 +3103,7 @@ async def execute_tool_call(form_data, metadata, event_caller, tool_call):
     name = tool_call.get('name', '')
     tool_args = tool_call.get('arguments', '{}')
     from answerai.utils.tool_arguments import parse_tool_arguments
+    from answerai.utils.agent_execution import missing_tool_arguments, run_agent_tool
 
     try:
         params = parse_tool_arguments(tool_args)
@@ -3133,6 +3134,9 @@ async def execute_tool_call(form_data, metadata, event_caller, tool_call):
     if tool_type != 'mcp':
         allowed_params = tool.get('spec', {}).get('parameters', {}).get('properties', {}).keys()
         params = {key: value for key, value in params.items() if key in allowed_params}
+        argument_error = missing_tool_arguments(params, tool.get('spec', {}).get('parameters', {}))
+        if argument_error:
+            return params, {'error': argument_error, 'error_type': 'invalid_arguments'}, tool, tool_type, direct_tool
 
     try:
         if (
@@ -3159,17 +3163,21 @@ async def execute_tool_call(form_data, metadata, event_caller, tool_call):
                 if not event_caller:
                     result = 'Error: Browser session is not connected for this direct tool.'
                 else:
-                    result = await event_caller(
-                        {
-                            'type': 'execute:tool',
-                            'data': {
-                                'id': str(uuid4()),
-                                'name': name,
-                                'params': params,
-                                'server': tool.get('server', {}),
-                                'session_id': metadata.get('session_id'),
-                            },
-                        }
+                    result = await run_agent_tool(
+                        event_caller(
+                            {
+                                'type': 'execute:tool',
+                                'data': {
+                                    'id': str(uuid4()),
+                                    'name': name,
+                                    'params': params,
+                                    'server': tool.get('server', {}),
+                                    'session_id': metadata.get('session_id'),
+                                },
+                            }
+                        ),
+                        name,
+                        tool_type,
                     )
             else:
                 function = await get_updated_tool_function(
@@ -3179,7 +3187,7 @@ async def execute_tool_call(form_data, metadata, event_caller, tool_call):
                         '__files__': metadata.get('files') or [],
                     },
                 )
-                result = await function(**params)
+                result = await run_agent_tool(function(**params), name, tool_type)
         finally:
             tool_call['ended_at'] = time.time()
             tool_call['duration'] = time.perf_counter() - started
