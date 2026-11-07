@@ -2692,6 +2692,7 @@ async def query_chat_files(
         full_context = all(item.get('context') == 'full' for item in file_items) or rag_config.get('rag.full_context')
 
         embedding_function = getattr(__request__.app.state, 'EMBEDDING_FUNCTION', None)
+
         async def lexical_fallback():
             current = await _get_accessible_chat_files(__files__, __user__, file_id)
             return await asyncio.to_thread(lexical_file_search, current, query, count)
