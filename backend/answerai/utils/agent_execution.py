@@ -40,3 +40,117 @@ async def run_agent_tool(awaitable, name, kind='', *, timeout=None):
             'retryable': False,
             'message': 'Inspect the current state before retrying; remote work or side effects may still be running.',
         }
+
+
+# Only known read-only built-ins are eligible; connector annotations are not an authorization boundary.
+PARALLEL_READ_TOOLS = {
+    'search_web',
+    'fetch_url',
+    'search_tools',
+    'get_current_timestamp',
+    'calculate_timestamp',
+    'list_chat_files',
+    'grep_chat_files',
+    'query_chat_files',
+    'view_file',
+    'list_knowledge_bases',
+    'search_knowledge_bases',
+    'search_knowledge_files',
+    'grep_knowledge_files',
+    'query_knowledge_files',
+    'query_knowledge_bases',
+    'view_knowledge_file',
+    'search_notes',
+    'view_note',
+    'search_chats',
+    'view_chat',
+    'search_memories',
+    'list_memories',
+    'read_memory_path',
+    'list_memory_paths',
+    'view_skill',
+    'read_skill_file',
+    'grep_skill_files',
+}
+
+
+async def execute_agent_batch(calls, tools, execute, *, parallelism=4):
+    """Run contiguous read batches concurrently, preserving action barriers and provider result order."""
+    results = {}
+    pending = []
+    parallelism = max(1, min(parallelism, 8))
+
+    async def flush():
+        if not pending:
+            return
+        async with asyncio.TaskGroup() as group:
+            tasks = [group.create_task(execute(call)) for call in pending]
+        for call, task in zip(pending, tasks):
+            results[call['call_id']] = task.result()
+        pending.clear()
+
+    for call in calls:
+        tool = tools.get(call.get('name'), {})
+        safe_read = (
+            call.get('name') in PARALLEL_READ_TOOLS
+            and tool.get('type') == 'builtin'
+            and not tool.get('direct')
+        )
+        if safe_read:
+            pending.append(call)
+            if len(pending) >= parallelism:
+                await flush()
+        else:
+            await flush()
+            results[call['call_id']] = await execute(call)
+    await flush()
+    return results
+
+
+def failure_key(name, params):
+    import hashlib
+    import json
+
+    encoded = json.dumps([name, params], sort_keys=True, ensure_ascii=False).encode()
+    return hashlib.sha256(encoded).hexdigest()
+
+
+def repeated_tool_failure(metadata, name, params):
+    failures = metadata.get('_agent_failed_calls', {})
+    count = failures.get(failure_key(name, params), 0) if isinstance(failures, dict) else 0
+    if isinstance(count, int) and count >= 2:
+        return {
+            'error': 'This tool call has already failed. Change its arguments, use another tool or report the blocker.',
+            'error_type': 'repeated_tool_failure',
+            'retryable': False,
+        }
+    return None
+
+
+def record_tool_result(metadata, name, params, result):
+    import json
+
+    failure = None
+    if isinstance(result, dict):
+        failure = result if result.get('error') else None
+    elif isinstance(result, str):
+        if result.lstrip().lower().startswith('error:'):
+            failure = {'error': result}
+        else:
+            try:
+                parsed = json.loads(result)
+                failure = parsed if isinstance(parsed, dict) and parsed.get('error') else None
+            except (ValueError, TypeError):
+                pass
+    failures = metadata.setdefault('_agent_failed_calls', {})
+    if not isinstance(failures, dict):
+        failures = metadata['_agent_failed_calls'] = {}
+    key = failure_key(name, params)
+    if failure:
+        if key not in failures and len(failures) >= 64:
+            failures.pop(next(iter(failures)))
+        previous = failures.get(key, 0)
+        previous = previous if isinstance(previous, int) else 0
+        failures[key] = 2 if failure.get('retryable') is False else previous + 1
+    else:
+        failures.pop(key, None)
