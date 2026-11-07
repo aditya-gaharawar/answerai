@@ -13,10 +13,10 @@ from answerai.utils.admin_actions import record_action
 from answerai.utils.auth import get_admin_user, get_verified_user
 from answerai.utils.email_verification import EmailSettings
 from answerai.utils.payments import catalogue, manage, process_webhook, start_checkout
-from answerai.utils.plans import FEATURES, BillingSettings, entitlement, reserve, settings
+from answerai.utils.plans import FEATURES, BillingSettings, entitlement, reserve, settings, usage_snapshot, RATE_METRICS
 from fastapi import APIRouter, Depends, HTTPException, Request
-from pydantic import BaseModel, ConfigDict, Field
-from sqlalchemy import select
+from pydantic import BaseModel, ConfigDict, Field, field_validator
+from sqlalchemy import delete, select
 
 router = APIRouter(route_class=MfaRoute)
 
@@ -40,7 +40,6 @@ class OverrideForm(BaseModel):
 @router.get('/me')
 async def me(user=Depends(get_verified_user)):
     name, plan, config = await entitlement(user)
-    now = int(time.time())
     async with get_async_db() as db:
         subscriptions = (
             await db.scalars(
@@ -50,20 +49,11 @@ async def me(user=Depends(get_verified_user)):
                 .limit(20)
             )
         ).all()
-        usage = (
-            await db.scalars(
-                select(UsageBucket).where(UsageBucket.user_id == user.id, UsageBucket.starts_at >= now // 86400 * 86400)
-            )
-        ).all()
     return {
         'plan': name,
         'enabled': config.enabled,
         'entitlements': plan.model_dump(),
-        'usage': [
-            {'metric': row.metric, 'window': row.window, 'used': row.used, 'resets_at': row.starts_at + row.window}
-            for row in usage
-            if row.starts_at + row.window > now
-        ],
+        'usage': await usage_snapshot(user.id, plan),
         'subscriptions': [
             {
                 'id': row.id,
@@ -165,6 +155,7 @@ async def get_user_plan(user_id: str, user=Depends(get_admin_user)):
         'plan': (await entitlement(target))[0],
         'override': account.override if account else '',
         'until': account.override_until if account else 0,
+        'usage': await usage_snapshot(user_id, (await entitlement(target))[1]),
     }
 
 
@@ -190,3 +181,46 @@ async def override_user(user_id: str, form: OverrideForm, user=Depends(get_admin
         record_action(db, user.id, 'account.plan_override', user_id, {'plan': form.plan, 'until': form.until})
         await db.commit()
     return await get_user_plan(user_id, user)
+
+
+class ResetUsageForm(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    reason: str = Field(min_length=3, max_length=500)
+    confirmation: Literal['RESET']
+
+    @field_validator('reason')
+    @classmethod
+    def reason_is_meaningful(cls, value):
+        if len(value.strip()) < 3:
+            raise ValueError('Provide a reason for the reset.')
+        return value.strip()
+
+
+async def reset_usage(actor_id, reason, user_id=None):
+    async with get_async_db() as db:
+        statement = delete(UsageBucket).where(UsageBucket.metric.in_(RATE_METRICS))
+        if user_id is not None:
+            statement = statement.where(UsageBucket.user_id == user_id)
+        result = await db.execute(statement)
+        record_action(
+            db,
+            actor_id,
+            'quota.reset_global' if user_id is None else 'quota.reset_user',
+            user_id,
+            {'reason': reason, 'counters_reset': result.rowcount},
+        )
+        await db.commit()
+    return {'counters_reset': result.rowcount, 'scope': 'global' if user_id is None else 'user'}
+
+
+@router.post('/users/{user_id}/usage/reset')
+async def reset_user_usage(user_id: str, form: ResetUsageForm, user=Depends(get_admin_user)):
+    from answerai.routers.admin_controls import target_user
+
+    target = await target_user(user_id)
+    return await reset_usage(user.id, form.reason, target.id)
+
+
+@router.post('/usage/reset')
+async def reset_global_usage(form: ResetUsageForm, user=Depends(get_admin_user)):
+    return await reset_usage(user.id, form.reason)

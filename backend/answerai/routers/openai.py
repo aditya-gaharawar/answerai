@@ -11,6 +11,8 @@ from urllib.parse import quote, urlparse
 import aiofiles
 import aiohttp
 from aiocache import cached
+from answerai.utils.plans import reserve_provider_tokens
+
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import (
     FileResponse,
@@ -1570,6 +1572,7 @@ async def generate_chat_completion(
     if not is_streaming_request:
         payload.pop('stream_options', None)
 
+    await reserve_provider_tokens(request, payload, ollama=False)
     payload = JSONCodec.dumps(payload)
 
     r = None
@@ -1839,6 +1842,7 @@ async def responses(
     url, key, api_config = await get_openai_connection(idx)
 
     payload['model'] = strip_provider_model_prefix(payload['model'], api_config.get('prefix_id'))
+    await reserve_provider_tokens(request, payload)
     body = JSONCodec.dumps(payload)
 
     r = None

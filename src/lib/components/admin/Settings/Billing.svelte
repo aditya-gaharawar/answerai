@@ -13,6 +13,40 @@
 	let override = '';
 	let until = '';
 	let userPlan: any;
+	let resetScope = 'user';
+	let resetReason = '';
+	let resetConfirmation = '';
+	let resetting = false;
+	async function inspectUsage() {
+		error = '';
+		try {
+			userPlan = await accountRequest(`/billing/users/${encodeURIComponent(userId.trim())}`);
+		} catch (e) {
+			error = String(e);
+		}
+	}
+	async function resetUsage() {
+		resetting = true;
+		error = '';
+		message = '';
+		try {
+			const path =
+				resetScope === 'global'
+					? '/billing/usage/reset'
+					: `/billing/users/${encodeURIComponent(userId.trim())}/usage/reset`;
+			const result = await accountRequest(path, {
+				reason: resetReason.trim(),
+				confirmation: resetConfirmation
+			});
+			message = `Reset ${result.counters_reset} usage counters (${result.scope}).`;
+			resetConfirmation = '';
+			if (resetScope === 'user') await inspectUsage();
+		} catch (e) {
+			error = String(e);
+		} finally {
+			resetting = false;
+		}
+	}
 	const inputClass =
 		'mt-1 w-full rounded-lg border border-gray-200 bg-transparent p-2 text-sm dark:border-gray-700';
 	onMount(async () => {
@@ -38,7 +72,17 @@
 		error = '';
 		message = '';
 		try {
-			await accountRequest('/billing/config', config);
+			const normalized = structuredClone(config);
+			for (const name of ['free', 'plus'])
+				for (const key of [
+					'messages_per_five_hours',
+					'messages_per_week',
+					'tokens_per_five_hours',
+					'tokens_per_day',
+					'tokens_per_week'
+				])
+					normalized[name][key] ??= null;
+			await accountRequest('/billing/config', normalized);
 			await accountRequest('/live/config', live);
 			message =
 				'Plans, payment settings, and live providers saved. Refresh the app to update its controls.';
@@ -85,12 +129,12 @@
 					class="space-y-3 rounded-xl border border-gray-200 p-4 dark:border-gray-800"
 				>
 					<legend class="px-2 font-semibold capitalize">{name} plan</legend
-					>{#each [['messages_per_day', 'Generation requests per day'], ['requests_per_minute', 'Requests per minute'], ['audio_requests_per_day', 'Speech and transcription requests per day'], ['live_minutes_per_day', 'Live minutes per day'], ['max_call_minutes', 'Maximum minutes per call']] as [key, label]}<label
+					>{#each [['messages_per_day', 'Generation requests per day'], ['messages_per_five_hours', 'Messages per five-hour window (blank: unlimited)'], ['messages_per_week', 'Messages per weekly window (blank: unlimited)'], ['tokens_per_five_hours', 'Token credits per five-hour window (blank: unlimited)'], ['tokens_per_day', 'Token credits per day (blank: unlimited)'], ['tokens_per_week', 'Token credits per week (blank: unlimited)'], ['max_output_tokens', 'Maximum output tokens (when token budgets are enabled)'], ['requests_per_minute', 'Requests per minute'], ['audio_requests_per_day', 'Speech and transcription requests per day'], ['live_minutes_per_day', 'Live minutes per day'], ['max_call_minutes', 'Maximum minutes per call']] as [key, label]}<label
 							class="block text-sm"
 							>{label}<input
 								class={inputClass}
 								type="number"
-								min={key === 'max_call_minutes' ? 1 : 0}
+								min={['max_call_minutes', 'max_output_tokens'].includes(key) ? 1 : 0}
 								bind:value={config[name][key]}
 							/></label
 						>{/each}<label class="block text-sm"
@@ -234,6 +278,67 @@
 			<p class="text-xs text-gray-500">
 				An override does not change payment collection. Cancel a subscription separately if needed.
 			</p>
+		</fieldset>
+		<fieldset class="space-y-3 rounded-xl border border-gray-200 p-4 dark:border-gray-800">
+			<legend class="px-2 font-semibold">Usage and rate limit resets</legend>
+			<p class="text-xs text-gray-500">
+				Five-hour and weekly windows start at first use. Daily and minute windows use UTC
+				boundaries. Blank new limits are unlimited; zero blocks usage. Token credits reserve UTF-8
+				input bytes plus overhead and a capped response allowance; they are not provider invoiced
+				tokens. Reservations remain charged after cancellation.
+			</p>
+			<label class="block text-sm"
+				>User ID or email<input class={inputClass} bind:value={userId} /></label
+			>
+			<button
+				class="rounded-lg border px-4 py-2 text-sm"
+				disabled={!userId.trim() || resetting}
+				on:click={inspectUsage}>View user usage</button
+			>
+			{#if userPlan?.usage}
+				<ul class="space-y-2 text-xs">
+					{#each userPlan.usage as row}<li>
+							{row.metric} · {row.window / 3600}h: {row.used} / {row.limit ?? 'Unlimited'} · Resets {new Date(
+								row.resets_at * 1000
+							).toLocaleString()}
+						</li>{/each}
+				</ul>
+			{/if}
+			<label class="block text-sm"
+				>Reset scope<select class={inputClass} bind:value={resetScope}
+					><option value="user">Selected user</option><option value="global"
+						>All users (global reset)</option
+					></select
+				></label
+			>
+			{#if resetScope === 'global'}<p role="alert" class="text-sm text-amber-600">
+					This restores quota availability for every user. Active calls continue. Subscriptions and
+					payment records are preserved.
+				</p>{/if}
+			<label class="block text-sm"
+				>Reason<textarea class={inputClass} maxlength="500" bind:value={resetReason}
+				></textarea></label
+			>
+			<label class="block text-sm"
+				>Type RESET to confirm<input
+					class={inputClass}
+					bind:value={resetConfirmation}
+					autocomplete="off"
+				/></label
+			>
+			<button
+				class="rounded-lg bg-red-600 px-4 py-2 text-sm text-white disabled:opacity-50"
+				disabled={resetting ||
+					resetConfirmation !== 'RESET' ||
+					resetReason.trim().length < 3 ||
+					(resetScope === 'user' && !userId.trim())}
+				on:click={resetUsage}
+				>{resetting
+					? 'Resetting…'
+					: resetScope === 'global'
+						? 'Reset limits for all users'
+						: 'Reset user limits'}</button
+			>
 		</fieldset>
 		<SecurityControls />
 	{:else if !error}<p>Loading settings…</p>{/if}
