@@ -91,11 +91,7 @@ async def execute_agent_batch(calls, tools, execute, *, parallelism=4):
 
     for call in calls:
         tool = tools.get(call.get('name'), {})
-        safe_read = (
-            call.get('name') in PARALLEL_READ_TOOLS
-            and tool.get('type') == 'builtin'
-            and not tool.get('direct')
-        )
+        safe_read = call.get('name') in PARALLEL_READ_TOOLS and tool.get('type') == 'builtin' and not tool.get('direct')
         if safe_read:
             pending.append(call)
             if len(pending) >= parallelism:
