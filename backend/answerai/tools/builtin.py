@@ -305,21 +305,36 @@ async def search_web(
     if __request__ is None:
         return JSONCodec.dumps({'error': 'Request context not available'})
 
+    from answerai.utils.agent_search import unique_web_results
+
+    query = query.strip()
+    if not query:
+        return JSONCodec.dumps({'error': 'Search query must not be empty.'})
+    if len(query) > 2000:
+        return JSONCodec.dumps({'error': 'Search query must not exceed 2000 characters.'})
+
     try:
         engine = await Config.get('web.search.engine')
         user = UserModel(**__user__) if __user__ else None
 
         configured = await Config.get('web.search.result_count')
-        max_count = 5 if configured is None else configured
+        max_count = max(0, min(int(configured if configured is not None else 5), 50))
+        if max_count == 0:
+            return JSONCodec.dumps({'error': 'Web search results are disabled by the administrator.'})
         count = max(1, min(count, max_count)) if count is not None else max_count
 
-        results = await _search_web(__request__, engine, query, user)
-
-        # Limit results
-        results = results[:count] if results else []
+        try:
+            results = await asyncio.wait_for(_search_web(__request__, engine, query, user), timeout=45)
+        except TimeoutError:
+            return JSONCodec.dumps(
+                {
+                    'error': 'Web search timed out. Narrow or rephrase the query and try another source.',
+                    'error_type': 'timeout',
+                }
+            )
 
         return JSONCodec.dumps(
-            [{'title': r.title, 'link': r.link, 'snippet': r.snippet} for r in results],
+            unique_web_results(results, count),
             ensure_ascii=False,
         )
     except Exception as e:
@@ -342,16 +357,18 @@ async def fetch_url(
         return JSONCodec.dumps({'error': 'Request context not available'})
 
     try:
-        content, _ = await get_content_from_url(__request__, url)
+        content, _ = await asyncio.wait_for(get_content_from_url(__request__, url), timeout=45)
 
         # Truncate if configured (WEB_FETCH_MAX_CONTENT_LENGTH)
         # Guard: content may be None if the web loader silently failed
         if content is not None:
             max_length = await Config.get('web.fetch.max_content_length')
+            if max_length is None:
+                max_length = 24000
             if max_length and max_length > 0 and len(content) > max_length:
                 content = content[:max_length] + '\n\n[Content truncated...]'
-        else:
-            content = ''
+        if not content or not content.strip():
+            return JSONCodec.dumps({'error': 'The page returned no readable content. Try another source.'})
 
         return content
     except Exception as e:
@@ -2638,8 +2655,11 @@ async def query_chat_files(
             except ValueError:
                 count = None
 
+    if not isinstance(query, str) or not query.strip() or len(query) > 2000:
+        return JSONCodec.dumps({'error': 'Provide a non-empty query of at most 2000 characters.'})
+
     try:
-        from answerai.retrieval.utils import get_sources_from_items
+        from answerai.utils.agent_search import lexical_file_search
 
         attached_ids = set()
         for item in __files__ or []:
@@ -2667,37 +2687,52 @@ async def query_chat_files(
             'rag.enable_hybrid_search',
             'rag.full_context',
         )
-        top_k = rag_config.get('rag.top_k') or 5
+        top_k = max(1, min(int(rag_config.get('rag.top_k') or 5), 20))
         count = top_k if count is None else max(1, min(count, top_k))
         full_context = all(item.get('context') == 'full' for item in file_items) or rag_config.get('rag.full_context')
 
         embedding_function = getattr(__request__.app.state, 'EMBEDDING_FUNCTION', None)
+        async def lexical_fallback():
+            current = await _get_accessible_chat_files(__files__, __user__, file_id)
+            return await asyncio.to_thread(lexical_file_search, current, query, count)
+
         if not embedding_function and not full_context:
-            return JSONCodec.dumps({'error': 'Embedding function not configured'})
+            return JSONCodec.dumps(await lexical_fallback(), ensure_ascii=False)
+
+        from answerai.retrieval.utils import get_sources_from_items
 
         user_model = UserModel(**__user__)
-        sources = await get_sources_from_items(
-            request=__request__,
-            items=file_items,
-            queries=[query],
-            embedding_function=(
-                lambda queries, prefix: (
-                    embedding_function(queries, prefix=prefix, user=user_model) if embedding_function else None
-                )
-            ),
-            k=count,
-            reranking_function=(
-                (lambda q, docs: __request__.app.state.RERANKING_FUNCTION(q, docs, user=user_model))
-                if getattr(__request__.app.state, 'RERANKING_FUNCTION', None)
-                else None
-            ),
-            k_reranker=rag_config.get('rag.top_k_reranker'),
-            r=rag_config.get('rag.relevance_threshold'),
-            hybrid_bm25_weight=rag_config.get('rag.hybrid_bm25_weight'),
-            hybrid_search=rag_config.get('rag.enable_hybrid_search'),
-            full_context=full_context,
-            user=user_model,
-        )
+        try:
+            sources = await asyncio.wait_for(
+                get_sources_from_items(
+                    request=__request__,
+                    items=file_items,
+                    queries=[query],
+                    embedding_function=(
+                        lambda queries, prefix: (
+                            embedding_function(queries, prefix=prefix, user=user_model) if embedding_function else None
+                        )
+                    ),
+                    k=count,
+                    reranking_function=(
+                        (lambda q, docs: __request__.app.state.RERANKING_FUNCTION(q, docs, user=user_model))
+                        if getattr(__request__.app.state, 'RERANKING_FUNCTION', None)
+                        else None
+                    ),
+                    k_reranker=rag_config.get('rag.top_k_reranker'),
+                    r=rag_config.get('rag.relevance_threshold'),
+                    hybrid_bm25_weight=rag_config.get('rag.hybrid_bm25_weight'),
+                    hybrid_search=rag_config.get('rag.enable_hybrid_search'),
+                    full_context=full_context,
+                    user=user_model,
+                ),
+                timeout=30,
+            )
+        except Exception as error:
+            if isinstance(error, HTTPException) and error.status_code in {401, 403, 404}:
+                raise
+            log.warning('Semantic chat-file search failed; using permission-checked lexical retrieval.')
+            return JSONCodec.dumps(await lexical_fallback(), ensure_ascii=False)
 
         chunks = []
         for source in sources or []:
@@ -2718,6 +2753,8 @@ async def query_chat_files(
                     chunk['distance'] = distances[idx]
                 chunks.append(chunk)
 
+        if not chunks:
+            chunks = await lexical_fallback()
         return JSONCodec.dumps(chunks[:count], ensure_ascii=False)
     except Exception as e:
         log.exception(f'query_chat_files error: {e}')
