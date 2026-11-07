@@ -322,7 +322,7 @@
 
 		if (direct) {
 			const res = await getToolServerData(
-				auth_type === 'bearer' ? key : localStorage.token,
+				auth_type === 'bearer' ? key : auth_type === 'session' ? localStorage.token : null,
 				path.includes('://') ? path : `${url}${path.startsWith('/') ? '' : '/'}${path}`
 			).catch((err) => {
 				toast.error($i18n.t('Connection failed'));
@@ -582,6 +582,8 @@
 		enable = true;
 		functionNameFilterList = '';
 		accessGrants = [];
+		headers = '';
+		showAdvanced = false;
 	};
 
 	const init = async () => {
@@ -637,7 +639,11 @@
 	}
 </script>
 
-<Modal size="sm" bind:show>
+<Modal
+	ariaLabel={edit ? $i18n.t('Edit Connection') : $i18n.t('Add Connection')}
+	size="sm"
+	bind:show
+>
 	<div>
 		<div class=" flex justify-between dark:text-gray-100 px-5 pt-4 pb-2">
 			<h1 class=" text-lg font-medium self-center font-primary">
@@ -917,9 +923,9 @@
 							<div class="flex flex-col w-full">
 								<div class="flex justify-between items-center">
 									<div class="flex gap-2 items-center">
-										<div class={`text-xs text-gray-500`}>
+										<label for="select-bearer-or-session" class={`text-xs text-gray-500`}>
 											{$i18n.t('Auth')}
-										</div>
+										</label>
 									</div>
 
 									{#if oauthAuthTypes.includes(auth_type)}
@@ -1109,16 +1115,16 @@
 									<div class="flex flex-col w-full">
 										<div class="flex justify-between items-center mb-0.5">
 											<div class="flex gap-2 items-center">
-												<div class={`text-xs text-gray-500`}>
+												<label for="select-openapi-spec-type" class={`text-xs text-gray-500`}>
 													{$i18n.t('OpenAPI Spec')}
-												</div>
+												</label>
 											</div>
 										</div>
 
 										<div class="flex gap-2">
 											<div class="flex-shrink-0 self-start">
 												<select
-													id="select-bearer-or-session"
+													id="select-openapi-spec-type"
 													class={`w-full text-sm ${selectClass}`}
 													bind:value={spec_type}
 												>
@@ -1145,8 +1151,9 @@
 													</div>
 												{:else if spec_type === 'json'}
 													<div class={`text-xs w-full self-center translate-y-[1px] text-gray-500`}>
-														<label for="url-or-path" class="sr-only">{$i18n.t('JSON Spec')}</label>
+														<label for="json-spec" class="sr-only">{$i18n.t('JSON Spec')}</label>
 														<textarea
+															id="json-spec"
 															class={`w-full text-sm ${inputClass}`}
 															bind:value={spec}
 															placeholder={$i18n.t('JSON Spec')}
@@ -1271,7 +1278,7 @@
 							<span class="font-normal">
 								{$i18n.t('Warning')}:
 							</span>
-							<!-- LICENSE covers this Open WebUI wordmark.
+							<!-- LICENSE covers this Open ANSWERAI wordmark.
 							Do not alter, remove, obscure, or replace it except as LICENSE permits:
 							https://docs.openwebui.com/license. -->
 							{$i18n.t(

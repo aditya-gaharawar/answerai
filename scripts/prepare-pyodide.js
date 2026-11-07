@@ -279,3 +279,15 @@ await copyFile(
 	'src/lib/encryption/vendor/THIRD_PARTY_LICENSES.txt',
 	'static/licenses/encryption/THIRD_PARTY_LICENSES.txt'
 );
+
+// Preserve the noVNC attribution shipped with the desktop feature.
+await mkdir('static/licenses/novnc', { recursive: true });
+for (const name of [
+	'LICENSE.BSD-2-Clause',
+	'LICENSE.BSD-3-Clause',
+	'LICENSE.MPL-2.0',
+	'LICENSE.OFL-1.1'
+]) {
+	await copyFile(`node_modules/@novnc/novnc/docs/${name}`, `static/licenses/novnc/${name}`);
+}
+await copyFile('node_modules/@novnc/novnc/AUTHORS', 'static/licenses/novnc/AUTHORS');

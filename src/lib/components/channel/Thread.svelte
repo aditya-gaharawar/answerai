@@ -24,17 +24,18 @@
 
 	export let threadId: string | null = null;
 	export let channel: ChannelRecord | null = null;
+	export let chatInputElement:
+		import('$lib/components/common/RichTextInput.svelte').default | null = null;
 
 	export let onClose = () => {};
 	export let onPin: ChannelPinHandler = () => {};
 
 	let messages: ChannelMessage[] | null = null;
 	let searchAnchor = '';
-	let loadVersion = 0;
+	let loading: ReturnType<typeof getChannelThreadMessages> | null = null;
 	let top = false;
 
 	let messagesContainerElement: HTMLDivElement | null = null;
-	let chatInputElement: import('$lib/components/common/RichTextInput.svelte').default | null = null;
 
 	let replyToMessage: ChannelMessage | null = null;
 
@@ -56,7 +57,7 @@
 	};
 
 	const initHandler = async (anchor = '') => {
-		const version = ++loadVersion;
+		loading = null;
 		searchAnchor = anchor;
 		messages = null;
 		top = false;
@@ -66,20 +67,17 @@
 		for (const timer of Object.values(typingUsersTimeout)) clearTimeout(timer);
 		typingUsersTimeout = {};
 
-		if (channel && threadId) {
-			const loaded = await getChannelThreadMessages(
-				localStorage.token,
-				channel.id,
-				threadId,
-				0,
-				50,
-				{ around: anchor }
-			).catch((error) => {
-				toast.error(String(error));
+		if (channel) {
+			loading = getChannelThreadMessages(localStorage.token, channel.id, threadId ?? '', 0, 50, {
+				around: anchor
+			}).catch((error) => {
+				if (request === loading) toast.error(String(error));
 				return [];
 			});
-			if (version !== loadVersion) return;
-			messages = loaded;
+			const request = loading;
+			const loaded = await request;
+			if (request !== loading) return;
+			messages = loaded ?? [];
 
 			if ((messages ?? []).length < 50) {
 				top = true;
@@ -104,9 +102,15 @@
 		if (event.channel_id === channel.id) {
 			const { type, data } = event.data;
 
+			if (messages === null && type !== 'typing') {
+				const request = loading;
+				await request;
+				if (request !== loading) return;
+			}
+
 			if (type === 'message') {
 				if ((data?.parent_id ?? null) === threadId) {
-					if (messages) {
+					if (messages && !messages.some((message) => message.id === data.id)) {
 						messages = [{ ...data, temp_id: null }, ...messages];
 
 						if (typingUsers.find((user) => user.id === event.user.id)) {
@@ -224,23 +228,21 @@
 	});
 
 	onDestroy(() => {
-		for (const timer of Object.values(typingUsersTimeout)) clearTimeout(timer);
+		loading = null;
 		$socket?.off('events:channel', channelEventHandler);
 	});
 </script>
 
 {#if channel}
 	<div class="flex flex-col w-full h-full bg-white dark:bg-gray-900">
-		<div
-			class="sticky top-0 flex min-h-10 items-center justify-between border-b border-gray-100/60 px-4 py-1.5 dark:border-gray-800/40"
-		>
+		<div class="sticky top-0 flex min-h-10 items-center justify-between px-4 py-1.5">
 			<div class=" font-medium text-sm">{$i18n.t('Thread')}</div>
 
 			<div>
 				<button
 					type="button"
 					aria-label={$i18n.t('Close')}
-					class="flex size-7 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-50/60 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800/60 dark:hover:text-gray-300"
+					class="flex h-7 items-center justify-center rounded-lg text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 px-0"
 					on:click={() => {
 						onClose();
 					}}
@@ -254,7 +256,7 @@
 			class="flex-1 min-h-0 w-full overflow-y-auto will-change-transform"
 			bind:this={messagesContainerElement}
 		>
-			<div class="pt-3">
+			<div>
 				{#if searchAnchor}<div class="px-3 py-2 text-xs text-gray-500 flex justify-between">
 						<span>{$i18n.t('Showing search match')}</span><button
 							class="underline"

@@ -8,12 +8,10 @@
 	let loaded = false;
 
 	onMount(async () => {
-		if (
-			!(
-				($config?.features?.enable_notes ?? false) &&
-				($user?.role === 'admin' || ($user?.permissions?.features?.notes ?? true))
-			)
-		) {
+		if (!(
+			($config?.features?.enable_notes ?? false) &&
+			($user?.role === 'admin' || ($user?.permissions?.features?.notes ?? true))
+		)) {
 			// If the feature is not enabled, redirect to the home page
 			goto('/');
 		}
@@ -23,7 +21,7 @@
 </script>
 
 <svelte:head>
-	<!-- LICENSE covers this Open WebUI browser-title identifier.
+	<!-- LICENSE covers this Open ANSWERAI browser-title identifier.
 	Do not alter, remove, obscure, or replace it except as LICENSE permits:
 	https://docs.openwebui.com/license. -->
 	<title>

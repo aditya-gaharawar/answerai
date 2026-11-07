@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { errorText } from '$lib/utils/errorText';
+
 	import { getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	import { user } from '$lib/stores';
@@ -34,7 +36,7 @@
 	let accessGrants: any[] = [];
 	let savedGrants: any[] = [];
 	let requestId = 0;
-	const reportError = (error: any) => toast.error(`${error?.detail ?? error}`);
+	const reportError = (error: any) => toast.error(`${errorText(error) ?? error}`);
 
 	export const open = async (id: string) => {
 		const request = ++requestId;

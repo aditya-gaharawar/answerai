@@ -197,7 +197,7 @@
 				{#if query}
 					<div class="self-center pl-1.5 translate-y-[0.5px] rounded-l-xl bg-transparent">
 						<button
-							class="p-0.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+							class="py-0.5 rounded-full transition hover:text-gray-900 dark:hover:text-gray-100 text-gray-500 dark:text-gray-400 px-0"
 							aria-label={$i18n.t('Clear search')}
 							on:click={() => {
 								query = '';
@@ -362,7 +362,9 @@
 						</button>
 					</th>
 
-					<th scope="col" class="px-2.5 py-1.5 font-normal text-right"></th>
+					<th scope="col" class="px-2.5 py-1.5 font-normal text-right"
+						><span class="sr-only">{$i18n.t('Actions')}</span></th
+					>
 				</tr>
 			</thead>
 			<tbody class="">
@@ -376,7 +378,7 @@
 										src={`${WEBUI_API_BASE_URL}/users/${user.id}/profile/image`}
 										alt="user"
 										on:error={(e) => {
-											// LICENSE covers this Open WebUI fallback logo.
+											// LICENSE covers this Open ANSWERAI fallback logo.
 											// Do not alter, remove, obscure, or replace it except as LICENSE permits:
 											// https://docs.openwebui.com/license.
 											if (e.currentTarget instanceof HTMLImageElement)
@@ -402,21 +404,28 @@
 						<td class="px-3 py-1 min-w-[5rem] w-20">
 							<button
 								class="text-xs font-normal leading-4 capitalize transition {roleClass(user.role)}"
-								aria-label={$i18n.t('Change User Role')}
 								on:click={() => {
 									selectedUser = user;
 									showEditUserModal = !showEditUserModal;
 								}}
 							>
+								<span class="sr-only">{$i18n.t('Change User Role')}</span>
 								{$i18n.t(user.role)}
 							</button>
 						</td>
 						<td class=" px-3 py-1 max-w-48 truncate"> {user.email} </td>
 
 						<td class=" px-3 py-1">
-							{dayjs(user.last_active_at * 1000)
-								.locale($i18n.language)
-								.fromNow()}
+							<Tooltip
+								content={new Date(user.last_active_at * 1000).toLocaleString($i18n.language, {
+									dateStyle: 'medium',
+									timeStyle: 'long'
+								})}
+							>
+								{dayjs(user.last_active_at * 1000)
+									.locale($i18n.language)
+									.fromNow()}
+							</Tooltip>
 						</td>
 
 						<td class=" px-3 py-1">
@@ -503,20 +512,20 @@
 
 {#if !$config?.license_metadata}
 	{#if total !== null && total > 50}
-		<!-- LICENSE covers the Open WebUI branding narrative here.
+		<!-- LICENSE covers the Open ANSWERAI branding narrative here.
 		Do not alter, remove, obscure, or replace it except as LICENSE permits:
 		https://docs.openwebui.com/license. -->
 		<div class="mt-3 mb-3 pb-1 text-gray-700 dark:text-gray-300">
 			<div class="max-w-3xl text-xs leading-5">
 				<div class="text-gray-900 dark:text-gray-100">
-					<!-- LICENSE covers this Open WebUI wordmark.
+					<!-- LICENSE covers this Open ANSWERAI wordmark.
 					Do not alter, remove, obscure, or replace it except as LICENSE permits:
 					https://docs.openwebui.com/license. -->
 					{$i18n.t('Running ANSWERAI for a team?')}
 				</div>
 				<div class="mt-2 space-y-2">
 					<p>
-						<!-- LICENSE covers this Open WebUI branding copy.
+						<!-- LICENSE covers this Open ANSWERAI branding copy.
 						Do not alter, remove, obscure, or replace it except as LICENSE permits:
 						https://docs.openwebui.com/license. -->
 						{$i18n.t(
@@ -524,7 +533,7 @@
 						)}
 					</p>
 					<p class="text-gray-500 dark:text-gray-400">
-						<!-- LICENSE covers this Open WebUI branding copy.
+						<!-- LICENSE covers this Open ANSWERAI branding copy.
 						Do not alter, remove, obscure, or replace it except as LICENSE permits:
 						https://docs.openwebui.com/license. -->
 						{$i18n.t(

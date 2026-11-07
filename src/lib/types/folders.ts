@@ -31,7 +31,7 @@ export type FolderRegistry = Record<
 	{
 		setFolderItems?: () => unknown;
 		upsertChat?: (chat: Partial<ChatSummary> & { id: string }) => unknown;
-		setChatActive?: (chatId: string, active: boolean) => boolean;
+		setChatActive?: (chatId: string, active: boolean, pendingApproval?: boolean) => boolean;
 		setChatReadAt?: (chatId: string, lastReadAt: number) => boolean;
 		setAllChatsRead?: () => unknown;
 	}

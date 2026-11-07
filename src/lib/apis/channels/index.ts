@@ -1,3 +1,4 @@
+import { errorText } from '$lib/utils/errorText';
 import { WEBUI_API_BASE_URL } from '$lib/constants';
 import { getApps, type App } from '$lib/apis/apps';
 
@@ -335,7 +336,7 @@ export const removeMembersById = async (
 export const updateChannelById = async (
 	token: string = '',
 	channel_id: string,
-	channel: ChannelForm
+	channel: Omit<ChannelForm, 'access_grants'>
 ) => {
 	let error = null;
 
@@ -346,7 +347,7 @@ export const updateChannelById = async (
 			'Content-Type': 'application/json',
 			authorization: `Bearer ${token}`
 		},
-		body: JSON.stringify({ ...channel })
+		body: JSON.stringify({ ...channel, access_grants: undefined })
 	})
 		.then(async (res) => {
 			if (!res.ok) throw await res.json();
@@ -961,7 +962,7 @@ export const getChannelAppsById = async (
 			return res.json();
 		})
 		.catch((err) => {
-			error = err?.detail ?? err;
+			error = errorText(err) ?? err;
 			console.error(err);
 			return null;
 		});
@@ -999,7 +1000,7 @@ export const inviteAppToChannel = async (
 			return res.json();
 		})
 		.catch((err) => {
-			error = err?.detail ?? err;
+			error = errorText(err) ?? err;
 			console.error(err);
 			return null;
 		});
@@ -1034,7 +1035,36 @@ export const removeAppFromChannel = async (
 			return res.json();
 		})
 		.catch((err) => {
-			error = err?.detail ?? err;
+			error = errorText(err) ?? err;
+			console.error(err);
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const updateChannelAccessGrants = async (token: string, id: string, accessGrants: any[]) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/channels/${id}/access/update`, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify({ access_grants: accessGrants })
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			error = err.detail;
 			console.error(err);
 			return null;
 		});

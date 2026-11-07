@@ -12,10 +12,11 @@ from answerai.config import UPLOAD_DIR
 from answerai.constants import ERROR_MESSAGES
 from answerai.events import EVENTS, publish_event
 from answerai.internal.db import get_async_session
-from answerai.models.shared_chats import ChatShareMode
+from answerai.models.access_grants import AccessGrants
+from answerai.models.automations import Automations
 from answerai.models.chat_messages import ChatMessages
-from answerai.models.config import Config
 from answerai.models.chats import Chats
+from answerai.models.config import Config
 from answerai.models.folders import (
     FolderForm,
     FolderModel,
@@ -23,17 +24,16 @@ from answerai.models.folders import (
     Folders,
     FolderUpdateForm,
 )
-from answerai.models.access_grants import AccessGrants
-from answerai.models.automations import Automations
 from answerai.models.groups import Groups
+from answerai.models.shared_chats import ChatShareMode
 from answerai.models.users import Users
-from answerai.utils.access_control import has_permission
+from answerai.tasks import has_active_tasks
 from answerai.utils.access_control import (
-    filter_allowed_access_grants,
+    has_permission,
+    validate_access_grants,
 )
 from answerai.utils.access_control.files import can_read_all_folder_files, get_accessible_folder_files
 from answerai.utils.auth import get_admin_user, get_verified_user
-from answerai.tasks import has_active_tasks
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -84,9 +84,7 @@ async def check_folders_permission(request: Request, user, db=None):
         )
 
 
-############################
 # Get Folders
-############################
 
 
 @router.get('/', response_model=list[FolderNameIdResponse])
@@ -142,9 +140,7 @@ async def get_folders(
     ]
 
 
-############################
 # Create Folder
-############################
 
 
 @router.post('/')
@@ -234,9 +230,7 @@ async def create_folder(
         )
 
 
-############################
 # Get Shared Folders
-############################
 
 
 @router.get('/shared')
@@ -287,9 +281,7 @@ async def get_shared_folders(
     return results
 
 
-############################
 # Get Folders By Id
-############################
 
 
 class FolderResponse(FolderModel):
@@ -327,9 +319,7 @@ async def get_folder_by_id(
     )
 
 
-############################
 # Update Folder Name By Id
-############################
 
 
 @router.post('/{id}/update')
@@ -416,9 +406,7 @@ async def update_folder_name_by_id(
             )
 
 
-############################
 # Update Folder Parent Id By Id
-############################
 
 
 class FolderParentIdForm(BaseModel):
@@ -478,9 +466,7 @@ async def update_folder_parent_id_by_id(
         )
 
 
-############################
 # Update Folder Is Expanded By Id
-############################
 
 
 class FolderIsExpandedForm(BaseModel):
@@ -522,9 +508,7 @@ async def update_folder_is_expanded_by_id(
         )
 
 
-############################
 # Update Folder Access By Id
-############################
 
 
 class FolderAccessGrantsForm(BaseModel):
@@ -555,12 +539,12 @@ async def update_folder_access_by_id(
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
 
-    form_data.access_grants = await filter_allowed_access_grants(
+    form_data.access_grants = await validate_access_grants(
         await Config.get('user.permissions'),
         user.id,
         user.role,
         form_data.access_grants,
-        None,
+        resource_type='folder',
         db=db,
     )
 
@@ -584,9 +568,7 @@ async def update_folder_access_by_id(
     }
 
 
-############################
 # Get Shared Folder Chats
-############################
 
 
 @router.get('/{id}/shared/chats')
@@ -637,6 +619,7 @@ async def get_shared_folder_chats(
     user_ids.update(uid for ids in participant_ids.values() for uid in ids)
     users = await Users.get_users_by_user_ids(list(user_ids), db=db) if user_ids else []
     names = {u.id: u.name for u in users}
+    pending_approval_ids = await ChatMessages.get_chat_ids_with_pending_approval([chat['id'] for chat in chats], db=db)
     for chat in chats:
         uid = chat['user_id']
         chat['owner_name'] = names.get(uid, 'Unknown')
@@ -650,6 +633,7 @@ async def get_shared_folder_chats(
             ),
         )
         chat['active'] = False
+        chat['pending_approval'] = chat['id'] in pending_approval_ids
         if chat['user_id'] != user.id:
             chat['last_read_at'] = chat['updated_at']
         if await has_active_tasks(request.app.state.redis, chat['id']):
@@ -702,9 +686,7 @@ async def mark_folder_chats_read_by_id(
     }
 
 
-############################
 # Delete Folder By Id
-############################
 
 
 @router.delete('/{id}')

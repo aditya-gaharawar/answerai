@@ -20,7 +20,7 @@ _SAFE_DATA_URI_RE = re.compile(rf'^data:image/({_mime_suffixes});base64,', re.IG
 # static-asset paths AAI itself assigns; no prefix/wildcard matching is
 # used so that arbitrary relative paths cannot trigger authenticated GETs
 # against internal endpoints when rendered as ``<img>`` sources.
-# LICENSE covers the Open WebUI favicon fallback paths below. Do not alter,
+# LICENSE covers the Open ANSWERAI favicon fallback paths below. Do not alter,
 # remove, obscure, or replace them except as LICENSE permits:
 # https://docs.openwebui.com/license.
 _SAFE_STATIC_PATHS = frozenset(
@@ -61,12 +61,12 @@ def validate_image_url(url: str, *, file_only: bool = False) -> str:
             return url
         raise ValueError('Invalid background image URL: must reference an internal file.')
 
-    # --- Relative paths (exact match + anchored regex only) -----------
+    # Relative paths (exact match + anchored regex only)
 
     if not url or url in _SAFE_STATIC_PATHS or _USER_PROFILE_IMAGE_RE.match(url):
         return url
 
-    # --- Absolute URLs -------------------------------------------------
+    # Absolute URLs
 
     # urlparse normalises the scheme to lowercase, giving us
     # case-insensitive scheme matching for free.

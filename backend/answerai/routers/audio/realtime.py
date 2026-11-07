@@ -9,13 +9,13 @@ from urllib.parse import urlencode, urlsplit, urlunsplit
 import aiohttp
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from answerai.config import BYPASS_ADMIN_ACCESS_CONTROL, DEFAULT_REALTIME_CALL_PROMPT_TEMPLATE
-from answerai.env import AIOHTTP_CLIENT_SESSION_SSL, BYPASS_MODEL_ACCESS_CONTROL
+from answerai.env import AIOHTTP_CLIENT_SESSION_SSL, BYPASS_MODEL_ACCESS_CONTROL, ENABLE_FORWARD_USER_INFO_HEADERS
 from answerai.models.chats import Chats
 from answerai.models.config import Config
 from answerai.models.models import Models, ModelVoice
 from answerai.utils.access_control import has_permission
 from answerai.utils.auth import get_verified_user_by_token
-from answerai.utils.headers import get_microsoft_entra_id_access_token
+from answerai.utils.headers import get_microsoft_entra_id_access_token, include_user_info_headers
 from answerai.utils.json_codec import JSONCodec
 from answerai.utils.models import check_model_access, get_all_models
 from answerai.utils.session_pool import get_session
@@ -430,6 +430,8 @@ async def realtime_call(ws: WebSocket):
         async with asyncio.timeout(30):
             async with asyncio.timeout(15):
                 ws_url, headers = await _get_realtime_connection(config)
+                if ENABLE_FORWARD_USER_INFO_HEADERS:
+                    headers = include_user_info_headers(headers, user)
                 session = await get_session()
                 try:
                     upstream = await session.ws_connect(
@@ -497,7 +499,15 @@ async def realtime_call(ws: WebSocket):
                 if event == {'type': 'bridge.ping'}:
                     await ws.send_json({'type': 'bridge.pong'})
                     continue
-                command = protocol.command(event)
+                try:
+                    command = protocol.command(event)
+                except (ValueError, TypeError):
+                    if not isinstance(event, dict) or event.get('type') != 'conversation.item.truncate':
+                        raise
+                    await ws.send_json(
+                        {'type': 'bridge.error', 'message': 'Invalid audio truncation request', 'fatal': False}
+                    )
+                    continue
                 if event['type'] == 'bridge.result':
                     protocol.requested.add(f'result:{event["call_id"]}')
                 for item in command if isinstance(command, list) else [command]:
@@ -553,6 +563,9 @@ async def realtime_call(ws: WebSocket):
         detail = (
             str(exc)
             if type(exc) is ValueError
+            # A send can still fail on the provider connection that just closed.
+            else 'Voice provider connection closed'
+            if isinstance(exc, aiohttp.ClientConnectionResetError)
             else ('Voice connection timed out' if isinstance(exc, TimeoutError) else 'Voice connection failed')
         )
         log.info('Bridge closed: user_id=%s error_type=%s', user.id if user else None, type(exc).__name__)

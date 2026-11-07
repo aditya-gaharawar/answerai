@@ -481,7 +481,7 @@ def test_full_fresh_database_migration_chain(tmp_path, monkeypatch):
     command.upgrade(config, 'head')
     engine = create_engine(url)
     with engine.connect() as connection:
-        assert connection.exec_driver_sql('SELECT version_num FROM alembic_version').scalar_one() == 'b2a10c9d8e74'
+        assert connection.exec_driver_sql('SELECT version_num FROM alembic_version').scalar_one() == 'c7d1e32b8a09'
         assert {'email_verification', 'billing_account', 'admin_action', 'app'} <= set(
             inspect(connection).get_table_names()
         )
@@ -511,7 +511,7 @@ def test_existing_answerai_database_upgrade_preserves_billing(tmp_path, monkeypa
         )
     command.upgrade(config, 'head')
     with engine.connect() as connection:
-        assert connection.exec_driver_sql('SELECT version_num FROM alembic_version').scalar_one() == 'b2a10c9d8e74'
+        assert connection.exec_driver_sql('SELECT version_num FROM alembic_version').scalar_one() == 'c7d1e32b8a09'
         assert connection.exec_driver_sql(
             "SELECT override, override_until FROM billing_account WHERE user_id = 'existing-user'"
         ).one() == ('plus', 2000000000)

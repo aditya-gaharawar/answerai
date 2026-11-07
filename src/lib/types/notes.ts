@@ -18,11 +18,15 @@ export type NoteAttachment = {
 };
 export type NoteContent = { json: JSONContent | null; html: string; md: string };
 export type NoteData = {
+	page_id?: string;
+	pages_revision?: number;
+	pages?: import('$lib/apis/notes').NotePage[];
 	content: NoteContent;
 	versions?: NoteContent[];
 	files?: NoteAttachment[] | null;
 };
 export type NoteRecord = {
+	is_pinned?: boolean;
 	id: string;
 	user_id: string;
 	title: string;

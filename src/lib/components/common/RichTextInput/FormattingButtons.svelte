@@ -31,6 +31,8 @@
 >
 	<Tooltip placement="top" content={$i18n.t('H1')}>
 		<button
+			aria-label={$i18n.t('H1')}
+			aria-pressed={editor?.isActive('heading', { level: 1 })}
 			on:click={() => editor?.chain().focus().toggleHeading({ level: 1 }).run()}
 			class="{editor?.isActive('heading', { level: 1 })
 				? 'bg-gray-50 dark:bg-gray-700'
@@ -43,6 +45,8 @@
 
 	<Tooltip placement="top" content={$i18n.t('H2')}>
 		<button
+			aria-label={$i18n.t('H2')}
+			aria-pressed={editor?.isActive('heading', { level: 2 })}
 			on:click={() => editor?.chain().focus().toggleHeading({ level: 2 }).run()}
 			class="{editor?.isActive('heading', { level: 2 })
 				? 'bg-gray-50 dark:bg-gray-700'
@@ -55,6 +59,8 @@
 
 	<Tooltip placement="top" content={$i18n.t('H3')}>
 		<button
+			aria-label={$i18n.t('H3')}
+			aria-pressed={editor?.isActive('heading', { level: 3 })}
 			on:click={() => editor?.chain().focus().toggleHeading({ level: 3 }).run()}
 			class="{editor?.isActive('heading', { level: 3 })
 				? 'bg-gray-50 dark:bg-gray-700'
@@ -68,6 +74,7 @@
 	{#if editor?.isActive('bulletList') || editor?.isActive('orderedList') || editor?.isActive('taskList')}
 		<Tooltip placement="top" content={$i18n.t('Lift List')}>
 			<button
+				aria-label={$i18n.t('Lift List')}
 				on:click={() => {
 					editor?.commands.liftListItem(editor?.isActive('taskList') ? 'taskItem' : 'listItem');
 				}}
@@ -79,6 +86,7 @@
 		</Tooltip>
 		<Tooltip placement="top" content={$i18n.t('Sink List')}>
 			<button
+				aria-label={$i18n.t('Sink List')}
 				on:click={() =>
 					editor?.commands.sinkListItem(editor?.isActive('taskList') ? 'taskItem' : 'listItem')}
 				class="hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg p-1.5 transition-all"
@@ -91,6 +99,8 @@
 
 	<Tooltip placement="top" content={$i18n.t('Bullet List')}>
 		<button
+			aria-label={$i18n.t('Bullet List')}
+			aria-pressed={editor?.isActive('bulletList')}
 			on:click={() => editor?.chain().focus().toggleBulletList().run()}
 			class="{editor?.isActive('bulletList')
 				? 'bg-gray-50 dark:bg-gray-700'
@@ -103,6 +113,8 @@
 
 	<Tooltip placement="top" content={$i18n.t('Ordered List')}>
 		<button
+			aria-label={$i18n.t('Ordered List')}
+			aria-pressed={editor?.isActive('orderedList')}
 			on:click={() => editor?.chain().focus().toggleOrderedList().run()}
 			class="{editor?.isActive('orderedList')
 				? 'bg-gray-50 dark:bg-gray-700'
@@ -115,6 +127,8 @@
 
 	<Tooltip placement="top" content={$i18n.t('Task List')}>
 		<button
+			aria-label={$i18n.t('Task List')}
+			aria-pressed={editor?.isActive('taskList')}
 			on:click={() => editor?.chain().focus().toggleTaskList().run()}
 			class="{editor?.isActive('taskList')
 				? 'bg-gray-50 dark:bg-gray-700'
@@ -127,6 +141,8 @@
 
 	<Tooltip placement="top" content={$i18n.t('Bold')}>
 		<button
+			aria-label={$i18n.t('Bold')}
+			aria-pressed={editor?.isActive('bold')}
 			on:click={() => editor?.chain().focus().toggleBold().run()}
 			class="{editor?.isActive('bold')
 				? 'bg-gray-50 dark:bg-gray-700'
@@ -139,6 +155,8 @@
 
 	<Tooltip placement="top" content={$i18n.t('Italic')}>
 		<button
+			aria-label={$i18n.t('Italic')}
+			aria-pressed={editor?.isActive('italic')}
 			on:click={() => editor?.chain().focus().toggleItalic().run()}
 			class="{editor?.isActive('italic')
 				? 'bg-gray-50 dark:bg-gray-700'
@@ -151,6 +169,8 @@
 
 	<Tooltip placement="top" content={$i18n.t('Underline')}>
 		<button
+			aria-label={$i18n.t('Underline')}
+			aria-pressed={editor?.isActive('underline')}
 			on:click={() => editor?.chain().focus().toggleUnderline().run()}
 			class="{editor?.isActive('underline')
 				? 'bg-gray-50 dark:bg-gray-700'
@@ -163,6 +183,8 @@
 
 	<Tooltip placement="top" content={$i18n.t('Strikethrough')}>
 		<button
+			aria-label={$i18n.t('Strikethrough')}
+			aria-pressed={editor?.isActive('strike')}
 			on:click={() => editor?.chain().focus().toggleStrike().run()}
 			class="{editor?.isActive('strike')
 				? 'bg-gray-50 dark:bg-gray-700'
@@ -175,6 +197,8 @@
 
 	<Tooltip placement="top" content={$i18n.t('Code Block')}>
 		<button
+			aria-label={$i18n.t('Code Block')}
+			aria-pressed={editor?.isActive('codeBlock')}
 			on:click={() => editor?.chain().focus().toggleCodeBlock().run()}
 			class="{editor?.isActive('codeBlock')
 				? 'bg-gray-50 dark:bg-gray-700'
@@ -200,6 +224,7 @@
 	>
 		<Tooltip placement="top" content={$i18n.t('Emoji')}>
 			<button
+				aria-label={$i18n.t('Emoji')}
 				class="hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg p-1.5 transition-all"
 				type="button"
 			>

@@ -1,5 +1,9 @@
 <script lang="ts">
 	import { getContext } from 'svelte';
+	import CommentButton from '$lib/components/comments/CommentButton.svelte';
+	export let onComment: (
+		request: import('$lib/components/comments/CommentsPanel.svelte').CommentsRequest
+	) => void;
 
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
 	import DropdownMenu from '$lib/components/common/DropdownMenu.svelte';
@@ -67,6 +71,14 @@
 
 	<div slot="content">
 		<DropdownMenu className="min-w-[10.625rem]">
+			<CommentButton
+				resource={{ resource_type: 'model', resource_id: model.id }}
+				menu
+				{onComment}
+				onOpen={() => {
+					show = false;
+				}}
+			/>
 			<button
 				class="select-none flex w-full gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40 rounded-xl"
 				type="button"

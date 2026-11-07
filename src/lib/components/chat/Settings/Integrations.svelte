@@ -173,7 +173,7 @@
 						)}
 					</p>
 					<p>
-						<!-- LICENSE covers this Open WebUI wordmark.
+						<!-- LICENSE covers this Open ANSWERAI wordmark.
 							Do not alter, remove, obscure, or replace it except as LICENSE permits:
 							https://docs.openwebui.com/license. -->
 						{$i18n.t(

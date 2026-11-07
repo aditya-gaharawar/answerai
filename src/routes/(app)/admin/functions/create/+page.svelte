@@ -25,7 +25,7 @@
 		const manifest = extractFrontmatter(data.content);
 		if (compareVersion(manifest?.required_answerai_version ?? '0.0.0', WEBUI_VERSION)) {
 			console.log('Version is lower than required');
-			// LICENSE covers this Open WebUI wordmark.
+			// LICENSE covers this Open ANSWERAI wordmark.
 			// Do not alter, remove, obscure, or replace it except as LICENSE permits:
 			// https://docs.openwebui.com/license.
 			toast.error(

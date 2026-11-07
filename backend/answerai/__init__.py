@@ -20,7 +20,7 @@ def version_callback(value: bool) -> None:
     if value:
         from answerai.env import VERSION
 
-        # LICENSE covers this Open WebUI CLI identifier.
+        # LICENSE covers this Open ANSWERAI CLI identifier.
         # Do not alter, remove, obscure, or replace it except as LICENSE permits:
         # https://docs.openwebui.com/license.
         typer.echo(f'ANSWERAI version: {VERSION}')
@@ -57,8 +57,8 @@ def serve(
         os.environ['LD_LIBRARY_PATH'] = ':'.join(
             LD_LIBRARY_PATH
             + [
-                '/usr/local/lib/python3.11/site-packages/torch/lib',
-                '/usr/local/lib/python3.11/site-packages/nvidia/cudnn/lib',
+                '/usr/local/lib/python3.12/site-packages/torch/lib',
+                '/usr/local/lib/python3.12/site-packages/nvidia/cudnn/lib',
             ]
         )
         try:

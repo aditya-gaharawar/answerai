@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { errorText } from '$lib/utils/errorText';
+
 	import { getContext, onMount, tick } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	import { goto } from '$app/navigation';
@@ -60,7 +62,7 @@
 			const result = await getFunctionHistoryDiff(localStorage.token, id, selected.id, version_id);
 			if (request === comparisonRequest) comparison = result;
 		} catch (error: any) {
-			if (request === comparisonRequest) toast.error(error?.detail || String(error));
+			if (request === comparisonRequest) toast.error(errorText(error) || String(error));
 		} finally {
 			if (request === comparisonRequest) comparing = false;
 		}
@@ -639,6 +641,7 @@ class Pipe:
 					value={selected.snapshot.content}
 					lang="python"
 					readOnly
+					ariaLabel={$i18n.t('Code Editor')}
 					className="text-[0.6875rem]"
 				/>
 			{/if}
@@ -648,6 +651,7 @@ class Pipe:
 					value={content}
 					readOnly={!!selected || selecting || promoting}
 					lang="python"
+					ariaLabel={$i18n.t('Code Editor')}
 					{boilerplate}
 					className="text-[0.6875rem]"
 					onChange={(e: string) => {

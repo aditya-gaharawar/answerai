@@ -1,3 +1,4 @@
+import { errorText } from '$lib/utils/errorText';
 import { get } from 'svelte/store';
 import { config } from '$lib/stores';
 import { checkSourceSize, readSourceResponse } from './sourceText';
@@ -40,6 +41,7 @@ export type FileEntry = {
 	type: 'file' | 'directory';
 	size?: number;
 	modified?: number;
+	created?: number | null;
 	writable?: boolean;
 };
 
@@ -84,7 +86,30 @@ export type ListeningPort = {
 
 export type TerminalFeatures = {
 	terminal?: boolean;
+	browser?: boolean;
+	desktop?: boolean;
+	git?: boolean;
+	events?: boolean;
 };
+
+// Missing flags mean unsupported; never probe a new endpoint on an older server.
+export async function getTerminalFeatures(
+	connection: TerminalConnection,
+	chatId: string | null,
+	signal?: AbortSignal
+): Promise<TerminalFeatures> {
+	try {
+		const result = await terminalRequest<{ features?: TerminalFeatures }>(
+			connection,
+			chatId,
+			'/api/config',
+			{ signal }
+		);
+		return result.features ?? {};
+	} catch {
+		return {};
+	}
+}
 
 export type TerminalFileRoot = {
 	path: string;
@@ -165,7 +190,16 @@ export const terminalRequest = async <T>(
 			...options.headers
 		}
 	});
-	if (!response.ok) throw new Error(`Terminal request failed (${response.status})`);
+	if (!response.ok) {
+		const body = await response.json().catch(() => null);
+		throw new Error(
+			typeof body?.detail === 'string'
+				? body.detail
+				: typeof body?.error === 'string'
+					? body.error
+					: `Terminal request failed (${response.status})`
+		);
+	}
 	return response.json();
 };
 
@@ -666,7 +700,7 @@ export const moveEntry = async (
 		})
 		.catch((err) => {
 			console.error('open-terminal moveEntry error:', err);
-			return { error: err?.detail ?? 'Move failed' };
+			return { error: errorText(err) ?? 'Move failed' };
 		});
 	return res;
 };
@@ -693,9 +727,7 @@ export const getPortProxyUrl = (baseUrl: string, port: number, path: string = ''
 	return `${baseUrl.replace(/\/$/, '')}/proxy/${port}/${path}`;
 };
 
-// ---------------------------------------------------------------------------
 // Notebook execution
-// ---------------------------------------------------------------------------
 
 export const createNotebookSession = async (
 	baseUrl: string,
@@ -733,7 +765,7 @@ export const executeNotebookCell = async (
 	source?: string
 ): Promise<{ status: string; execution_count?: number; outputs: any[] } | { error: string }> => {
 	const url = `${baseUrl.replace(/\/$/, '')}/notebooks/${sessionId}/execute`;
-	const body: Record<string, any> = { cell_index: cellIndex };
+	const body: { cell_index: number; source?: string } = { cell_index: cellIndex };
 	if (source !== undefined) body.source = source;
 
 	const res = await fetch(url, {

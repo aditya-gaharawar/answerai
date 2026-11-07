@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { errorText } from '$lib/utils/errorText';
+
 	import { toast } from 'svelte-sonner';
 	import { getContext, onMount } from 'svelte';
 	const i18n = getContext<any>('i18n');
@@ -63,6 +65,7 @@
 	let policyStorage = 'ephemeral';
 	let policyStorageSize = '5Gi';
 	let policyIdleTimeout = 30;
+	let loadedPolicyData: Record<string, any> = {};
 	let lifecycleJson = '{}';
 	let refreshOnlyIdle = true;
 	let refreshReset = false;
@@ -123,6 +126,7 @@
 			// Restore resources
 			policyCpu = p.cpu_limit ?? '1';
 			policyMemory = p.memory_limit ?? '1Gi';
+			loadedPolicyData = {};
 			lifecycleJson = stringifyJson({});
 			refreshOnlyIdle = true;
 			refreshReset = false;
@@ -151,6 +155,7 @@
 			policyStorage = 'ephemeral';
 			policyStorageSize = '5Gi';
 			policyIdleTimeout = 30;
+			loadedPolicyData = {};
 			lifecycleJson = '{}';
 			refreshOnlyIdle = true;
 			refreshReset = false;
@@ -180,6 +185,7 @@
 				auth_type
 			);
 			const data = policy?.data ?? {};
+			loadedPolicyData = data;
 			policyImage = data.image ?? '';
 			policyIdleTimeout = data.idle_timeout_minutes ?? 30;
 			policyStorage = data.storage ? 'persistent' : 'ephemeral';
@@ -192,7 +198,7 @@
 			policyMemory = data.memory_limit ?? '1Gi';
 			lifecycleJson = stringifyJson(lifecycle?.data);
 		} catch (error: any) {
-			policyLoadError = error?.message || String(error);
+			policyLoadError = errorText(error) || String(error);
 		} finally {
 			loadingPolicy = false;
 		}
@@ -275,7 +281,18 @@
 	};
 
 	const buildPolicyData = (): object => {
-		const data: Record<string, any> = {};
+		// Keep fields the form does not edit; the orchestrator replaces the whole policy
+		const data: Record<string, any> = { ...loadedPolicyData };
+		for (const key of [
+			'image',
+			'cpu_limit',
+			'memory_limit',
+			'storage',
+			'idle_timeout_minutes',
+			'env'
+		]) {
+			delete data[key];
+		}
 
 		if (policyImage) data.image = policyImage;
 		if (policyCpu) data.cpu_limit = policyCpu;
@@ -432,7 +449,11 @@
 	};
 </script>
 
-<Modal size="sm" bind:show>
+<Modal
+	ariaLabel={edit ? $i18n.t('Edit Terminal Connection') : $i18n.t('Add Terminal Connection')}
+	size="sm"
+	bind:show
+>
 	<div>
 		<div class="flex justify-between dark:text-gray-100 px-5 pt-4 pb-2">
 			<h1 class="text-lg font-medium self-center font-primary">
@@ -648,9 +669,9 @@
 								<div class="flex gap-2 mt-2">
 									<div class="flex flex-col w-full">
 										<div class="flex justify-between mb-0.5">
-											<div class={`text-xs text-gray-500`}>
+											<label for="policy-id" class={`text-xs text-gray-500`}>
 												{$i18n.t('Policy ID')}
-											</div>
+											</label>
 										</div>
 										<div class="flex flex-1 items-center">
 											<input
@@ -676,10 +697,10 @@
 								<div class="flex gap-2 mt-2">
 									<div class="flex flex-col w-full">
 										<div class="flex justify-between mb-0.5">
-											<div class={`text-xs text-gray-500`}>
+											<label for="policy-image" class={`text-xs text-gray-500`}>
 												{$i18n.t('Image')}
 												<span class="opacity-50">({$i18n.t('optional')})</span>
-											</div>
+											</label>
 										</div>
 										<div class="flex flex-1 items-center">
 											<input
@@ -697,9 +718,9 @@
 								<div class="flex gap-2 mt-2">
 									<div class="flex flex-col flex-1">
 										<div class="flex justify-between mb-0.5">
-											<div class={`text-xs text-gray-500`}>
+											<label for="policy-cpu" class={`text-xs text-gray-500`}>
 												{$i18n.t('CPU')}
-											</div>
+											</label>
 										</div>
 										<div class="flex flex-1 items-center">
 											<input
@@ -714,9 +735,9 @@
 									</div>
 									<div class="flex flex-col flex-1">
 										<div class="flex justify-between mb-0.5">
-											<div class={`text-xs text-gray-500`}>
+											<label for="policy-memory" class={`text-xs text-gray-500`}>
 												{$i18n.t('Memory')}
-											</div>
+											</label>
 										</div>
 										<div class="flex flex-1 items-center">
 											<input
@@ -734,13 +755,17 @@
 								<div class="flex gap-2 mt-2">
 									<div class="flex flex-col flex-1">
 										<div class="flex justify-between mb-0.5">
-											<div class={`text-xs text-gray-500`}>
+											<label for="policy-storage" class={`text-xs text-gray-500`}>
 												{$i18n.t('Storage')}
-											</div>
+											</label>
 										</div>
 										<div class="flex gap-2">
 											<div class="flex-shrink-0 self-start">
-												<select class={`w-full text-sm ${selectClass}`} bind:value={policyStorage}>
+												<select
+													id="policy-storage"
+													class={`w-full text-sm ${selectClass}`}
+													bind:value={policyStorage}
+												>
 													<option value="ephemeral">{$i18n.t('Ephemeral')}</option>
 													<option value="persistent">{$i18n.t('Persistent')}</option>
 												</select>
@@ -752,6 +777,7 @@
 														class={`w-full flex-1 text-sm font-mono ${inputClass}`}
 														type="text"
 														bind:value={policyStorageSize}
+														aria-label={$i18n.t('Size')}
 														placeholder="5Gi"
 														autocomplete="off"
 													/>
@@ -762,10 +788,10 @@
 
 									<div class="flex flex-col flex-1">
 										<div class="flex justify-between mb-0.5">
-											<div class={`text-xs text-gray-500`}>
+											<label for="idle-timeout" class={`text-xs text-gray-500`}>
 												{$i18n.t('Idle Timeout')}
 												<span class="opacity-50">({$i18n.t('min')})</span>
-											</div>
+											</label>
 										</div>
 										<div class="flex flex-1 items-center">
 											<input
@@ -803,16 +829,19 @@
 													class={`flex-1 text-sm font-mono ${inputClass}`}
 													type="text"
 													bind:value={pair.key}
+													aria-label={$i18n.t('Key')}
 													placeholder="KEY"
 												/>
 												<input
 													class={`flex-[2] text-sm font-mono ${inputClass}`}
 													type="text"
 													bind:value={pair.value}
+													aria-label={$i18n.t('Value')}
 													placeholder="value"
 												/>
 												<button
 													type="button"
+													aria-label={$i18n.t('Remove')}
 													class="text-xs text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition px-1"
 													on:click={() =>
 														(policyEnvPairs = policyEnvPairs.filter((_, i) => i !== idx))}
@@ -827,9 +856,9 @@
 								<div class="flex gap-2 mt-2">
 									<div class="flex flex-col w-full">
 										<div class="flex justify-between mb-0.5">
-											<div class={`text-xs text-gray-500`}>
+											<label for="lifecycle-json" class={`text-xs text-gray-500`}>
 												{$i18n.t('Lifecycle JSON')}
-											</div>
+											</label>
 										</div>
 										<textarea
 											id="lifecycle-json"
@@ -1011,15 +1040,19 @@
 							<div class="flex flex-col w-full">
 								<div class="flex justify-between items-center">
 									<div class="flex gap-2 items-center">
-										<div class={`text-xs text-gray-500`}>
+										<label for="terminal-auth-type" class={`text-xs text-gray-500`}>
 											{$i18n.t('Auth')}
-										</div>
+										</label>
 									</div>
 								</div>
 
 								<div class="flex gap-2">
 									<div class="flex-shrink-0 self-start">
-										<select class={`w-full text-sm ${selectClass}`} bind:value={auth_type}>
+										<select
+											id="terminal-auth-type"
+											class={`w-full text-sm ${selectClass}`}
+											bind:value={auth_type}
+										>
 											<option value="none">{$i18n.t('None')}</option>
 											<option value="bearer">{$i18n.t('Bearer')}</option>
 											{#if !direct}

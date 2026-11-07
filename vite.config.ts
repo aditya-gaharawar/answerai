@@ -18,7 +18,7 @@ export default defineConfig({
 			preprocess: vitePreprocess(),
 			adapter: adapter({ pages: 'build', assets: 'build', fallback: 'index.html' }),
 			version: {
-				name: buildInfo.hash || process.env.npm_package_version || '0.12.3',
+				name: buildInfo.hash || process.env.npm_package_version || '0.13.0',
 				pollInterval: 60000
 			}
 		})
@@ -29,6 +29,7 @@ export default defineConfig({
 		APP_BUILD_CHANNEL: JSON.stringify(buildInfo.channel)
 	},
 	build: {
+		target: 'es2022',
 		sourcemap: true,
 		rolldownOptions: {
 			treeshake: {

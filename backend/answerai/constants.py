@@ -99,6 +99,8 @@ class ERROR_MESSAGES(str, Enum):
 
     INVALID_URL = 'The URL you provided is invalid. Please double-check and try again.'
 
+    COMPRESSED_RESPONSE = 'The server answered with a compressed response, which is not accepted.'
+
     WEB_SEARCH_ERROR = 'Something went wrong while searching the web.'
 
     OLLAMA_API_DISABLED = 'The Ollama API is disabled. Please enable it to use this feature.'
@@ -125,7 +127,7 @@ class ERROR_MESSAGES(str, Enum):
 
     FEATURE_DISABLED = lambda name='': f'{name} is disabled'
     INPUT_TOO_LONG = lambda size='': f'Input prompt exceeds maximum length of {size}'
-    # LICENSE covers this Open WebUI error identifier.
+    # LICENSE covers this Open ANSWERAI error identifier.
     # Do not alter, remove, obscure, or replace it except as LICENSE permits:
     # https://docs.openwebui.com/license.
     SERVER_CONNECTION_ERROR = 'ANSWERAI: Server Connection Error'

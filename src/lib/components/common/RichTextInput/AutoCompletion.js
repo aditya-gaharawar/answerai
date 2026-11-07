@@ -196,26 +196,6 @@ export const AIAutocompletion = Extension.create({
 						if (event.key === 'Tab') {
 							if (acceptFollowUpSuggestion(view)) return true;
 
-							// if (!node.attrs['data-suggestion']) {
-							//   // Generate completion
-							//   if (loading) return true
-							//   loading = true
-							//   const prompt = node.textContent
-							//   this.options.generateCompletion(prompt).then(suggestion => {
-							//     if (suggestion && suggestion.trim() !== '') {
-							//       dispatch(state.tr.setNodeMarkup($head.before(), null, {
-							//         ...node.attrs,
-							//         class: 'ai-autocompletion',
-							//         'data-prompt': prompt,
-							//         'data-suggestion': suggestion,
-							//       }))
-							//     }
-							//     // If suggestion is empty or null, do nothing
-							//   }).finally(() => {
-							//     loading = false
-							//   })
-							// }
-
 							if (node.attrs['data-suggestion']) {
 								// Accept suggestion
 								const suggestion = node.attrs['data-suggestion'];

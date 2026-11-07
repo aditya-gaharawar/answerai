@@ -19,6 +19,7 @@ from answerai.env import (
     FORWARD_USER_INFO_HEADER_USER_ROLE,
 )
 from answerai.models.groups import Groups
+from answerai.utils.oauth import get_system_oauth_token
 
 log = logging.getLogger(__name__)
 
@@ -181,7 +182,7 @@ async def get_headers_and_cookies(
         'Content-Type': 'application/json',
         **(
             {
-                # LICENSE covers this Open WebUI upstream metadata identifier.
+                # LICENSE covers this Open ANSWERAI upstream metadata identifier.
                 # Do not alter, remove, obscure, or replace it except as LICENSE permits:
                 # https://docs.openwebui.com/license.
                 'HTTP-Referer': 'https://answerai.in/',
@@ -208,16 +209,7 @@ async def get_headers_and_cookies(
     elif auth_type == 'session':
         token = request.state.token.credentials
     elif auth_type == 'system_oauth':
-        oauth_token = None
-        try:
-            if request.cookies.get('oauth_session_id', None):
-                oauth_token = await request.app.state.oauth_manager.get_oauth_token(
-                    user.id,
-                    request.cookies.get('oauth_session_id', None),
-                )
-        except Exception as e:
-            log.error(f'Error getting OAuth token: {e}')
-
+        oauth_token = await get_system_oauth_token(request, user) if user else None
         if oauth_token:
             token = f'{oauth_token.get("access_token", "")}'
 
