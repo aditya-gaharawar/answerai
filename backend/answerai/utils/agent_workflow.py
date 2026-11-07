@@ -23,6 +23,21 @@ def agent_workflow_prompt(tools: dict) -> str:
         )
     if 'search_web' in tools:
         instructions.append('Use search_web for current external information and cite the sources you actually used.')
+    if 'fetch_url' in tools:
+        instructions.append(
+            'Open the most relevant search sources with fetch_url before relying on snippets alone. '
+            'Distinguish verified source content from inferences and mention conflicting evidence.'
+        )
+    if 'query_chat_files' in tools:
+        instructions.append(
+            'File queries may return lexical matches when semantic retrieval is unavailable. '
+            'Use file_id and source details to read the relevant passage before making a broad claim.'
+        )
+    instructions.append(
+        'Use exact tool names and required arguments from the schema. Correct invalid arguments before retrying. '
+        'After a timeout, check whether work completed before repeating any action with side effects. '
+        'Do not mark a task complete until its result is verified; report partial results honestly.'
+    )
     if 'generate_image' in tools:
         instructions.append(
             'When asked to create an image, use generate_image. Its successful result is already displayed in chat; '
