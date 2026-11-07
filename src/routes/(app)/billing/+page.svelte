@@ -137,14 +137,21 @@
 					: ''}
 			</p>
 			<div class="mt-3 flex flex-wrap gap-5 text-sm text-gray-500">
-				{#each account.usage.filter( (row: any) => ['messages', 'live_minutes'].includes(row.metric) ) as row}<span
-						>{row.metric === 'messages' ? 'Messages' : 'Live minutes'}: {row.used} / {row.metric ===
-						'messages'
-							? account.entitlements.messages_per_day
-							: account.entitlements.live_minutes_per_day} today · Resets {new Date(
+				{#each account.usage.filter( (row: any) => ['messages', 'tokens', 'live_minutes'].includes(row.metric) ) as row}
+					<span
+						>{row.metric === 'tokens'
+							? 'Token credits'
+							: row.metric === 'messages'
+								? 'Messages'
+								: 'Live minutes'} · {row.window === 18000
+							? '5 hours'
+							: row.window === 604800
+								? 'Weekly'
+								: 'Daily'}: {row.used} / {row.limit ?? 'Unlimited'} · Resets {new Date(
 							row.resets_at * 1000
-						).toLocaleTimeString()}</span
-					>{/each}
+						).toLocaleString()}</span
+					>
+				{/each}
 			</div>
 		</div>
 		<div class="grid gap-6 md:grid-cols-2">

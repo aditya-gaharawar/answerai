@@ -575,3 +575,118 @@ async def test_current_stripe_invoice_refund_revokes_access(harness, monkeypatch
     monkeypatch.setattr(payments, 'api', AsyncMock(side_effect=lambda provider, method, path: data[path]))
     await payments.reconcile('stripe', 'sub_verified')
     assert (await plans.entitlement(user))[0] == 'free'
+
+
+@pytest.mark.asyncio
+async def test_long_windows_anchor_and_weekly_usage_survives_midnight(harness):
+    user = await member()
+    start = 86390
+    await plans.reserve(user.id, [('messages', 18000, 2, 1), ('messages', 604800, 3, 1)], now=start)
+    snapshot = await plans.usage_snapshot(user.id, plans.Plan(messages_per_week=3), now=start + 30)
+    assert {row['window'] for row in snapshot} == {18000, 604800}
+    assert {row['resets_at'] for row in snapshot} == {start + 18000, start + 604800}
+    await plans.reserve(user.id, [('messages', 18000, 2, 1)], now=start + 17999)
+    with pytest.raises(HTTPException) as limited:
+        await plans.reserve(user.id, [('messages', 18000, 2, 1)], now=start + 17999)
+    assert limited.value.headers['Retry-After'] == '1'
+    await plans.reserve(user.id, [('messages', 18000, 2, 1)], now=start + 18000)
+
+
+@pytest.mark.asyncio
+async def test_long_window_concurrency_and_token_rollback(harness):
+    user = await member()
+
+    async def attempt():
+        try:
+            await plans.reserve(user.id, [('messages', 18000, 4, 1), ('tokens', 604800, 12, 3)], now=1000)
+            return True
+        except HTTPException as error:
+            assert error.status_code == 429
+            return False
+
+    assert sum(await asyncio.gather(*(attempt() for _ in range(20)))) == 4
+    async with get_async_db() as db:
+        rows = (await db.scalars(select(UsageBucket).where(UsageBucket.metric != '_anchor'))).all()
+        assert {row.metric: row.used for row in rows} == {'messages': 4, 'tokens': 12}
+
+
+@pytest.mark.asyncio
+async def test_token_credit_cap_and_legacy_plan_defaults(harness):
+    user = await member()
+    values = await enable()
+    values['free'].update(tokens_per_week=10000, messages_per_five_hours=2, max_output_tokens=128)
+    await Config.upsert({'billing.settings': values})
+    request = SimpleNamespace(state=SimpleNamespace())
+    payload = {'model': 'allowed', 'messages': [{'role': 'user', 'content': 'Hello'}], 'max_tokens': 9999}
+    await plans.reserve_generation(request, user, payload)
+    assert payload['max_tokens'] == 128
+    provider = {'max_completion_tokens': 99999}
+    plans.apply_output_cap(request, provider)
+    assert provider['max_completion_tokens'] == 128
+    ollama = {'options': {'num_predict': -1}}
+    plans.apply_output_cap(request, ollama, ollama=True)
+    assert ollama['options']['num_predict'] == 128
+    assert plans.Plan().tokens_per_week is None
+    async with get_async_db() as db:
+        before = (await db.scalar(select(UsageBucket).where(UsageBucket.metric == 'tokens'))).used
+    await plans.reserve_generation(request, user, payload)
+    async with get_async_db() as db:
+        assert (await db.scalar(select(UsageBucket).where(UsageBucket.metric == 'tokens'))).used == before
+    with pytest.raises(HTTPException):
+        await plans.reserve_generation(
+            SimpleNamespace(state=SimpleNamespace()), user, {'model': 'allowed', 'max_tokens': -1}
+        )
+
+
+@pytest.mark.asyncio
+async def test_user_and_global_resets_are_scoped_audited_and_admin_only(harness):
+    from answerai.models.admin_actions import AdminAction
+
+    client, _, _, app, admin = harness
+    app.include_router(billing.router, prefix='/api/v1/billing')
+    first = await member()
+    second = await Auths.insert_new_auth('second@example.com', 'test-hash', 'Second', role='user')
+    for target in [first, second]:
+        await plans.reserve(target.id, [('messages', 604800, 10, 1), ('checkout', 60, 3, 1)])
+    await subscription(second, status='active', end=int(time.time()) + 3600)
+    form = {'reason': 'Support adjustment', 'confirmation': 'RESET'}
+    from answerai.utils.auth import get_admin_user
+
+    app.dependency_overrides.pop(get_admin_user, None)
+    app.dependency_overrides[get_current_user] = lambda: first
+    assert (await client.post('/api/v1/billing/usage/reset', json=form)).status_code == 401
+    app.dependency_overrides[get_current_user] = lambda: admin
+    assert (await client.post('/api/v1/billing/usage/reset', json={**form, 'confirmation': 'oops'})).status_code == 422
+    response = await client.post(f'/api/v1/billing/users/{first.id}/usage/reset', json=form)
+    assert response.status_code == 200, response.text
+    async with get_async_db() as db:
+        assert (
+            await db.scalars(
+                select(UsageBucket).where(UsageBucket.user_id == second.id, UsageBucket.metric == 'messages')
+            )
+        ).all()
+    response = await client.post('/api/v1/billing/usage/reset', json=form)
+    assert response.status_code == 200, response.text
+    async with get_async_db() as db:
+        assert not (await db.scalars(select(UsageBucket).where(UsageBucket.metric == 'messages'))).all()
+        assert len((await db.scalars(select(UsageBucket).where(UsageBucket.metric == 'checkout'))).all()) == 2
+        actions = (await db.scalars(select(AdminAction).where(AdminAction.action.like('quota.reset_%')))).all()
+        assert len(actions) == 2
+        assert await db.get(Subscription, 'local-sub') is not None
+
+
+@pytest.mark.asyncio
+async def test_agent_followups_reserve_additional_token_credits(harness):
+    user = await member()
+    values = await enable()
+    values['free'].update(tokens_per_week=10000, max_output_tokens=128)
+    await Config.upsert({'billing.settings': values})
+    request = SimpleNamespace(state=SimpleNamespace())
+    payload = {'model': 'allowed', 'messages': [{'role': 'user', 'content': 'Hello'}]}
+    await plans.reserve_generation(request, user, payload)
+    first = await plans.usage_snapshot(user.id, plans.Plan())
+    initial = next(row['used'] for row in first if row['metric'] == 'tokens')
+    await plans.reserve_provider_tokens(request, payload)
+    await asyncio.gather(*(plans.reserve_provider_tokens(request, payload) for _ in range(2)))
+    latest = await plans.usage_snapshot(user.id, plans.Plan())
+    assert next(row['used'] for row in latest if row['metric'] == 'tokens') == 3 * initial

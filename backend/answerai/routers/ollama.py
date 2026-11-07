@@ -13,6 +13,8 @@ from urllib.parse import urlparse
 import aiofiles
 import aiohttp
 from aiocache import cached
+from answerai.utils.plans import reserve_provider_tokens
+
 from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile
 from fastapi.responses import StreamingResponse
 from answerai.config import UPLOAD_DIR
@@ -1048,9 +1050,11 @@ async def generate_completion(
     prefix_id = api_config.get('prefix_id')
     form_data.model = strip_provider_model_prefix(form_data.model, prefix_id)
 
+    payload = form_data.model_dump(exclude_none=True)
+    await reserve_provider_tokens(request, payload, ollama=True)
     return await send_request(
         f'{url}/api/generate',
-        payload=form_data.model_dump_json(exclude_none=True).encode(),
+        payload=JSONCodec.dumps(payload),
         key=get_api_key(url_idx, url, api_configs),
         user=user,
         stream=True,
@@ -1185,6 +1189,7 @@ async def generate_chat_completion(
     prefix_id = api_config.get('prefix_id')
     payload['model'] = strip_provider_model_prefix(payload['model'], prefix_id)
 
+    await reserve_provider_tokens(request, payload, ollama=True)
     return await send_request(
         f'{url}/api/chat',
         payload=JSONCodec.dumps(payload),
@@ -1278,6 +1283,7 @@ async def generate_openai_completion(
     prefix_id = api_config.get('prefix_id')
     payload['model'] = strip_provider_model_prefix(payload['model'], prefix_id)
 
+    await reserve_provider_tokens(request, payload)
     return await send_request(
         f'{url}/v1/completions',
         payload=JSONCodec.dumps(payload),
@@ -1384,6 +1390,7 @@ async def generate_openai_chat_completion(
     prefix_id = api_config.get('prefix_id')
     payload['model'] = strip_provider_model_prefix(payload['model'], prefix_id)
 
+    await reserve_provider_tokens(request, payload)
     return await send_request(
         f'{url}/v1/chat/completions',
         payload=JSONCodec.dumps(payload),
@@ -1437,6 +1444,7 @@ async def generate_anthropic_messages(
     prefix_id = api_config.get('prefix_id', None)
     payload['model'] = strip_provider_model_prefix(payload['model'], prefix_id)
 
+    await reserve_provider_tokens(request, payload)
     return await send_request(
         f'{url}/v1/messages',
         payload=JSONCodec.dumps(payload),
@@ -1496,6 +1504,7 @@ async def generate_responses(
     prefix_id = api_config.get('prefix_id', None)
     payload['model'] = strip_provider_model_prefix(payload['model'], prefix_id)
 
+    await reserve_provider_tokens(request, payload)
     return await send_request(
         f'{url}/v1/responses',
         payload=JSONCodec.dumps(payload),
