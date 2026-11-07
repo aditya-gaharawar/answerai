@@ -3103,7 +3103,12 @@ async def execute_tool_call(form_data, metadata, event_caller, tool_call):
     name = tool_call.get('name', '')
     tool_args = tool_call.get('arguments', '{}')
     from answerai.utils.tool_arguments import parse_tool_arguments
-    from answerai.utils.agent_execution import missing_tool_arguments, run_agent_tool
+    from answerai.utils.agent_execution import (
+        missing_tool_arguments,
+        record_tool_result,
+        repeated_tool_failure,
+        run_agent_tool,
+    )
 
     try:
         params = parse_tool_arguments(tool_args)
@@ -3137,6 +3142,11 @@ async def execute_tool_call(form_data, metadata, event_caller, tool_call):
         argument_error = missing_tool_arguments(params, tool.get('spec', {}).get('parameters', {}))
         if argument_error:
             return params, {'error': argument_error, 'error_type': 'invalid_arguments'}, tool, tool_type, direct_tool
+
+    tool_call['arguments'] = JSONCodec.dumps(params)
+    previous_failure = repeated_tool_failure(metadata, name, params)
+    if previous_failure:
+        return params, previous_failure, tool, tool_type, direct_tool
 
     try:
         if (
@@ -3193,6 +3203,7 @@ async def execute_tool_call(form_data, metadata, event_caller, tool_call):
             tool_call['duration'] = time.perf_counter() - started
     except Exception as e:
         result = {'error': str(e)}
+    record_tool_result(metadata, name, params, result)
     return params, result, tool, tool_type, direct_tool
 
 
@@ -5770,12 +5781,16 @@ async def streaming_chat_response_handler(response, ctx):
                     # Provider calls have been resolved and staged; execute their saved items directly.
                     response_tool_calls = [output_by_call_id[call['id']] for call in response_tool_calls]
                     delegate_calls = [call for call in response_tool_calls if call.get('name') == 'delegate_task']
-                    tool_results = {}
-                    for tool_call in response_tool_calls:
-                        if tool_call.get('name') != 'delegate_task':
-                            tool_results[tool_call['call_id']] = await execute_tool_call(
-                                form_data, metadata, event_caller, tool_call
-                            )
+                    from answerai.utils.agent_execution import execute_agent_batch
+
+                    async def execute_prepared_call(call):
+                        return await execute_tool_call(form_data, metadata, event_caller, call)
+
+                    tool_results = await execute_agent_batch(
+                        [call for call in response_tool_calls if call.get('name') != 'delegate_task'],
+                        metadata.get('tools', {}),
+                        execute_prepared_call,
+                    )
                     tool_results.update(
                         zip(
                             [tool_call['call_id'] for tool_call in delegate_calls],
