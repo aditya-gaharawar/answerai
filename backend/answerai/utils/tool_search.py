@@ -63,10 +63,7 @@ def build_deferred_tools_manifest(tools_dict: dict[str, dict], deferred: list[st
     entries = ''
     for name in deferred:
         description = _truncate_description(tools_dict[name].get('spec', {}).get('description'))
-        entries += (
-            f'<tool>\n<name>{escape(name)}</name>\n'
-            f'<description>{escape(description)}</description>\n</tool>\n'
-        )
+        entries += f'<tool>\n<name>{escape(name)}</name>\n<description>{escape(description)}</description>\n</tool>\n'
 
     return (
         '<available_tools>\n'
@@ -197,8 +194,7 @@ def tokenize(text: str | None) -> list[str]:
 def _document_text(name: str, spec: dict) -> str:
     properties = (spec.get('parameters') or {}).get('properties') or {}
     fields = [
-        f'{key} {value.get("description", "")}' if isinstance(value, dict) else key
-        for key, value in properties.items()
+        f'{key} {value.get("description", "")}' if isinstance(value, dict) else key for key, value in properties.items()
     ]
     return ' '.join([name, str(spec.get('description') or ''), *fields])[:12000]
 
