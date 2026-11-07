@@ -259,7 +259,6 @@ def test_tool_manifest_escapes_untrusted_server_description():
     assert result.count('</available_tools>') == 1
 
 
-
 @pytest.mark.asyncio
 async def test_parallel_research_preserves_action_barriers():
     from answerai.utils.agent_execution import execute_agent_batch
