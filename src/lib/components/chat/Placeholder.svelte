@@ -317,9 +317,19 @@
 		</div>
 	{:else}
 		<div class="mx-auto max-w-2xl mt-2" in:fade={{ duration: 200, delay: 200 }}>
-			<div class="mx-5">
-				<Suggestions suggestionPrompts={selectedSuggestionPrompts} inputValue={prompt} {onSelect} />
-			</div>
+			<details class="mx-5 text-center">
+				<summary
+					class="inline-block cursor-pointer text-xs text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+					>{$i18n.t('Explore ideas')}</summary
+				>
+				<div class="mt-4 text-left">
+					<Suggestions
+						suggestionPrompts={selectedSuggestionPrompts}
+						inputValue={prompt}
+						{onSelect}
+					/>
+				</div>
+			</details>
 		</div>
 	{/if}
 </div>

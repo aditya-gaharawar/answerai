@@ -2500,24 +2500,39 @@
 											<PlusAlt className="size-5" />
 										</button>
 									</InputMenu>
-									<select
-										aria-label="Execution mode"
-										class="rounded-full bg-transparent px-2 py-1 text-xs dark:text-gray-200"
-										value={params.agent_mode ?? 'auto'}
-										on:change={(event) => {
-											params = {
-												...params,
-												agent_mode: event.currentTarget.value,
-												tool_approval_mode: 'ask'
-											};
-										}}
-										><option value="auto">Chat</option><option value="agent">Agent</option></select
-									>
-									<a
-										href="/agents"
-										class="rounded-full px-2 py-1 text-xs text-gray-500 hover:text-blue-500"
-										>Background tasks</a
-									>
+									<details class="relative shrink-0">
+										<summary
+											class="inline-flex cursor-pointer list-none items-center gap-1 whitespace-nowrap rounded-full px-2 py-1 text-xs text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800"
+											>{params.agent_mode === 'agent' ? 'Agent' : 'Chat'}
+											<span aria-hidden="true">⌄</span></summary
+										>
+										<div
+											class="absolute bottom-full left-0 z-50 mb-2 w-44 rounded-xl border border-gray-200 bg-white p-2 shadow-lg dark:border-gray-700 dark:bg-gray-900"
+										>
+											<label class="block px-2 py-1 text-xs text-gray-500"
+												>Mode<select
+													aria-label="Execution mode"
+													class="mt-1 w-full rounded-md bg-transparent py-1 text-sm text-gray-900 dark:text-white"
+													value={params.agent_mode ?? 'auto'}
+													on:change={(event) => {
+														params = {
+															...params,
+															agent_mode: event.currentTarget.value,
+															tool_approval_mode: 'ask'
+														};
+														event.currentTarget.closest('details')?.removeAttribute('open');
+													}}
+													><option value="auto">Chat</option><option value="agent">Agent</option
+													></select
+												></label
+											>
+											<a
+												href="/agents"
+												class="mt-1 block rounded-lg px-2 py-2 text-xs text-gray-600 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-800"
+												>Background tasks ↗</a
+											>
+										</div>
+									</details>
 
 									{#if showWebSearchButton || showImageGenerationButton || showCodeInterpreterButton || showToolsButton || showSkillsButton || (toggleFilters && toggleFilters.length > 0)}
 										<div

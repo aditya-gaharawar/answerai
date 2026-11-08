@@ -27,11 +27,12 @@ async function main() {
 		page.on('pageerror', (error) => errors.push(error.message));
 		await page.addInitScript((value) => localStorage.setItem('token', value), token);
 		await page.goto(`${base}/agents`, { waitUntil: 'domcontentloaded', timeout: 120000 });
-		await page.getByRole('heading', { name: 'Background agent tasks' }).waitFor({ timeout: 60000 });
+		await page.getByRole('heading', { name: 'Agent tasks' }).waitFor({ timeout: 60000 });
 		const changelog = page.getByRole('dialog', { name: "What's New in ANSWERAI" });
 		if (await changelog.isVisible())
 			await changelog.getByRole('button', { name: 'Close', exact: true }).click();
 		await page.getByLabel('Model', { exact: true }).selectOption(model);
+		await page.getByText('Options', { exact: true }).click();
 		await page.getByLabel('Web research', { exact: true }).uncheck();
 		await page
 			.getByLabel('Objective', { exact: true })
@@ -42,7 +43,7 @@ async function main() {
 					new URL(response.url()).pathname === '/api/v1/agent-runs/' &&
 					response.request().method() === 'POST'
 			),
-			page.getByRole('button', { name: 'Start research' }).click()
+			page.getByRole('button', { name: 'Start task' }).click()
 		]);
 		if (!response.ok()) throw new Error(`Task creation failed: HTTP ${response.status()}`);
 		const run = await response.json();
@@ -63,6 +64,18 @@ async function main() {
 		await page.screenshot({ path: path.join(artifacts, 'agent-mobile.png'), fullPage: true });
 		if (await page.evaluate(() => document.documentElement.scrollWidth > innerWidth))
 			throw new Error('Mobile page overflows viewport.');
+		await page.goto(base, { waitUntil: 'domcontentloaded' });
+		const mode = page.getByLabel('Execution mode', { exact: true });
+		await mode.waitFor({ state: 'attached' });
+		const menu = page.locator('details').filter({ has: mode });
+		await menu.locator('summary').click();
+		await mode.selectOption('agent');
+		if ((await menu.getAttribute('open')) !== null)
+			throw new Error('Execution mode menu did not close after selection.');
+		if ((await mode.inputValue()) !== 'agent') throw new Error('Agent mode was not selected.');
+		await menu.locator('summary').click();
+		await menu.getByRole('link', { name: 'Background tasks' }).click();
+		await page.getByRole('heading', { name: 'Agent tasks', exact: true }).waitFor();
 		if (errors.length) throw new Error(`Browser raised ${errors.length} uncaught errors.`);
 		console.log(
 			JSON.stringify({
@@ -71,6 +84,8 @@ async function main() {
 				toolEvent: true,
 				verification: true,
 				mobileLayout: true,
+				modeSelection: true,
+				backgroundTaskNavigation: true,
 				pageErrors: errors
 			})
 		);
