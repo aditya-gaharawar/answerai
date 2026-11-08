@@ -2899,11 +2899,19 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             if metadata.get('params', {}).get('function_calling') != 'legacy':
                 deferred = await apply_tool_search(form_data, metadata, tools_dict, inlet_filter_tools)
 
-                # If the function calling is native, then call the tools function calling handler
+                # Put relevant authorized schemas first without removing discovery or permission checks.
+                if metadata.get('params', {}).get('agent_mode') == 'agent':
+                    from answerai.utils.tool_context import contextual_tools
+
+                    preferred = contextual_tools(form_data, tools_dict)
+                    ordered_names = [*preferred, *(name for name in tools_dict if name not in preferred)]
+                else:
+                    ordered_names = list(tools_dict)
                 form_data['tools'] = [
                     {'type': 'function', 'function': tool.get('spec', {})}
-                    for name, tool in tools_dict.items()
+                    for name in ordered_names
                     if name not in deferred
+                    for tool in [tools_dict[name]]
                 ]
                 if inlet_filter_tools:
                     form_data['tools'].extend(inlet_filter_tools)
@@ -3239,7 +3247,18 @@ async def execute_tool_call(form_data, metadata, event_caller, tool_call):
         output_error = validate_contract(result, tool['output_schema'])
         if output_error:
             result = {'error': output_error, 'error_type': 'invalid_output', 'retryable': False}
+    if metadata.get('params', {}).get('agent_mode') == 'agent':
+        from answerai.utils.tool_outcomes import normalize_tool_error
+
+        result = normalize_tool_error(result, name, tool_type)
     failed = record_tool_result(metadata, name, params, result)
+    log.info(
+        'Tool execution name=%s kind=%s duration_ms=%.1f outcome=%s',
+        name,
+        tool_type,
+        1000 * tool_call.get('duration', 0),
+        'failed' if failed else 'completed',
+    )
     if metadata.get('_agent_run_id') and metadata.get('_agent_run_lease'):
         from answerai.utils.agent_runs import record_run_event
 

@@ -93,10 +93,30 @@ async def execute_agent_batch(calls, tools, execute, *, parallelism=4):
     async def flush():
         if not pending:
             return
+        import json
+        import copy
+
+        # Join identical read calls only inside this contiguous batch, never across actions or requests.
+        shared = {}
         async with asyncio.TaskGroup() as group:
-            tasks = [group.create_task(execute(call)) for call in pending]
+            tasks = []
+            for call in pending:
+                arguments = call.get('arguments', '{}')
+                try:
+                    arguments = json.loads(arguments) if isinstance(arguments, str) else arguments
+                    key = json.dumps([call.get('name'), arguments], sort_keys=True)
+                except (ValueError, TypeError):
+                    key = call['call_id']
+                if key not in shared:
+                    shared[key] = group.create_task(execute(call))
+                tasks.append(shared[key])
         for call, task in zip(pending, tasks):
-            results[call['call_id']] = task.result()
+            value = task.result()
+            if isinstance(value, tuple) and len(value) == 5:
+                value = (copy.deepcopy(value[0]), copy.deepcopy(value[1]), *value[2:])
+            else:
+                value = copy.deepcopy(value)
+            results[call['call_id']] = value
         pending.clear()
 
     for call in calls:

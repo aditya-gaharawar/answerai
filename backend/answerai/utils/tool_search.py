@@ -84,6 +84,11 @@ async def apply_tool_search(
     names = set(tools_dict) | {(tool.get('function') or tool).get('name') for tool in extra_tools or []}
     config = not names.intersection({SEARCH_TOOL_NAME, CALL_TOOL_NAME}) and await get_tool_search_config()
     deferred = select_deferred_tools(tools_dict, config) if config else []
+    if deferred and metadata.get('params', {}).get('agent_mode') == 'agent':
+        from answerai.utils.tool_context import contextual_tools
+
+        promoted = set(contextual_tools(form_data, tools_dict))
+        deferred = [name for name in deferred if name not in promoted]
     if not deferred:
         return set()
 
