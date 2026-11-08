@@ -10,6 +10,7 @@ import alembic.context
 from alembic.runtime.migration import MigrationContext
 from answerai.env import DATABASE_PASSWORD, DATABASE_SCHEMA, DATABASE_URL, LOG_FORMAT
 from answerai.internal.db import enable_iam_token_auth, extract_ssl_params_from_url, reattach_ssl_params_to_url
+from answerai.models.agent_runs import AgentRun  # noqa: F401
 from answerai.models.auths import Auth
 from answerai.models.calendar import Calendar, CalendarEvent, CalendarEventAttendee  # noqa: F401
 from answerai.models.chat_messages import ChatMessage  # noqa: F401

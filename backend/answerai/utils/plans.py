@@ -203,6 +203,7 @@ async def usage_snapshot(user_id, plan, now=None):
         ).all()
     limits = {(metric, window): maximum for metric, window, maximum in plan_limits(plan)}
     limits.update({(feature, 86400): maximum for feature, maximum in plan.feature_limits.items()})
+    limits[('web_search', 60)] = plan.requests_per_minute
     limits.update({('audio', 86400): plan.audio_requests_per_day, ('live_minutes', 86400): plan.live_minutes_per_day})
     return [
         {
@@ -416,6 +417,9 @@ def apply_output_cap(request, payload, *, ollama=False):
 
 
 async def reserve_provider_tokens(request, payload, *, ollama=False):
+    from answerai.utils.agent_runs import reserve_run_credits
+
+    await reserve_run_credits(request, payload)
     apply_output_cap(request, payload, ollama=ollama)
     limits = getattr(request.state, 'billing_token_limits', None)
     if not limits:

@@ -446,6 +446,9 @@ async def lifespan(app: FastAPI):
     from answerai.utils.automations import scheduler_worker_loop
 
     app.state.scheduler_worker_loop = asyncio.create_task(scheduler_worker_loop(app))
+    from answerai.utils.agent_runs import worker_loop
+
+    app.state.agent_worker = asyncio.create_task(worker_loop(app))
 
     if await Config.get('models.base_models_cache'):
         try:
@@ -539,6 +542,11 @@ async def lifespan(app: FastAPI):
     app.state.periodic_usage_pool_cleanup.cancel()
     app.state.periodic_session_pool_cleanup.cancel()
     app.state.scheduler_worker_loop.cancel()
+    app.state.agent_worker.cancel()
+    try:
+        await app.state.agent_worker
+    except asyncio.CancelledError:
+        pass
 
     await publish_event(request, EVENTS.SYSTEM_SHUTDOWN_COMPLETED, source='system')
 
@@ -830,6 +838,9 @@ app.include_router(configs.router, prefix='/api/v1/configs', tags=['configs'])
 app.include_router(auths.router, prefix='/api/v1/auths', tags=['auths'])
 app.include_router(admin_controls.router, prefix='/api/v1/admin/controls', tags=['admin controls'])
 app.include_router(billing.router, prefix='/api/v1/billing', tags=['billing'])
+from answerai.routers import agent_runs
+
+app.include_router(agent_runs.router, prefix='/api/v1/agent-runs', tags=['agent runs'])
 app.include_router(live.router, prefix='/api/v1/live', tags=['live'])
 app.include_router(email_verification.router, prefix='/api/v1/auths/email', tags=['email verification'])
 app.include_router(mfa.router, prefix='/api/v1/auths/mfa', tags=['auths'])
@@ -1261,6 +1272,9 @@ async def chat_completion(
 
         approval_resume = getattr(request.state, 'tool_approval_resume', None)
         metadata = {
+            '_agent_run_id': getattr(request.state, 'agent_run_id', None),
+            '_agent_run_lease': getattr(request.state, 'agent_run_lease', None),
+            '_agent_read_only': getattr(request.state, 'agent_read_only', False) is True,
             'tool_approval_resume': approval_resume[2]
             if approval_resume and approval_resume[:2] == (chat_id, form_data.get('assistant_message_id'))
             else None,

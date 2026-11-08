@@ -5,6 +5,8 @@ which the model invokes through `call_tool`. Discovery does not change the provi
 """
 
 import fnmatch
+import difflib
+from html import escape
 import re
 import unicodedata
 
@@ -61,7 +63,7 @@ def build_deferred_tools_manifest(tools_dict: dict[str, dict], deferred: list[st
     entries = ''
     for name in deferred:
         description = _truncate_description(tools_dict[name].get('spec', {}).get('description'))
-        entries += f'<tool>\n<name>{name}</name>\n<description>{description}</description>\n</tool>\n'
+        entries += f'<tool>\n<name>{escape(name)}</name>\n<description>{escape(description)}</description>\n</tool>\n'
 
     return (
         '<available_tools>\n'
@@ -82,6 +84,11 @@ async def apply_tool_search(
     names = set(tools_dict) | {(tool.get('function') or tool).get('name') for tool in extra_tools or []}
     config = not names.intersection({SEARCH_TOOL_NAME, CALL_TOOL_NAME}) and await get_tool_search_config()
     deferred = select_deferred_tools(tools_dict, config) if config else []
+    if deferred and metadata.get('params', {}).get('agent_mode') == 'agent':
+        from answerai.utils.tool_context import contextual_tools
+
+        promoted = set(contextual_tools(form_data, tools_dict))
+        deferred = [name for name in deferred if name not in promoted]
     if not deferred:
         return set()
 
@@ -191,7 +198,10 @@ def tokenize(text: str | None) -> list[str]:
 
 def _document_text(name: str, spec: dict) -> str:
     properties = (spec.get('parameters') or {}).get('properties') or {}
-    return ' '.join([name, str(spec.get('description') or ''), *properties.keys()])
+    fields = [
+        f'{key} {value.get("description", "")}' if isinstance(value, dict) else key for key, value in properties.items()
+    ]
+    return ' '.join([name, str(spec.get('description') or ''), *fields])[:12000]
 
 
 def search_deferred_tools(query: str, candidates: dict[str, dict], count: int = DEFAULT_SEARCH_COUNT) -> list[str]:
@@ -199,22 +209,34 @@ def search_deferred_tools(query: str, candidates: dict[str, dict], count: int = 
     from rank_bm25 import BM25Okapi
 
     query = (query or '').strip()
-    if query in candidates:
-        return [query]
+    exact = next((name for name in sorted(candidates) if name.casefold() == query.casefold()), None)
+    if exact is not None:
+        return [exact]
 
-    query_tokens = tokenize(query)
+    query_tokens = tokenize(query[:2000])[:24]
     if not candidates or not query_tokens:
         return []
 
-    names = list(candidates)
+    names = sorted(candidates)
+    name_tokens = {name: set(tokenize(name)) for name in names}
     documents = [tokenize(_document_text(name, candidates[name])) or ['_'] for name in names]
+    vocabulary = sorted(set().union(*name_tokens.values()))
+    document_tokens = set().union(*(set(document) for document in documents))
+    corrected = []
+    for token in query_tokens:
+        if token not in document_tokens and len(token) >= 4:
+            nearby = difflib.get_close_matches(token, vocabulary, n=1, cutoff=0.84)
+            token = nearby[0] if nearby else token
+        corrected.append(token)
+    query_tokens = corrected
     # BM25 IDF is zero for a term found in half the corpus, common with small tool sets,
     # so raw token overlap keeps every matching term rankable.
     bm25 = BM25Okapi(documents).get_scores(query_tokens)
-    scores = {
-        name: max(0.0, float(bm25[index])) + len(set(query_tokens) & set(documents[index]))
-        for index, name in enumerate(names)
-    }
+    scores = {}
+    query_set = set(query_tokens)
+    for index, name in enumerate(names):
+        overlap = len(query_set & set(documents[index]))
+        scores[name] = max(0.0, float(bm25[index])) + overlap + 3 * len(query_set & name_tokens[name])
 
     ranked = sorted((name for name in names if scores[name] > 0), key=lambda name: (-scores[name], name))
     return ranked[: max(1, min(count, MAX_SEARCH_COUNT))]

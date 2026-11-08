@@ -2500,6 +2500,24 @@
 											<PlusAlt className="size-5" />
 										</button>
 									</InputMenu>
+									<select
+										aria-label="Execution mode"
+										class="rounded-full bg-transparent px-2 py-1 text-xs dark:text-gray-200"
+										value={params.agent_mode ?? 'auto'}
+										on:change={(event) => {
+											params = {
+												...params,
+												agent_mode: event.currentTarget.value,
+												tool_approval_mode: 'ask'
+											};
+										}}
+										><option value="auto">Chat</option><option value="agent">Agent</option></select
+									>
+									<a
+										href="/agents"
+										class="rounded-full px-2 py-1 text-xs text-gray-500 hover:text-blue-500"
+										>Background tasks</a
+									>
 
 									{#if showWebSearchButton || showImageGenerationButton || showCodeInterpreterButton || showToolsButton || showSkillsButton || (toggleFilters && toggleFilters.length > 0)}
 										<div

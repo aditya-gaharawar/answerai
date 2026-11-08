@@ -2899,11 +2899,19 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             if metadata.get('params', {}).get('function_calling') != 'legacy':
                 deferred = await apply_tool_search(form_data, metadata, tools_dict, inlet_filter_tools)
 
-                # If the function calling is native, then call the tools function calling handler
+                # Put relevant authorized schemas first without removing discovery or permission checks.
+                if metadata.get('params', {}).get('agent_mode') == 'agent':
+                    from answerai.utils.tool_context import contextual_tools
+
+                    preferred = contextual_tools(form_data, tools_dict)
+                    ordered_names = [*preferred, *(name for name in tools_dict if name not in preferred)]
+                else:
+                    ordered_names = list(tools_dict)
                 form_data['tools'] = [
                     {'type': 'function', 'function': tool.get('spec', {})}
-                    for name, tool in tools_dict.items()
+                    for name in ordered_names
                     if name not in deferred
+                    for tool in [tools_dict[name]]
                 ]
                 if inlet_filter_tools:
                     form_data['tools'].extend(inlet_filter_tools)
@@ -3103,6 +3111,14 @@ async def execute_tool_call(form_data, metadata, event_caller, tool_call):
     name = tool_call.get('name', '')
     tool_args = tool_call.get('arguments', '{}')
     from answerai.utils.tool_arguments import parse_tool_arguments
+    from answerai.utils.agent_execution import (
+        missing_tool_arguments,
+        requires_tool_approval,
+        PARALLEL_READ_TOOLS,
+        record_tool_result,
+        repeated_tool_failure,
+        run_agent_tool,
+    )
 
     try:
         params = parse_tool_arguments(tool_args)
@@ -3128,16 +3144,45 @@ async def execute_tool_call(form_data, metadata, event_caller, tool_call):
         elif tool.get('type') == 'terminal' or tool.get('server', {}).get('is_terminal') is True:
             return params, 'Error: Uploaded file display is not available.', None, None, False
     tool_type = tool.get('type', '')
+    from answerai.utils.agent_roles import read_only_delegation
+
+    if metadata.get('_agent_read_only') and (
+        tool_type != 'builtin'
+        or (name not in PARALLEL_READ_TOOLS and not read_only_delegation(name, params))
+        or tool.get('direct')
+    ):
+        return (
+            params,
+            {'error': 'This background execution permits read-only built-in tools only.'},
+            tool,
+            tool_type,
+            False,
+        )
     direct_tool = tool.get('direct', False)
     # MCP servers validate their own arguments
     if tool_type != 'mcp':
         allowed_params = tool.get('spec', {}).get('parameters', {}).get('properties', {}).keys()
         params = {key: value for key, value in params.items() if key in allowed_params}
+        argument_error = missing_tool_arguments(params, tool.get('spec', {}).get('parameters', {}))
+        if argument_error:
+            return params, {'error': argument_error, 'error_type': 'invalid_arguments'}, tool, tool_type, direct_tool
+
+    if tool_type != 'mcp' and metadata.get('params', {}).get('agent_mode') == 'agent':
+        from answerai.utils.tool_contracts import validate_contract
+
+        contract_error = validate_contract(params, tool.get('spec', {}).get('parameters') or {})
+        if contract_error:
+            return params, {'error': contract_error, 'error_type': 'invalid_arguments'}, tool, tool_type, direct_tool
+    tool_call['arguments'] = JSONCodec.dumps(params)
+    previous_failure = repeated_tool_failure(metadata, name, params)
+    if previous_failure:
+        return params, previous_failure, tool, tool_type, direct_tool
 
     try:
         if (
             not is_saved_chat_id(metadata.get('chat_id'))
             and metadata.get('params', {}).get('tool_approval_mode') == 'ask'
+            and requires_tool_approval(tool_call, metadata)
             and not (name == 'ask_user' and tool_type == 'builtin')
             and (
                 not event_caller
@@ -3152,6 +3197,13 @@ async def execute_tool_call(form_data, metadata, event_caller, tool_call):
         ):
             return params, 'Error: tool call was not approved.', tool, tool_type, direct_tool
 
+        run_id = metadata.get('_agent_run_id')
+        lease = metadata.get('_agent_run_lease')
+        if run_id and lease:
+            from answerai.utils.agent_runs import record_run_event
+
+            if not await record_run_event(run_id, lease, 'tool.started', call_id=tool_call.get('call_id'), tool=name):
+                return params, {'error': 'Execution lease is no longer active.'}, tool, tool_type, direct_tool
         tool_call['started_at'] = time.time()
         started = time.perf_counter()
         try:
@@ -3159,17 +3211,21 @@ async def execute_tool_call(form_data, metadata, event_caller, tool_call):
                 if not event_caller:
                     result = 'Error: Browser session is not connected for this direct tool.'
                 else:
-                    result = await event_caller(
-                        {
-                            'type': 'execute:tool',
-                            'data': {
-                                'id': str(uuid4()),
-                                'name': name,
-                                'params': params,
-                                'server': tool.get('server', {}),
-                                'session_id': metadata.get('session_id'),
-                            },
-                        }
+                    result = await run_agent_tool(
+                        event_caller(
+                            {
+                                'type': 'execute:tool',
+                                'data': {
+                                    'id': str(uuid4()),
+                                    'name': name,
+                                    'params': params,
+                                    'server': tool.get('server', {}),
+                                    'session_id': metadata.get('session_id'),
+                                },
+                            }
+                        ),
+                        name,
+                        tool_type,
                     )
             else:
                 function = await get_updated_tool_function(
@@ -3179,12 +3235,41 @@ async def execute_tool_call(form_data, metadata, event_caller, tool_call):
                         '__files__': metadata.get('files') or [],
                     },
                 )
-                result = await function(**params)
+                result = await run_agent_tool(function(**params), name, tool_type)
         finally:
             tool_call['ended_at'] = time.time()
             tool_call['duration'] = time.perf_counter() - started
     except Exception as e:
         result = {'error': str(e)}
+    if tool.get('output_schema') and metadata.get('params', {}).get('agent_mode') == 'agent':
+        from answerai.utils.tool_contracts import validate_contract
+
+        output_error = validate_contract(result, tool['output_schema'])
+        if output_error:
+            result = {'error': output_error, 'error_type': 'invalid_output', 'retryable': False}
+    if metadata.get('params', {}).get('agent_mode') == 'agent':
+        from answerai.utils.tool_outcomes import normalize_tool_error
+
+        result = normalize_tool_error(result, name, tool_type)
+    failed = record_tool_result(metadata, name, params, result)
+    log.info(
+        'Tool execution name=%s kind=%s duration_ms=%.1f outcome=%s',
+        name,
+        tool_type,
+        1000 * tool_call.get('duration', 0),
+        'failed' if failed else 'completed',
+    )
+    if metadata.get('_agent_run_id') and metadata.get('_agent_run_lease'):
+        from answerai.utils.agent_runs import record_run_event
+
+        await record_run_event(
+            metadata['_agent_run_id'],
+            metadata['_agent_run_lease'],
+            'tool.failed' if failed else 'tool.completed',
+            call_id=tool_call.get('call_id'),
+            tool=name,
+            duration_ms=1000 * tool_call.get('duration', 0),
+        )
     return params, result, tool, tool_type, direct_tool
 
 
@@ -5731,10 +5816,13 @@ async def streaming_chat_response_handler(response, ctx):
                             if item.get('name') == 'ask_user' and item.get('status') == 'pending':
                                 item['status'] = 'in_progress'
 
+                    from answerai.utils.agent_execution import requires_tool_approval
+
                     tool_approval_mode = metadata.get('params', {}).get('tool_approval_mode', 'full')
                     if (
                         response_tool_calls
                         and tool_approval_mode == 'ask'
+                        and any(requires_tool_approval(call, metadata) for call in response_tool_calls)
                         and is_saved_chat_id(metadata.get('chat_id'))
                         and metadata.get('message_id')
                     ):
@@ -5762,12 +5850,16 @@ async def streaming_chat_response_handler(response, ctx):
                     # Provider calls have been resolved and staged; execute their saved items directly.
                     response_tool_calls = [output_by_call_id[call['id']] for call in response_tool_calls]
                     delegate_calls = [call for call in response_tool_calls if call.get('name') == 'delegate_task']
-                    tool_results = {}
-                    for tool_call in response_tool_calls:
-                        if tool_call.get('name') != 'delegate_task':
-                            tool_results[tool_call['call_id']] = await execute_tool_call(
-                                form_data, metadata, event_caller, tool_call
-                            )
+                    from answerai.utils.agent_execution import execute_agent_batch
+
+                    async def execute_prepared_call(call):
+                        return await execute_tool_call(form_data, metadata, event_caller, call)
+
+                    tool_results = await execute_agent_batch(
+                        [call for call in response_tool_calls if call.get('name') != 'delegate_task'],
+                        metadata.get('tools', {}),
+                        execute_prepared_call,
+                    )
                     tool_results.update(
                         zip(
                             [tool_call['call_id'] for tool_call in delegate_calls],

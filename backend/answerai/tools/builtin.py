@@ -305,26 +305,105 @@ async def search_web(
     if __request__ is None:
         return JSONCodec.dumps({'error': 'Request context not available'})
 
+    from answerai.utils.agent_search import unique_web_results
+
+    query = query.strip()
+    if not query:
+        return JSONCodec.dumps({'error': 'Search query must not be empty.'})
+    if len(query) > 2000:
+        return JSONCodec.dumps({'error': 'Search query must not exceed 2000 characters.'})
+
     try:
         engine = await Config.get('web.search.engine')
         user = UserModel(**__user__) if __user__ else None
 
         configured = await Config.get('web.search.result_count')
-        max_count = 5 if configured is None else configured
+        max_count = max(0, min(int(configured if configured is not None else 5), 50))
+        if max_count == 0:
+            return JSONCodec.dumps({'error': 'Web search results are disabled by the administrator.'})
         count = max(1, min(count, max_count)) if count is not None else max_count
 
-        results = await _search_web(__request__, engine, query, user)
+        if user is None:
+            return JSONCodec.dumps({'error': 'Authenticated user context is required for search.'})
 
-        # Limit results
-        results = results[:count] if results else []
+        from answerai.utils.research_cache import PUBLIC_SEARCH_CACHE
+        from answerai.utils.plans import entitlement, require_feature, reserve
+
+        if user:
+            await require_feature(user, 'web_search')
+            name, plan, billing_config = await entitlement(user)
+            if name != 'admin' and billing_config.enabled:
+                await reserve(user.id, [('web_search', 60, plan.requests_per_minute, 1)])
+
+        async def load_results():
+            rows = await asyncio.wait_for(_search_web(__request__, engine, query, user), timeout=45)
+            return unique_web_results(rows, count)
+
+        try:
+            results = await PUBLIC_SEARCH_CACHE.get((getattr(user, 'id', None), engine, query, count), load_results)
+        except TimeoutError:
+            return JSONCodec.dumps(
+                {
+                    'error': 'Web search timed out. Narrow or rephrase the query and try another source.',
+                    'error_type': 'timeout',
+                }
+            )
 
         return JSONCodec.dumps(
-            [{'title': r.title, 'link': r.link, 'snippet': r.snippet} for r in results],
+            results,
             ensure_ascii=False,
         )
     except Exception as e:
         log.exception(f'search_web error: {e}')
-        return JSONCodec.dumps({'error': str(e)})
+        return JSONCodec.dumps(
+            {
+                'error': 'Web search failed. Check provider availability and your search permissions or limits.',
+                'error_type': 'search_failed',
+            }
+        )
+
+
+async def research_web(
+    queries: list[str],
+    count_per_query: int = 3,
+    __request__: Request = None,
+    __user__: dict = None,
+) -> str:
+    """Research up to five distinct queries in parallel and return deduplicated, traceable sources.
+
+    :param queries: Specific search queries covering independent aspects of the objective
+    :param count_per_query: Results per query, from 1 to 10, further capped by administrator search settings
+    :return: Per-query results/errors, a deduplicated source list with citation IDs and a partial-results flag
+    """
+    from answerai.utils.agent_search import canonical_search_url
+
+    if not isinstance(queries, list) or not 1 <= len(queries) <= 5:
+        return JSONCodec.dumps({'error': 'Supply between one and five search queries.'})
+    if any(not isinstance(query, str) or not query.strip() or len(query) > 2000 for query in queries):
+        return JSONCodec.dumps({'error': 'Queries must be non-empty strings of at most 2000 characters.'})
+    if type(count_per_query) is not int or not 1 <= count_per_query <= 10:
+        return JSONCodec.dumps({'error': 'count_per_query must be between 1 and 10.'})
+    unique_queries = list(dict.fromkeys(query.strip() for query in queries))
+    semaphore = asyncio.Semaphore(3)
+
+    async def run(query):
+        async with semaphore:
+            result = JSONCodec.loads(await search_web(query, count_per_query, __request__, __user__))
+            return {'query': query, 'results': result} if isinstance(result, list) else {'query': query, **result}
+
+    results = await asyncio.gather(*(run(query) for query in unique_queries))
+    sources = []
+    seen = set()
+    for result in results:
+        for source in result.get('results', []):
+            key = canonical_search_url(source['link'])
+            if key and key not in seen:
+                seen.add(key)
+                sources.append({'citation_id': f'S{len(sources) + 1}', **source})
+    return JSONCodec.dumps(
+        {'queries': results, 'sources': sources, 'partial': any('error' in result for result in results)},
+        ensure_ascii=False,
+    )
 
 
 async def fetch_url(
@@ -342,16 +421,18 @@ async def fetch_url(
         return JSONCodec.dumps({'error': 'Request context not available'})
 
     try:
-        content, _ = await get_content_from_url(__request__, url)
+        content, _ = await asyncio.wait_for(get_content_from_url(__request__, url), timeout=45)
 
         # Truncate if configured (WEB_FETCH_MAX_CONTENT_LENGTH)
         # Guard: content may be None if the web loader silently failed
         if content is not None:
             max_length = await Config.get('web.fetch.max_content_length')
+            if max_length is None:
+                max_length = 24000
             if max_length and max_length > 0 and len(content) > max_length:
                 content = content[:max_length] + '\n\n[Content truncated...]'
-        else:
-            content = ''
+        if not content or not content.strip():
+            return JSONCodec.dumps({'error': 'The page returned no readable content. Try another source.'})
 
         return content
     except Exception as e:
@@ -1782,6 +1863,7 @@ async def delegate_task(
     file_ids: list[str] | None = None,
     background: bool = False,
     model_id: str | None = None,
+    role: Literal['general', 'planner', 'researcher', 'coder', 'browser', 'data', 'verifier'] = 'general',
     __request__: Request = None,
     __user__: dict = None,
     __metadata__: dict = None,
@@ -1797,11 +1879,14 @@ async def delegate_task(
         do not put file IDs only in context.
     :param background: Return immediately and continue this chat when the sub-agent finishes
     :param model_id: ID of an available sub-agent model. Omit to use the current model
+    :param role: Specialist role; researcher, planner and verifier roles are restricted to read-only tools
     :return: Foreground result text, or a JSON dispatch handle for background work
     """
     if __request__ is None:
         return 'Error: request context not available.'
-    if getattr(__request__.state, 'internal', False) is True:
+    if getattr(__request__.state, 'internal', False) is True and not getattr(
+        __request__.state, 'agent_coordinator', False
+    ):
         return 'Error: sub-agents cannot delegate recursively.'
 
     from answerai.utils.subagents import delegate
@@ -1812,6 +1897,7 @@ async def delegate_task(
         background,
         file_ids=file_ids,
         model_id=model_id,
+        role=role,
         request=__request__,
         user_data=__user__ or {},
         metadata=__metadata__ or {},
@@ -2638,8 +2724,11 @@ async def query_chat_files(
             except ValueError:
                 count = None
 
+    if not isinstance(query, str) or not query.strip() or len(query) > 2000:
+        return JSONCodec.dumps({'error': 'Provide a non-empty query of at most 2000 characters.'})
+
     try:
-        from answerai.retrieval.utils import get_sources_from_items
+        from answerai.utils.agent_search import lexical_file_search
 
         attached_ids = set()
         for item in __files__ or []:
@@ -2667,37 +2756,53 @@ async def query_chat_files(
             'rag.enable_hybrid_search',
             'rag.full_context',
         )
-        top_k = rag_config.get('rag.top_k') or 5
+        top_k = max(1, min(int(rag_config.get('rag.top_k') or 5), 20))
         count = top_k if count is None else max(1, min(count, top_k))
         full_context = all(item.get('context') == 'full' for item in file_items) or rag_config.get('rag.full_context')
 
         embedding_function = getattr(__request__.app.state, 'EMBEDDING_FUNCTION', None)
+
+        async def lexical_fallback():
+            current = await _get_accessible_chat_files(__files__, __user__, file_id)
+            return await asyncio.to_thread(lexical_file_search, current, query, count)
+
         if not embedding_function and not full_context:
-            return JSONCodec.dumps({'error': 'Embedding function not configured'})
+            return JSONCodec.dumps(await lexical_fallback(), ensure_ascii=False)
+
+        from answerai.retrieval.utils import get_sources_from_items
 
         user_model = UserModel(**__user__)
-        sources = await get_sources_from_items(
-            request=__request__,
-            items=file_items,
-            queries=[query],
-            embedding_function=(
-                lambda queries, prefix: (
-                    embedding_function(queries, prefix=prefix, user=user_model) if embedding_function else None
-                )
-            ),
-            k=count,
-            reranking_function=(
-                (lambda q, docs: __request__.app.state.RERANKING_FUNCTION(q, docs, user=user_model))
-                if getattr(__request__.app.state, 'RERANKING_FUNCTION', None)
-                else None
-            ),
-            k_reranker=rag_config.get('rag.top_k_reranker'),
-            r=rag_config.get('rag.relevance_threshold'),
-            hybrid_bm25_weight=rag_config.get('rag.hybrid_bm25_weight'),
-            hybrid_search=rag_config.get('rag.enable_hybrid_search'),
-            full_context=full_context,
-            user=user_model,
-        )
+        try:
+            sources = await asyncio.wait_for(
+                get_sources_from_items(
+                    request=__request__,
+                    items=file_items,
+                    queries=[query],
+                    embedding_function=(
+                        lambda queries, prefix: (
+                            embedding_function(queries, prefix=prefix, user=user_model) if embedding_function else None
+                        )
+                    ),
+                    k=count,
+                    reranking_function=(
+                        (lambda q, docs: __request__.app.state.RERANKING_FUNCTION(q, docs, user=user_model))
+                        if getattr(__request__.app.state, 'RERANKING_FUNCTION', None)
+                        else None
+                    ),
+                    k_reranker=rag_config.get('rag.top_k_reranker'),
+                    r=rag_config.get('rag.relevance_threshold'),
+                    hybrid_bm25_weight=rag_config.get('rag.hybrid_bm25_weight'),
+                    hybrid_search=rag_config.get('rag.enable_hybrid_search'),
+                    full_context=full_context,
+                    user=user_model,
+                ),
+                timeout=30,
+            )
+        except Exception as error:
+            if isinstance(error, HTTPException) and error.status_code in {401, 403, 404}:
+                raise
+            log.warning('Semantic chat-file search failed; using permission-checked lexical retrieval.')
+            return JSONCodec.dumps(await lexical_fallback(), ensure_ascii=False)
 
         chunks = []
         for source in sources or []:
@@ -2718,6 +2823,8 @@ async def query_chat_files(
                     chunk['distance'] = distances[idx]
                 chunks.append(chunk)
 
+        if not chunks:
+            chunks = await lexical_fallback()
         return JSONCodec.dumps(chunks[:count], ensure_ascii=False)
     except Exception as e:
         log.exception(f'query_chat_files error: {e}')

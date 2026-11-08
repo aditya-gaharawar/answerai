@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { decode } from 'html-entities';
+	import { toolActivity } from '$lib/utils/toolActivity';
 	import { v4 as uuidv4 } from 'uuid';
 
 	import { getContext } from 'svelte';
@@ -245,6 +246,8 @@
 					<span class="hidden @md:inline font-normal">
 						{#if isRejected}
 							{$i18n.t('Denied {{NAME}}', { NAME: attributes.name })}
+						{:else if isError}
+							{$i18n.t('Tool failed')}: {attributes.name}
 						{:else if isDone}
 							{$i18n.t('View Result from {{NAME}}', { NAME: attributes.name })}
 						{:else if needsInput}
@@ -254,7 +257,7 @@
 						{:else if isPreparing}
 							{$i18n.t('Preparing {{NAME}}...', { NAME: attributes.name })}
 						{:else}
-							{$i18n.t('Executing {{NAME}}...', { NAME: attributes.name })}
+							{$i18n.t(toolActivity(attributes.name ?? 'tool'))}…
 						{/if}
 					</span>
 				</div>
