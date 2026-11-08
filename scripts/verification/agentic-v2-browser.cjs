@@ -65,16 +65,14 @@ async function main() {
 		if (await page.evaluate(() => document.documentElement.scrollWidth > innerWidth))
 			throw new Error('Mobile page overflows viewport.');
 		await page.goto(base, { waitUntil: 'domcontentloaded' });
+		await page.locator('#input-menu-button').click();
 		const mode = page.getByLabel('Execution mode', { exact: true });
-		await mode.waitFor({ state: 'attached' });
-		const menu = page.locator('details').filter({ has: mode });
-		await menu.locator('summary').click();
+		await mode.waitFor({ state: 'visible' });
 		await mode.selectOption('agent');
-		if ((await menu.getAttribute('open')) !== null)
-			throw new Error('Execution mode menu did not close after selection.');
+		await mode.waitFor({ state: 'detached' });
+		await page.locator('#input-menu-button').click();
 		if ((await mode.inputValue()) !== 'agent') throw new Error('Agent mode was not selected.');
-		await menu.locator('summary').click();
-		await menu.getByRole('link', { name: 'Background tasks' }).click();
+		await page.getByRole('menuitem', { name: 'Background tasks' }).click();
 		await page.getByRole('heading', { name: 'Agent tasks', exact: true }).waitFor();
 		if (errors.length) throw new Error(`Browser raised ${errors.length} uncaught errors.`);
 		console.log(

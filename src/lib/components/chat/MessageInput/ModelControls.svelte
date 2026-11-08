@@ -19,6 +19,7 @@
 
 	const i18n: any = getContext('i18n');
 	export let selectedModels: string[] = [];
+	export let menuItem = false;
 	export let chatFiles: any[] = [];
 	export let params: Record<string, any> = {};
 	export let onParamChange: (key: string, value: unknown) => void = () => {};
@@ -136,9 +137,14 @@
 			<button
 				type="button"
 				aria-label={$i18n.t('Model controls')}
-				class="mr-2 flex shrink-0 items-center justify-center text-gray-500 transition-colors hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+				class={menuItem
+					? 'flex min-h-11 w-full items-center gap-2 rounded-xl px-2 text-left text-sm text-gray-700 hover:bg-gray-50 dark:text-gray-200 dark:hover:bg-gray-800'
+					: 'mr-2 flex shrink-0 items-center justify-center text-gray-500 transition-colors hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'}
 			>
 				<Knobs className="size-4" />
+				{#if menuItem}<span class="flex-1">{$i18n.t('Model controls')}</span><span
+						aria-hidden="true">›</span
+					>{/if}
 			</button>
 		</Tooltip>
 		<div slot="content">

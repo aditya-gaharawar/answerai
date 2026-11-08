@@ -11,7 +11,7 @@ Interactive requests enter `main.chat_completion`, prepare context and tools thr
 ## Execution modes
 
 - **Chat:** existing conversation behavior and optional tools.
-- **Agent:** explicit composer selection; multi-step native tool loop, schema validation, bounded parallel reads and approval before actions or unknown connectors. Known server-side read-only built-ins can run without repeated approval clicks. Tools impersonating built-in names do not inherit this exemption.
+- **Agent:** choose **+ → Mode → Agent** in the composer; multi-step native tool loop, schema validation, bounded parallel reads and approval before actions or unknown connectors. Known server-side read-only built-ins can run without repeated approval clicks. Tools impersonating built-in names do not inherit this exemption.
 - **Background research:** `/agents`, persistent objectives, model selection, optional configured web research, adjustable execution-credit budget, activity history, pause/resume/cancel and explicit result verification. Read-only planner, researcher and verifier delegates run in the parent's lease and credit budget. Child agents cannot recursively delegate. Mutations, code execution, direct browser tools and external connectors remain unavailable in this mode.
 
 ## Persistence, budgets and recovery

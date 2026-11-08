@@ -1,16 +1,11 @@
 <script lang="ts">
 	import type { Model } from '$lib/stores';
 	import type { TerminalContext } from '$lib/types';
-	import { toast } from 'svelte-sonner';
-	import { marked } from 'marked';
-	import DOMPurify from 'dompurify';
 
-	import { onMount, getContext, tick, createEventDispatcher } from 'svelte';
-	import { blur, fade } from 'svelte/transition';
+	import { getContext, createEventDispatcher } from 'svelte';
+	import { fade } from 'svelte/transition';
 
 	const dispatch = createEventDispatcher();
-
-	import { updateFolderById } from '$lib/apis/folders';
 
 	import {
 		config,
@@ -20,14 +15,10 @@
 		selectedFolder
 	} from '$lib/stores';
 	import { refreshChatList, refreshFolderChatLists } from '$lib/stores/chatList';
-	import { sanitizeResponseContent, extractCurlyBraceWords } from '$lib/utils';
 	import {
-		resolveLocalizedModelDescription,
-		resolveLocalizedModelName,
 		resolveLocalizedModelPromptSuggestions,
 		resolveLocalizedPromptSuggestions
 	} from '$lib/utils/localizedContent';
-	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 
 	import Suggestions from './Suggestions.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
@@ -96,17 +87,10 @@
 
 	let models = [];
 	export let selectedModelIdx = 0;
-	let selectedModel;
-	let selectedModelName = '';
-	let selectedModelDescription = '';
 	let selectedSuggestionPrompts = [];
+	let showSuggestions = false;
 
 	$: models = selectedModels.map((id) => $_models.find((m) => m.id === id));
-	$: selectedModel = atSelectedModel ?? models[selectedModelIdx];
-	$: selectedModelName = resolveLocalizedModelName(selectedModel, $i18n.language);
-	$: selectedModelDescription =
-		$config?.license_metadata?.chat_placeholder_description ||
-		resolveLocalizedModelDescription(selectedModel, $i18n.language);
 	$: selectedSuggestionPrompts =
 		resolveLocalizedModelPromptSuggestions(atSelectedModel, $i18n.language) ??
 		resolveLocalizedModelPromptSuggestions(models[selectedModelIdx], $i18n.language) ??
@@ -153,110 +137,11 @@
 					}}
 				/>
 			{:else}
-				<div class="flex flex-row justify-center gap-2.5 @sm:gap-3 w-fit px-5 max-w-xl">
-					<div class="flex shrink-0 justify-center">
-						<div class="flex -space-x-4 mb-0.5" in:fade={{ duration: 100 }}>
-							{#each models as model, modelIdx}
-								<Tooltip
-									content={(models[modelIdx]?.info?.meta?.tags ?? [])
-										.map((tag) => tag.name.toUpperCase())
-										.join(', ')}
-									placement="top"
-								>
-									<button
-										aria-hidden={models.length <= 1}
-										tabindex={models.length > 1 ? 0 : -1}
-										aria-label={$i18n.t('Get information on {{name}} in the UI', {
-											name: models[modelIdx]?.name
-										})}
-										on:click={() => {
-											selectedModelIdx = modelIdx;
-										}}
-									>
-										<img
-											src={`${WEBUI_API_BASE_URL}/models/model/profile/image?id=${model?.id}&lang=${$i18n.language}`}
-											class=" size-9 @sm:size-10 rounded-2xl"
-											aria-hidden="true"
-											alt=""
-											draggable="false"
-											on:error={(e) => {
-												// LICENSE covers this Open ANSWERAI fallback logo.
-												// Do not alter, remove, obscure, or replace it except as LICENSE permits:
-												// https://docs.openwebui.com/license.
-												if (e.currentTarget instanceof HTMLImageElement)
-													e.currentTarget.src = '/favicon.png';
-											}}
-										/>
-									</button>
-								</Tooltip>
-							{/each}
-						</div>
-					</div>
-
-					<h2
-						class=" text-2xl @sm:text-2xl line-clamp-1 flex items-center"
-						in:fade={{ duration: 100 }}
-					>
-						{#if selectedModelName}
-							<Tooltip
-								as="span"
-								content={selectedModelName}
-								placement="top"
-								className=" flex items-center "
-							>
-								<span class="line-clamp-1">
-									{selectedModelName}
-								</span>
-							</Tooltip>
-						{:else}
-							{$i18n.t('Hello, {{name}}', { name: $user?.name })}
-						{/if}
-					</h2>
-				</div>
-
-				<div class="flex mt-1 mb-2">
-					<div in:fade={{ duration: 100, delay: 50 }}>
-						{#if selectedModelDescription}
-							<Tooltip
-								className=" w-fit"
-								content={DOMPurify.sanitize(
-									marked.parse(
-										sanitizeResponseContent(selectedModelDescription).replaceAll('\n', '<br>')
-									)
-								)}
-								allowHTML={true}
-								placement="top"
-							>
-								<div
-									class="mt-0.5 px-2 text-sm font-normal text-gray-500 dark:text-gray-400 line-clamp-2 max-w-xl markdown"
-								>
-									{@html DOMPurify.sanitize(
-										marked.parse(
-											sanitizeResponseContent(selectedModelDescription).replaceAll('\n', '<br>')
-										)
-									)}
-								</div>
-							</Tooltip>
-
-							{#if models[selectedModelIdx]?.info?.meta?.user && (!models[selectedModelIdx]?.info?.meta?.user?.community || $config?.features.enable_community_sharing)}
-								<div class="mt-0.5 text-sm font-normal text-gray-400 dark:text-gray-500">
-									{$i18n.t('By')}
-									{#if models[selectedModelIdx]?.info?.meta?.user?.community}
-										<a
-											href="https://answerai.in/m/{models[selectedModelIdx]?.info?.meta?.user
-												?.username}"
-											>{models[selectedModelIdx]?.info?.meta?.user?.name
-												? models[selectedModelIdx]?.info?.meta?.user?.name
-												: `@${models[selectedModelIdx]?.info?.meta?.user?.username}`}</a
-										>
-									{:else}
-										{models[selectedModelIdx]?.info?.meta?.user?.name}
-									{/if}
-								</div>
-							{/if}
-						{/if}
-					</div>
-				</div>
+				<h1
+					class="mb-4 px-5 text-2xl font-medium tracking-tight text-gray-900 dark:text-gray-100 sm:text-3xl"
+				>
+					{$i18n.t('What can I help with?')}
+				</h1>
 			{/if}
 
 			<div class="text-base font-normal @md:max-w-3xl w-full py-3 {atSelectedModel ? 'mt-2' : ''}">
@@ -273,6 +158,9 @@
 						bind:chatFiles
 						bind:params
 						{onParamChange}
+						onExploreIdeas={selectedSuggestionPrompts?.length
+							? () => (showSuggestions = !showSuggestions)
+							: undefined}
 						bind:files
 						bind:prompt
 						bind:autoScroll
@@ -315,21 +203,16 @@
 		<div class="mx-auto px-4 md:max-w-3xl md:px-6 min-h-62" in:fade={{ duration: 200, delay: 200 }}>
 			<FolderPlaceholder folder={$selectedFolder} />
 		</div>
-	{:else}
-		<div class="mx-auto max-w-2xl mt-2" in:fade={{ duration: 200, delay: 200 }}>
-			<details class="mx-5 text-center">
-				<summary
-					class="inline-block cursor-pointer text-xs text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
-					>{$i18n.t('Explore ideas')}</summary
-				>
-				<div class="mt-4 text-left">
-					<Suggestions
-						suggestionPrompts={selectedSuggestionPrompts}
-						inputValue={prompt}
-						{onSelect}
-					/>
-				</div>
-			</details>
+	{:else if showSuggestions}
+		<div class="mx-auto mt-4 max-w-2xl px-5 text-left" in:fade={{ duration: 150 }}>
+			<Suggestions
+				suggestionPrompts={selectedSuggestionPrompts}
+				inputValue={prompt}
+				onSelect={(selection) => {
+					showSuggestions = false;
+					onSelect(selection);
+				}}
+			/>
 		</div>
 	{/if}
 </div>

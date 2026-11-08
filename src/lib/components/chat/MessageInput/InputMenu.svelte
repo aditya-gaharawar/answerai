@@ -51,6 +51,14 @@
 
 	let show = false;
 	let tab = '';
+	export const open = () => {
+		tab = '';
+		show = true;
+	};
+	const close = () => {
+		show = false;
+		tab = '';
+	};
 
 	let showAttachWebpageModal = false;
 	$: toolApprovalModes = [
@@ -132,10 +140,9 @@
 <Dropdown
 	bind:show
 	visualViewportAware
-	on:change={(e) => {
-		if (e.detail === false) {
-			onClose();
-		}
+	onOpenChange={(open) => {
+		if (open) tab = '';
+		else onClose();
 	}}
 >
 	<Tooltip content={$i18n.t('More')}>
@@ -143,82 +150,81 @@
 	</Tooltip>
 
 	<div slot="content">
-		<DropdownMenu className="w-70 max-h-72 overflow-hidden transition">
-			{#if tab === ''}
+		<DropdownMenu
+			className="composer-menu w-80 max-w-[calc(100vw-2rem)] max-h-[min(70dvh,32rem)] overflow-hidden transition"
+		>
+			{#if tab === '' || tab === 'attachments'}
 				<div
-					class="max-h-72 overflow-y-auto overflow-x-hidden scrollbar-thin"
+					class="max-h-[min(70dvh,32rem)] overflow-y-auto overflow-x-hidden overscroll-contain scrollbar-thin"
 					in:fly={{ x: -20, duration: 150 }}
 				>
-					{#if toolPermissionsEnabled}
-						<button
-							role="menuitem"
-							class="flex gap-2 w-full items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40 rounded-xl text-left"
-							on:click={() => {
-								tab = 'tool_permissions';
-							}}
-						>
-							<svg
-								class="size-3.5 shrink-0"
-								viewBox="0 0 24 24"
-								fill="none"
-								stroke="currentColor"
-								stroke-width="1.5"
-								stroke-linecap="round"
-								stroke-linejoin="round"
+					{#if tab === ''}
+						<slot name="controls" {close} />
+						{#if toolPermissionsEnabled}
+							<button
+								role="menuitem"
+								class="flex gap-2 w-full items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40 rounded-xl text-left"
+								on:click={() => {
+									tab = 'tool_permissions';
+								}}
 							>
-								<path d="M12 22C12 22 20 18 20 12V5L12 2L4 5V12C4 18 12 22 12 22Z" />
-							</svg>
+								<svg
+									class="size-3.5 shrink-0"
+									viewBox="0 0 24 24"
+									fill="none"
+									stroke="currentColor"
+									stroke-width="1.5"
+									stroke-linecap="round"
+									stroke-linejoin="round"
+								>
+									<path d="M12 22C12 22 20 18 20 12V5L12 2L4 5V12C4 18 12 22 12 22Z" />
+								</svg>
 
-							<div class="flex items-center w-full justify-between min-w-0">
-								<div class="line-clamp-1">
-									{$i18n.t('Tool Permissions')}
-								</div>
-
-								<div class="flex items-center gap-2 min-w-0">
-									<div class="text-xs text-gray-500 truncate">
-										{$i18n.t(
-											toolApprovalModes.find((mode) => mode.value === toolApprovalMode)?.label ??
-												'Full access'
-										)}
+								<div class="flex items-center w-full justify-between min-w-0">
+									<div class="line-clamp-1">
+										{$i18n.t('Tool Permissions')}
 									</div>
-									<div class="text-gray-500">
-										<ChevronRight />
+
+									<div class="flex items-center gap-2 min-w-0">
+										<div class="text-xs text-gray-500 truncate">
+											{$i18n.t(
+												toolApprovalModes.find((mode) => mode.value === toolApprovalMode)?.label ??
+													'Full access'
+											)}
+										</div>
+										<div class="text-gray-500">
+											<ChevronRight />
+										</div>
 									</div>
 								</div>
-							</div>
-						</button>
+							</button>
 
-						<div class="h-px mx-1 my-1 bg-gray-100 dark:bg-gray-800"></div>
-					{/if}
+							<div class="h-px mx-1 my-1 bg-gray-100 dark:bg-gray-800"></div>
+						{/if}
 
-					<Tooltip
-						content={fileUploadCapableModels.length !== selectedModels.length
-							? $i18n.t('Model(s) do not support file upload')
-							: !fileUploadEnabled
-								? $i18n.t('You do not have permission to upload files.')
-								: ''}
-						className="w-full"
-					>
 						<button
-							role="menuitem"
-							class="flex w-full gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal select-none cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40 rounded-xl text-left {!fileUploadEnabled
-								? 'opacity-50'
-								: ''}"
 							type="button"
+							role="menuitem"
+							class="flex min-h-11 w-full items-center gap-2 rounded-xl px-2 text-left text-sm hover:bg-gray-50 dark:hover:bg-gray-800"
 							on:click={() => {
-								if (fileUploadEnabled) {
-									uploadFilesHandler();
-									show = false;
-								}
+								tab = 'attachments';
 							}}
 						>
-							<Clip />
-
-							<div class="line-clamp-1">{$i18n.t('Upload Files')}</div>
+							<Clip className="size-4" /><span class="flex-1">{$i18n.t('Add attachments')}</span
+							><ChevronRight />
 						</button>
-					</Tooltip>
+					{:else}
+						<button
+							type="button"
+							role="menuitem"
+							class="mb-2 flex min-h-11 w-full items-center gap-2 rounded-xl px-2 text-left text-sm hover:bg-gray-50 dark:hover:bg-gray-800"
+							on:click={() => {
+								tab = '';
+							}}
+						>
+							<ChevronLeft /><span>{$i18n.t('Attachments')}</span>
+						</button>
 
-					{#if visionCapableModels.length > 0 && $visibleControls['chat.capture']}
 						<Tooltip
 							content={fileUploadCapableModels.length !== selectedModels.length
 								? $i18n.t('Model(s) do not support file upload')
@@ -235,370 +241,399 @@
 								type="button"
 								on:click={() => {
 									if (fileUploadEnabled) {
-										if (!detectMobile()) {
-											screenCaptureHandler();
-										} else {
-											const cameraInputElement = document.getElementById('camera-input');
+										uploadFilesHandler();
+										show = false;
+									}
+								}}
+							>
+								<Clip />
 
-											if (cameraInputElement) {
-												cameraInputElement.click();
+								<div class="line-clamp-1">{$i18n.t('Upload Files')}</div>
+							</button>
+						</Tooltip>
+
+						{#if visionCapableModels.length > 0 && $visibleControls['chat.capture']}
+							<Tooltip
+								content={fileUploadCapableModels.length !== selectedModels.length
+									? $i18n.t('Model(s) do not support file upload')
+									: !fileUploadEnabled
+										? $i18n.t('You do not have permission to upload files.')
+										: ''}
+								className="w-full"
+							>
+								<button
+									role="menuitem"
+									class="flex w-full gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal select-none cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40 rounded-xl text-left {!fileUploadEnabled
+										? 'opacity-50'
+										: ''}"
+									type="button"
+									on:click={() => {
+										if (fileUploadEnabled) {
+											if (!detectMobile()) {
+												screenCaptureHandler();
+											} else {
+												const cameraInputElement = document.getElementById('camera-input');
+
+												if (cameraInputElement) {
+													cameraInputElement.click();
+												}
 											}
+											show = false;
 										}
-										show = false;
-									}
-								}}
-							>
-								<Camera />
-								<div class=" line-clamp-1">{$i18n.t('Capture')}</div>
-							</button>
-						</Tooltip>
-					{/if}
+									}}
+								>
+									<Camera />
+									<div class=" line-clamp-1">{$i18n.t('Capture')}</div>
+								</button>
+							</Tooltip>
+						{/if}
 
-					{#if $visibleControls['chat.compare']}
-						<button
-							role="menuitem"
-							type="button"
-							class="flex w-full gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40 rounded-xl text-left"
-							on:click={async () => {
-								show = false;
-								await tick();
-								onCompare();
-							}}
-						>
-							<svg
-								class="size-3.5 shrink-0"
-								viewBox="0 0 24 24"
-								fill="none"
-								stroke="currentColor"
-								stroke-width="1.5"
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								aria-hidden="true"
-							>
-								<rect x="3" y="4" width="18" height="16" rx="2" />
-								<path d="M12 4v16M5.5 12h4M14.5 12h4M16.5 10v4" />
-							</svg>
-							<span>{$i18n.t('Compare text')}</span>
-						</button>
-					{/if}
-
-					{#if $visibleControls['chat.attach_webpage']}
-						<Tooltip
-							content={!webUploadEnabled
-								? $i18n.t('You do not have permission to upload web content.')
-								: ''}
-							className="w-full"
-						>
+						{#if $visibleControls['chat.compare']}
 							<button
 								role="menuitem"
-								class="flex w-full gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal select-none cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40 rounded-xl text-left {!webUploadEnabled
-									? 'opacity-50'
-									: ''}"
 								type="button"
-								on:click={() => {
-									if (webUploadEnabled) {
-										showAttachWebpageModal = true;
-										show = false;
-									}
-								}}
-							>
-								<GlobeAlt />
-								<div class="line-clamp-1">{$i18n.t('Attach Webpage')}</div>
-							</button>
-						</Tooltip>
-					{/if}
-
-					{#if $visibleControls['chat.attach_files']}
-						<Tooltip
-							content={fileUploadCapableModels.length !== selectedModels.length
-								? $i18n.t('Model(s) do not support file upload')
-								: !fileUploadEnabled
-									? $i18n.t('You do not have permission to upload files.')
-									: ''}
-							className="w-full"
-						>
-							<button
-								role="menuitem"
-								class="flex gap-2 w-full items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal select-none cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40 rounded-xl text-left {!fileUploadEnabled
-									? 'opacity-50'
-									: ''}"
-								on:click={() => {
-									if (fileUploadEnabled) {
-										tab = 'files';
-									}
-								}}
-							>
-								<DocumentArrowUp />
-
-								<div class="flex items-center w-full justify-between">
-									<div class="line-clamp-1">
-										{$i18n.t('Attach Files')}
-									</div>
-
-									<div class="text-gray-500">
-										<ChevronRight />
-									</div>
-								</div>
-							</button>
-						</Tooltip>
-					{/if}
-
-					{#if ($config?.features?.enable_notes ?? false) && ($user?.role === 'admin' || ($user?.permissions?.features?.notes ?? true)) && $visibleControls['chat.attach_notes']}
-						<Tooltip
-							content={fileUploadCapableModels.length !== selectedModels.length
-								? $i18n.t('Model(s) do not support file upload')
-								: !fileUploadEnabled
-									? $i18n.t('You do not have permission to upload files.')
-									: ''}
-							className="w-full"
-						>
-							<button
-								role="menuitem"
-								class="flex gap-2 w-full items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal select-none cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40 rounded-xl text-left {!fileUploadEnabled
-									? 'opacity-50'
-									: ''}"
-								on:click={() => {
-									if (fileUploadEnabled) {
-										tab = 'notes';
-									}
-								}}
-							>
-								<PageEdit />
-
-								<div class="flex items-center w-full justify-between">
-									<div class=" line-clamp-1">
-										{$i18n.t('Attach Notes')}
-									</div>
-
-									<div class="text-gray-500">
-										<ChevronRight />
-									</div>
-								</div>
-							</button>
-						</Tooltip>
-					{/if}
-
-					{#if $visibleControls['chat.attach_knowledge']}
-						<Tooltip
-							content={fileUploadCapableModels.length !== selectedModels.length
-								? $i18n.t('Model(s) do not support file upload')
-								: !fileUploadEnabled
-									? $i18n.t('You do not have permission to upload files.')
-									: ''}
-							className="w-full"
-						>
-							<button
-								role="menuitem"
-								class="flex gap-2 w-full items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40 rounded-xl text-left {!fileUploadEnabled
-									? 'opacity-50'
-									: ''}"
-								on:click={() => {
-									if (fileUploadEnabled) {
-										tab = 'knowledge';
-									}
-								}}
-							>
-								<Database />
-
-								<div class="flex items-center w-full justify-between">
-									<div class=" line-clamp-1">
-										{$i18n.t('Attach Knowledge')}
-									</div>
-
-									<div class="text-gray-500">
-										<ChevronRight />
-									</div>
-								</div>
-							</button>
-						</Tooltip>
-					{/if}
-
-					{#if $visibleControls['chat.reference_chats']}
-						<Tooltip
-							content={fileUploadCapableModels.length !== selectedModels.length
-								? $i18n.t('Model(s) do not support file upload')
-								: !fileUploadEnabled
-									? $i18n.t('You do not have permission to upload files.')
-									: ''}
-							className="w-full"
-						>
-							<button
-								role="menuitem"
-								class="flex gap-2 w-full items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40 rounded-xl text-left {!fileUploadEnabled
-									? 'opacity-50'
-									: ''}"
-								on:click={() => {
-									if (fileUploadEnabled) {
-										tab = 'chats';
-									}
-								}}
-							>
-								<ClockRotateRight />
-
-								<div class="flex items-center w-full justify-between">
-									<div class=" line-clamp-1">
-										{$i18n.t('Reference Chats')}
-									</div>
-
-									<div class="text-gray-500">
-										<ChevronRight />
-									</div>
-								</div>
-							</button>
-						</Tooltip>
-					{/if}
-
-					{#if fileUploadEnabled}
-						{#if $config?.features?.enable_google_drive_integration}
-							<button
-								role="menuitem"
-								class="flex w-full gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal select-none cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40 rounded-xl text-left"
-								type="button"
-								on:click={() => {
-									uploadGoogleDriveHandler();
+								class="flex w-full gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40 rounded-xl text-left"
+								on:click={async () => {
 									show = false;
+									await tick();
+									onCompare();
 								}}
 							>
 								<svg
-									xmlns="http://www.w3.org/2000/svg"
-									viewBox="0 0 87.3 78"
 									class="size-3.5 shrink-0"
+									viewBox="0 0 24 24"
+									fill="none"
+									stroke="currentColor"
+									stroke-width="1.5"
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									aria-hidden="true"
 								>
-									<path
-										d="m6.6 66.85 3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3l13.75-23.8h-27.5c0 1.55.4 3.1 1.2 4.5z"
-										fill="#0066da"
-									/>
-									<path
-										d="m43.65 25-13.75-23.8c-1.35.8-2.5 1.9-3.3 3.3l-25.4 44a9.06 9.06 0 0 0 -1.2 4.5h27.5z"
-										fill="#00ac47"
-									/>
-									<path
-										d="m73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l1.6-2.75 7.65-13.25c.8-1.4 1.2-2.95 1.2-4.5h-27.502l5.852 11.5z"
-										fill="#ea4335"
-									/>
-									<path
-										d="m43.65 25 13.75-23.8c-1.35-.8-2.9-1.2-4.5-1.2h-18.5c-1.6 0-3.15.45-4.5 1.2z"
-										fill="#00832d"
-									/>
-									<path
-										d="m59.8 53h-32.3l-13.75 23.8c1.35.8 2.9 1.2 4.5 1.2h50.8c1.6 0 3.15-.45 4.5-1.2z"
-										fill="#2684fc"
-									/>
-									<path
-										d="m73.4 26.5-12.7-22c-.8-1.4-1.95-2.5-3.3-3.3l-13.75 23.8 16.15 28h27.45c0-1.55-.4-3.1-1.2-4.5z"
-										fill="#ffba00"
-									/>
+									<rect x="3" y="4" width="18" height="16" rx="2" />
+									<path d="M12 4v16M5.5 12h4M14.5 12h4M16.5 10v4" />
 								</svg>
-								<div class="line-clamp-1">{$i18n.t('Google Drive')}</div>
+								<span>{$i18n.t('Compare text')}</span>
 							</button>
 						{/if}
 
-						{#if $config?.features?.enable_onedrive_integration && ($config?.features?.enable_onedrive_personal || $config?.features?.enable_onedrive_business)}
-							<button
-								role="menuitem"
-								class="flex gap-2 w-full items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal select-none cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40 rounded-xl text-left {!fileUploadEnabled
-									? 'opacity-50'
-									: ''}"
-								on:click={() => {
-									tab = 'microsoft_onedrive';
-								}}
+						{#if $visibleControls['chat.attach_webpage']}
+							<Tooltip
+								content={!webUploadEnabled
+									? $i18n.t('You do not have permission to upload web content.')
+									: ''}
+								className="w-full"
 							>
-								<svg
-									xmlns="http://www.w3.org/2000/svg"
-									viewBox="0 0 32 32"
-									class="size-3.5"
-									fill="none"
+								<button
+									role="menuitem"
+									class="flex w-full gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal select-none cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40 rounded-xl text-left {!webUploadEnabled
+										? 'opacity-50'
+										: ''}"
+									type="button"
+									on:click={() => {
+										if (webUploadEnabled) {
+											showAttachWebpageModal = true;
+											show = false;
+										}
+									}}
 								>
-									<mask
-										id="mask0_87_7796"
-										style="mask-type:alpha"
-										maskUnits="userSpaceOnUse"
-										x="0"
-										y="6"
-										width="32"
-										height="20"
+									<GlobeAlt />
+									<div class="line-clamp-1">{$i18n.t('Attach Webpage')}</div>
+								</button>
+							</Tooltip>
+						{/if}
+
+						{#if $visibleControls['chat.attach_files']}
+							<Tooltip
+								content={fileUploadCapableModels.length !== selectedModels.length
+									? $i18n.t('Model(s) do not support file upload')
+									: !fileUploadEnabled
+										? $i18n.t('You do not have permission to upload files.')
+										: ''}
+								className="w-full"
+							>
+								<button
+									role="menuitem"
+									class="flex gap-2 w-full items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal select-none cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40 rounded-xl text-left {!fileUploadEnabled
+										? 'opacity-50'
+										: ''}"
+									on:click={() => {
+										if (fileUploadEnabled) {
+											tab = 'files';
+										}
+									}}
+								>
+									<DocumentArrowUp />
+
+									<div class="flex items-center w-full justify-between">
+										<div class="line-clamp-1">
+											{$i18n.t('Attach Files')}
+										</div>
+
+										<div class="text-gray-500">
+											<ChevronRight />
+										</div>
+									</div>
+								</button>
+							</Tooltip>
+						{/if}
+
+						{#if ($config?.features?.enable_notes ?? false) && ($user?.role === 'admin' || ($user?.permissions?.features?.notes ?? true)) && $visibleControls['chat.attach_notes']}
+							<Tooltip
+								content={fileUploadCapableModels.length !== selectedModels.length
+									? $i18n.t('Model(s) do not support file upload')
+									: !fileUploadEnabled
+										? $i18n.t('You do not have permission to upload files.')
+										: ''}
+								className="w-full"
+							>
+								<button
+									role="menuitem"
+									class="flex gap-2 w-full items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal select-none cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40 rounded-xl text-left {!fileUploadEnabled
+										? 'opacity-50'
+										: ''}"
+									on:click={() => {
+										if (fileUploadEnabled) {
+											tab = 'notes';
+										}
+									}}
+								>
+									<PageEdit />
+
+									<div class="flex items-center w-full justify-between">
+										<div class=" line-clamp-1">
+											{$i18n.t('Attach Notes')}
+										</div>
+
+										<div class="text-gray-500">
+											<ChevronRight />
+										</div>
+									</div>
+								</button>
+							</Tooltip>
+						{/if}
+
+						{#if $visibleControls['chat.attach_knowledge']}
+							<Tooltip
+								content={fileUploadCapableModels.length !== selectedModels.length
+									? $i18n.t('Model(s) do not support file upload')
+									: !fileUploadEnabled
+										? $i18n.t('You do not have permission to upload files.')
+										: ''}
+								className="w-full"
+							>
+								<button
+									role="menuitem"
+									class="flex gap-2 w-full items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40 rounded-xl text-left {!fileUploadEnabled
+										? 'opacity-50'
+										: ''}"
+									on:click={() => {
+										if (fileUploadEnabled) {
+											tab = 'knowledge';
+										}
+									}}
+								>
+									<Database />
+
+									<div class="flex items-center w-full justify-between">
+										<div class=" line-clamp-1">
+											{$i18n.t('Attach Knowledge')}
+										</div>
+
+										<div class="text-gray-500">
+											<ChevronRight />
+										</div>
+									</div>
+								</button>
+							</Tooltip>
+						{/if}
+
+						{#if $visibleControls['chat.reference_chats']}
+							<Tooltip
+								content={fileUploadCapableModels.length !== selectedModels.length
+									? $i18n.t('Model(s) do not support file upload')
+									: !fileUploadEnabled
+										? $i18n.t('You do not have permission to upload files.')
+										: ''}
+								className="w-full"
+							>
+								<button
+									role="menuitem"
+									class="flex gap-2 w-full items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40 rounded-xl text-left {!fileUploadEnabled
+										? 'opacity-50'
+										: ''}"
+									on:click={() => {
+										if (fileUploadEnabled) {
+											tab = 'chats';
+										}
+									}}
+								>
+									<ClockRotateRight />
+
+									<div class="flex items-center w-full justify-between">
+										<div class=" line-clamp-1">
+											{$i18n.t('Reference Chats')}
+										</div>
+
+										<div class="text-gray-500">
+											<ChevronRight />
+										</div>
+									</div>
+								</button>
+							</Tooltip>
+						{/if}
+
+						{#if fileUploadEnabled}
+							{#if $config?.features?.enable_google_drive_integration}
+								<button
+									role="menuitem"
+									class="flex w-full gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal select-none cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40 rounded-xl text-left"
+									type="button"
+									on:click={() => {
+										uploadGoogleDriveHandler();
+										show = false;
+									}}
+								>
+									<svg
+										xmlns="http://www.w3.org/2000/svg"
+										viewBox="0 0 87.3 78"
+										class="size-3.5 shrink-0"
 									>
 										<path
-											d="M7.82979 26C3.50549 26 0 22.5675 0 18.3333C0 14.1921 3.35322 10.8179 7.54613 10.6716C9.27535 7.87166 12.4144 6 16 6C20.6308 6 24.5169 9.12183 25.5829 13.3335C29.1316 13.3603 32 16.1855 32 19.6667C32 23.0527 29 26 25.8723 25.9914L7.82979 26Z"
-											fill="#C4C4C4"
-										/>
-									</mask>
-									<g mask="url(#mask0_87_7796)">
-										<path
-											d="M7.83017 26.0001C5.37824 26.0001 3.18957 24.8966 1.75391 23.1691L18.0429 16.3335L30.7089 23.4647C29.5926 24.9211 27.9066 26.0001 26.0004 25.9915C23.1254 26.0001 12.0629 26.0001 7.83017 26.0001Z"
-											fill="url(#paint0_linear_87_7796)"
+											d="m6.6 66.85 3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3l13.75-23.8h-27.5c0 1.55.4 3.1 1.2 4.5z"
+											fill="#0066da"
 										/>
 										<path
-											d="M25.5785 13.3149L18.043 16.3334L30.709 23.4647C31.5199 22.4065 32.0004 21.0916 32.0004 19.6669C32.0004 16.1857 29.1321 13.3605 25.5833 13.3337C25.5817 13.3274 25.5801 13.3212 25.5785 13.3149Z"
-											fill="url(#paint1_linear_87_7796)"
+											d="m43.65 25-13.75-23.8c-1.35.8-2.5 1.9-3.3 3.3l-25.4 44a9.06 9.06 0 0 0 -1.2 4.5h27.5z"
+											fill="#00ac47"
 										/>
 										<path
-											d="M7.06445 10.7028L18.0423 16.3333L25.5779 13.3148C24.5051 9.11261 20.6237 6 15.9997 6C12.4141 6 9.27508 7.87166 7.54586 10.6716C7.3841 10.6773 7.22358 10.6877 7.06445 10.7028Z"
-											fill="url(#paint2_linear_87_7796)"
+											d="m73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l1.6-2.75 7.65-13.25c.8-1.4 1.2-2.95 1.2-4.5h-27.502l5.852 11.5z"
+											fill="#ea4335"
 										/>
 										<path
-											d="M1.7535 23.1687L18.0425 16.3331L7.06471 10.7026C3.09947 11.0792 0 14.3517 0 18.3331C0 20.1665 0.657197 21.8495 1.7535 23.1687Z"
-											fill="url(#paint3_linear_87_7796)"
+											d="m43.65 25 13.75-23.8c-1.35-.8-2.9-1.2-4.5-1.2h-18.5c-1.6 0-3.15.45-4.5 1.2z"
+											fill="#00832d"
 										/>
-									</g>
-									<defs>
-										<linearGradient
-											id="paint0_linear_87_7796"
-											x1="4.42591"
-											y1="24.6668"
-											x2="27.2309"
-											y2="23.2764"
-											gradientUnits="userSpaceOnUse"
-										>
-											<stop stop-color="#2086B8" />
-											<stop offset="1" stop-color="#46D3F6" />
-										</linearGradient>
-										<linearGradient
-											id="paint1_linear_87_7796"
-											x1="23.8302"
-											y1="19.6668"
-											x2="30.2108"
-											y2="15.2082"
-											gradientUnits="userSpaceOnUse"
-										>
-											<stop stop-color="#1694DB" />
-											<stop offset="1" stop-color="#62C3FE" />
-										</linearGradient>
-										<linearGradient
-											id="paint2_linear_87_7796"
-											x1="8.51037"
-											y1="7.33333"
-											x2="23.3335"
-											y2="15.9348"
-											gradientUnits="userSpaceOnUse"
-										>
-											<stop stop-color="#0D3D78" />
-											<stop offset="1" stop-color="#063B83" />
-										</linearGradient>
-										<linearGradient
-											id="paint3_linear_87_7796"
-											x1="-0.340429"
-											y1="19.9998"
-											x2="14.5634"
-											y2="14.4649"
-											gradientUnits="userSpaceOnUse"
-										>
-											<stop stop-color="#16589B" />
-											<stop offset="1" stop-color="#1464B7" />
-										</linearGradient>
-									</defs>
-								</svg>
+										<path
+											d="m59.8 53h-32.3l-13.75 23.8c1.35.8 2.9 1.2 4.5 1.2h50.8c1.6 0 3.15-.45 4.5-1.2z"
+											fill="#2684fc"
+										/>
+										<path
+											d="m73.4 26.5-12.7-22c-.8-1.4-1.95-2.5-3.3-3.3l-13.75 23.8 16.15 28h27.45c0-1.55-.4-3.1-1.2-4.5z"
+											fill="#ffba00"
+										/>
+									</svg>
+									<div class="line-clamp-1">{$i18n.t('Google Drive')}</div>
+								</button>
+							{/if}
 
-								<div class="flex items-center w-full justify-between">
-									<div class=" line-clamp-1">
-										{$i18n.t('Microsoft OneDrive')}
-									</div>
+							{#if $config?.features?.enable_onedrive_integration && ($config?.features?.enable_onedrive_personal || $config?.features?.enable_onedrive_business)}
+								<button
+									role="menuitem"
+									class="flex gap-2 w-full items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal select-none cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40 rounded-xl text-left {!fileUploadEnabled
+										? 'opacity-50'
+										: ''}"
+									on:click={() => {
+										tab = 'microsoft_onedrive';
+									}}
+								>
+									<svg
+										xmlns="http://www.w3.org/2000/svg"
+										viewBox="0 0 32 32"
+										class="size-3.5"
+										fill="none"
+									>
+										<mask
+											id="mask0_87_7796"
+											style="mask-type:alpha"
+											maskUnits="userSpaceOnUse"
+											x="0"
+											y="6"
+											width="32"
+											height="20"
+										>
+											<path
+												d="M7.82979 26C3.50549 26 0 22.5675 0 18.3333C0 14.1921 3.35322 10.8179 7.54613 10.6716C9.27535 7.87166 12.4144 6 16 6C20.6308 6 24.5169 9.12183 25.5829 13.3335C29.1316 13.3603 32 16.1855 32 19.6667C32 23.0527 29 26 25.8723 25.9914L7.82979 26Z"
+												fill="#C4C4C4"
+											/>
+										</mask>
+										<g mask="url(#mask0_87_7796)">
+											<path
+												d="M7.83017 26.0001C5.37824 26.0001 3.18957 24.8966 1.75391 23.1691L18.0429 16.3335L30.7089 23.4647C29.5926 24.9211 27.9066 26.0001 26.0004 25.9915C23.1254 26.0001 12.0629 26.0001 7.83017 26.0001Z"
+												fill="url(#paint0_linear_87_7796)"
+											/>
+											<path
+												d="M25.5785 13.3149L18.043 16.3334L30.709 23.4647C31.5199 22.4065 32.0004 21.0916 32.0004 19.6669C32.0004 16.1857 29.1321 13.3605 25.5833 13.3337C25.5817 13.3274 25.5801 13.3212 25.5785 13.3149Z"
+												fill="url(#paint1_linear_87_7796)"
+											/>
+											<path
+												d="M7.06445 10.7028L18.0423 16.3333L25.5779 13.3148C24.5051 9.11261 20.6237 6 15.9997 6C12.4141 6 9.27508 7.87166 7.54586 10.6716C7.3841 10.6773 7.22358 10.6877 7.06445 10.7028Z"
+												fill="url(#paint2_linear_87_7796)"
+											/>
+											<path
+												d="M1.7535 23.1687L18.0425 16.3331L7.06471 10.7026C3.09947 11.0792 0 14.3517 0 18.3331C0 20.1665 0.657197 21.8495 1.7535 23.1687Z"
+												fill="url(#paint3_linear_87_7796)"
+											/>
+										</g>
+										<defs>
+											<linearGradient
+												id="paint0_linear_87_7796"
+												x1="4.42591"
+												y1="24.6668"
+												x2="27.2309"
+												y2="23.2764"
+												gradientUnits="userSpaceOnUse"
+											>
+												<stop stop-color="#2086B8" />
+												<stop offset="1" stop-color="#46D3F6" />
+											</linearGradient>
+											<linearGradient
+												id="paint1_linear_87_7796"
+												x1="23.8302"
+												y1="19.6668"
+												x2="30.2108"
+												y2="15.2082"
+												gradientUnits="userSpaceOnUse"
+											>
+												<stop stop-color="#1694DB" />
+												<stop offset="1" stop-color="#62C3FE" />
+											</linearGradient>
+											<linearGradient
+												id="paint2_linear_87_7796"
+												x1="8.51037"
+												y1="7.33333"
+												x2="23.3335"
+												y2="15.9348"
+												gradientUnits="userSpaceOnUse"
+											>
+												<stop stop-color="#0D3D78" />
+												<stop offset="1" stop-color="#063B83" />
+											</linearGradient>
+											<linearGradient
+												id="paint3_linear_87_7796"
+												x1="-0.340429"
+												y1="19.9998"
+												x2="14.5634"
+												y2="14.4649"
+												gradientUnits="userSpaceOnUse"
+											>
+												<stop stop-color="#16589B" />
+												<stop offset="1" stop-color="#1464B7" />
+											</linearGradient>
+										</defs>
+									</svg>
 
-									<div class="text-gray-500">
-										<ChevronRight />
+									<div class="flex items-center w-full justify-between">
+										<div class=" line-clamp-1">
+											{$i18n.t('Microsoft OneDrive')}
+										</div>
+
+										<div class="text-gray-500">
+											<ChevronRight />
+										</div>
 									</div>
-								</div>
-							</button>
+								</button>
+							{/if}
 						{/if}
 					{/if}
 				</div>
@@ -788,3 +823,12 @@
 		</DropdownMenu>
 	</div>
 </Dropdown>
+
+<style>
+	@media (max-width: 767px) {
+		:global(.composer-menu button[role^='menuitem']),
+		:global(.composer-menu a[role^='menuitem']) {
+			min-height: 2.75rem;
+		}
+	}
+</style>
