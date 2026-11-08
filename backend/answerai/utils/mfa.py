@@ -42,10 +42,41 @@ class MfaConfigForm(BaseModel):
     MFA_ALLOW_TRUSTED_HEADER_BYPASS: StrictBool = False
 
 
+def stored_mfa_flag(value):
+    """Read canonical legacy booleans without weakening strict administrator input validation."""
+    if isinstance(value, str) and value.strip().casefold() in {'true', 'false'}:
+        return value.strip().casefold() == 'true'
+    if type(value) is int and value in (0, 1):
+        return bool(value)
+    return value  # Unknown values must still fail closed through StrictBool.
+
+
+def log_auth_backend_failure(operation, error):
+    import logging
+    import traceback
+
+    category = 'database' if isinstance(error, SQLAlchemyError) else 'stored_data_validation'
+    if isinstance(error, SQLAlchemyError):
+        original = str(getattr(error, 'orig', '')).casefold()
+        if any(marker in original for marker in ('no such table', 'no such column', 'does not exist')):
+            category = 'database_schema'
+        elif 'locked' in original:
+            category = 'database_locked'
+    # Do not log exception text, SQL parameters, passwords, tokens or malformed stored values.
+    frames = [f'{frame.filename}:{frame.lineno}:{frame.name}' for frame in traceback.extract_tb(error.__traceback__)]
+    logging.getLogger(__name__).error(
+        'Authentication backend failure operation=%s category=%s exception=%s frames=%s',
+        operation,
+        category,
+        type(error).__name__,
+        frames,
+    )
+
+
 async def get_mfa_config() -> MfaConfigForm:
     values = await Config.get_many(*MFA_CONFIG_KEYS.values())
     return MfaConfigForm(
-        **{field: values[key] for field, key in MFA_CONFIG_KEYS.items() if values.get(key) is not None}
+        **{field: stored_mfa_flag(values[key]) for field, key in MFA_CONFIG_KEYS.items() if values.get(key) is not None}
     )
 
 
@@ -123,7 +154,8 @@ async def record_mfa_event(event: str, user_id: str | None = None, *, request=No
 async def get_auth(user_id: str) -> AuthModel:
     try:
         auth = await Auths.get_auth_by_id(user_id)
-    except (SQLAlchemyError, ValidationError):
+    except (SQLAlchemyError, ValidationError) as error:
+        log_auth_backend_failure('get_auth', error)
         raise HTTPException(503, 'Authentication is temporarily unavailable.') from None
     if auth is None or not auth.active:
         raise HTTPException(401, 'Invalid authentication request.')
@@ -138,7 +170,8 @@ async def save_mfa(auth: AuthModel, mfa: MfaData, *, revoke: bool = False) -> Au
                 raise HTTPException(409, 'Authentication changed in another request. Please start again.')
             await db.commit()
             return updated
-    except SQLAlchemyError:
+    except SQLAlchemyError as error:
+        log_auth_backend_failure('save_mfa', error)
         raise HTTPException(503, 'Authentication is temporarily unavailable.') from None
 
 

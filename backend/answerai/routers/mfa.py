@@ -51,7 +51,8 @@ class MfaRoute(APIRoute):
                 response = JSONResponse({'detail': 'Invalid authentication request.'}, status_code=422)
             except HTTPException as error:
                 response = JSONResponse({'detail': error.detail}, status_code=error.status_code, headers=error.headers)
-            except (SQLAlchemyError, ValidationError):
+            except (SQLAlchemyError, ValidationError) as error:
+                mfa.log_auth_backend_failure(f'{request.method} {request.url.path}', error)
                 response = JSONResponse({'detail': 'Authentication is temporarily unavailable.'}, status_code=503)
             response.headers['Cache-Control'] = 'no-store'
             return response
