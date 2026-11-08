@@ -169,7 +169,7 @@ RUN --mount=from=ghcr.io/astral-sh/uv:0.12.10,source=/uv,target=/bin/uv \
     pip3 install 'torch==2.13.0' 'torchvision==0.28.0' --index-url https://download.pytorch.org/whl/$USE_CUDA_DOCKER_VER --no-cache-dir; \
     python -c "from importlib.metadata import version; print('torch==' + version('torch')); print('torchvision==' + version('torchvision'))" > /tmp/torch-constraints.txt; \
     uv pip install --system -r requirements.txt -c /tmp/torch-constraints.txt --no-cache-dir; \
-    python -m pip check; \
+    uv pip check --system; \
     python -c "import torch, torchvision; torchvision.ops.nms(torch.tensor([[0.,0.,1.,1.]]), torch.tensor([1.]), 0.5)"; \
     python -c "import os; from sentence_transformers import SentenceTransformer; SentenceTransformer(os.environ['RAG_EMBEDDING_MODEL'], device='cpu')"; \
     python -c "import os; from sentence_transformers import SentenceTransformer; SentenceTransformer(os.environ.get('AUXILIARY_EMBEDDING_MODEL', 'TaylorAI/bge-micro-v2'), device='cpu')"; \
@@ -179,7 +179,7 @@ RUN --mount=from=ghcr.io/astral-sh/uv:0.12.10,source=/uv,target=/bin/uv \
     pip3 install 'torch==2.13.0' 'torchvision==0.28.0' --index-url https://download.pytorch.org/whl/cpu --no-cache-dir; \
     python -c "from importlib.metadata import version; print('torch==' + version('torch')); print('torchvision==' + version('torchvision'))" > /tmp/torch-constraints.txt; \
     uv pip install --system -r requirements.txt -c /tmp/torch-constraints.txt --no-cache-dir; \
-    python -m pip check; \
+    uv pip check --system; \
     python -c "import torch, torchvision; torchvision.ops.nms(torch.tensor([[0.,0.,1.,1.]]), torch.tensor([1.]), 0.5)"; \
     if [ "$USE_SLIM" != "true" ]; then \
     python -c "import os; from sentence_transformers import SentenceTransformer; SentenceTransformer(os.environ['RAG_EMBEDDING_MODEL'], device='cpu')"; \
