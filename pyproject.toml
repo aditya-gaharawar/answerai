@@ -56,6 +56,7 @@ dependencies = [
     "regex==2026.5.9",
     "google-re2==1.1.20251105",
     "mcp==2.3.0",
+    "jsonschema==4.26.0",
 
     "openai==2.29.0",
     "anthropic==0.87.0",

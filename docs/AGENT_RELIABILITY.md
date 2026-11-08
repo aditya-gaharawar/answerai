@@ -14,4 +14,4 @@ The quota changes from PR #5 are merged into main. This follow-up improves the e
 
 Regression coverage exercises cancellation, timeouts, required arguments, event-loop responsiveness, context preservation, URL deduplication, disabled search, empty fetches, lexical ranking, permission revocation and discovery ranking/escaping. Backend CI runs the complete test suite, including the existing quota/security/agent regressions.
 
-The execution workspace became unavailable during implementation. Verification for this branch runs through GitHub Actions; no live model, connector or external search credentials are exercised by the regression tests.
+The execution workspace initially became unavailable, and the foundation was verified through GitHub Actions. Local execution subsequently recovered; durable runtime details and current validation evidence are documented in [Agentic Engine V2](AGENTIC_ENGINE_V2.md).

@@ -298,6 +298,7 @@ async def delegate(
     context: str,
     background: bool,
     *,
+    role: str = 'general',
     file_ids: list[str] | None = None,
     model_id: str | None = None,
     request: Request,
@@ -308,6 +309,18 @@ async def delegate(
 ) -> str:
     global _foreground_semaphore
 
+    from answerai.utils.agent_roles import (
+        ROLE_PROMPTS,
+        READ_ONLY_ROLES,
+        specialist_params,
+        specialist_completion_state,
+    )
+
+    if role not in ROLE_PROMPTS:
+        return 'Error: unsupported specialist role.'
+    context = f'Specialist role: {role}. {ROLE_PROMPTS[role]}\n\n{context}'
+    if getattr(request.state, 'agent_read_only', False) and (role not in READ_ONLY_ROLES or background):
+        return 'Error: this execution only permits foreground planner, researcher and verifier delegates.'
     task = task.strip()
     if not task:
         return 'Error: task must not be empty.'
@@ -481,6 +494,7 @@ async def delegate(
             internal_meta={
                 'internal': True,
                 'type': 'subagent',
+                'role': role,
                 'parent_chat_id': parent_chat_id,
                 'parent_message_id': parent_message_id,
                 'delegation_id': delegation_id,
@@ -502,6 +516,14 @@ async def delegate(
         try:
             child_request = await _build_request(request, user.id, internal=True)
             child_request.state.max_tool_call_iterations = max_iterations
+            child_request.state.agent_read_only = role in READ_ONLY_ROLES or getattr(
+                request.state, 'agent_read_only', False
+            )
+            if getattr(request.state, 'agent_run_id', None):
+                child_request.state.agent_run_id = request.state.agent_run_id
+                child_request.state.agent_run_lease = request.state.agent_run_lease
+                parent_limit = request.state.max_tool_call_iterations
+                child_request.state.max_tool_call_iterations = min(max_iterations or parent_limit, parent_limit)
             chat_context = copy.deepcopy(run.get('chat_context') or {})
             child_request.state.chat_context = chat_context
             subagent_system_prompt = (
@@ -509,7 +531,7 @@ async def delegate(
             )
             form_data = {
                 'model': model_id,
-                'params': chat_context.get('params') or {},
+                'params': specialist_params(chat_context.get('params'), role, metadata.get('params')),
                 'messages': add_or_update_system_message(
                     subagent_system_prompt,
                     [*chat_context.get('messages', []), {'role': 'user', 'content': prompt}],
@@ -564,8 +586,11 @@ async def delegate(
             error = message.get('error')
             if isinstance(error, dict):
                 error = error.get('content') or 'Sub-agent failed.'
+            completion_state, blocker = specialist_completion_state(message)
+            if not error and blocker:
+                error = f'{blocker} Inspect /c/{chat_id}.'
             return {
-                'status': 'error' if error else 'completed',
+                'status': 'error' if message.get('error') else completion_state,
                 'summary': summary or ('Sub-agent produced no output.' if not error else ''),
                 'error': error,
             }

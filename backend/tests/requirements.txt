@@ -54,3 +54,5 @@ aiofiles==25.1.0
 # Exercise multilingual deferred-tool ranking in the agent regression suite.
 rank-bm25==0.2.2
 regex==2026.5.9
+
+jsonschema==4.26.0

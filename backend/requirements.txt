@@ -154,3 +154,5 @@ datasets>=5.0.1
 oauthlib>=4.0.0
 setuptools>=83.0.0
 torch>=2.13.0
+
+jsonschema==4.26.0

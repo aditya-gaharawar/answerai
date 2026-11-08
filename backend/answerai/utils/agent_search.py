@@ -16,7 +16,7 @@ TOKEN_RE = re.compile(r'[^\W_]+', re.UNICODE)
 def canonical_search_url(url):
     try:
         parts = urlsplit(str(url or '').strip())
-        if parts.scheme.lower() not in {'http', 'https'} or not parts.hostname or parts.username:
+        if parts.scheme.lower() not in {'http', 'https'} or not parts.hostname or parts.username is not None:
             return None
         hostname = parts.hostname.encode('idna').decode().lower()
         if ':' in hostname:
@@ -45,7 +45,13 @@ def unique_web_results(results, count):
         if not key or key in seen:
             continue
         seen.add(key)
-        output.append({'title': result.title, 'link': result.link, 'snippet': result.snippet})
+        output.append(
+            {
+                'title': str(result.title or '')[:300],
+                'link': str(result.link)[:4000],
+                'snippet': str(result.snippet or '')[:2000],
+            }
+        )
         if len(output) >= count:
             break
     return output

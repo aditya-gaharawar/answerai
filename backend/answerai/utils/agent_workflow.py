@@ -38,6 +38,12 @@ def agent_workflow_prompt(tools: dict) -> str:
         'After a timeout, check whether work completed before repeating any action with side effects. '
         'Do not mark a task complete until its result is verified; report partial results honestly.'
     )
+    if 'delegate_task' in tools:
+        instructions.append(
+            'Delegate independent research, coding or verification only when parallel work will help. '
+            'Give each sub-agent a clear objective and required file IDs. Check its evidence and results '
+            'before relying on them; a delegated completion is not independent proof of correctness.'
+        )
     if 'generate_image' in tools:
         instructions.append(
             'When asked to create an image, use generate_image. Its successful result is already displayed in chat; '

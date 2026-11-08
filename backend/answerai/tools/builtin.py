@@ -323,8 +323,24 @@ async def search_web(
             return JSONCodec.dumps({'error': 'Web search results are disabled by the administrator.'})
         count = max(1, min(count, max_count)) if count is not None else max_count
 
+        if user is None:
+            return JSONCodec.dumps({'error': 'Authenticated user context is required for search.'})
+
+        from answerai.utils.research_cache import PUBLIC_SEARCH_CACHE
+        from answerai.utils.plans import entitlement, require_feature, reserve
+
+        if user:
+            await require_feature(user, 'web_search')
+            name, plan, billing_config = await entitlement(user)
+            if name != 'admin' and billing_config.enabled:
+                await reserve(user.id, [('web_search', 60, plan.requests_per_minute, 1)])
+
+        async def load_results():
+            rows = await asyncio.wait_for(_search_web(__request__, engine, query, user), timeout=45)
+            return unique_web_results(rows, count)
+
         try:
-            results = await asyncio.wait_for(_search_web(__request__, engine, query, user), timeout=45)
+            results = await PUBLIC_SEARCH_CACHE.get((getattr(user, 'id', None), engine, query, count), load_results)
         except TimeoutError:
             return JSONCodec.dumps(
                 {
@@ -334,12 +350,60 @@ async def search_web(
             )
 
         return JSONCodec.dumps(
-            unique_web_results(results, count),
+            results,
             ensure_ascii=False,
         )
     except Exception as e:
         log.exception(f'search_web error: {e}')
-        return JSONCodec.dumps({'error': str(e)})
+        return JSONCodec.dumps(
+            {
+                'error': 'Web search failed. Check provider availability and your search permissions or limits.',
+                'error_type': 'search_failed',
+            }
+        )
+
+
+async def research_web(
+    queries: list[str],
+    count_per_query: int = 3,
+    __request__: Request = None,
+    __user__: dict = None,
+) -> str:
+    """Research up to five distinct queries in parallel and return deduplicated, traceable sources.
+
+    :param queries: Specific search queries covering independent aspects of the objective
+    :param count_per_query: Results per query, from 1 to 10, further capped by administrator search settings
+    :return: Per-query results/errors, a deduplicated source list with citation IDs and a partial-results flag
+    """
+    from answerai.utils.agent_search import canonical_search_url
+
+    if not isinstance(queries, list) or not 1 <= len(queries) <= 5:
+        return JSONCodec.dumps({'error': 'Supply between one and five search queries.'})
+    if any(not isinstance(query, str) or not query.strip() or len(query) > 2000 for query in queries):
+        return JSONCodec.dumps({'error': 'Queries must be non-empty strings of at most 2000 characters.'})
+    if type(count_per_query) is not int or not 1 <= count_per_query <= 10:
+        return JSONCodec.dumps({'error': 'count_per_query must be between 1 and 10.'})
+    unique_queries = list(dict.fromkeys(query.strip() for query in queries))
+    semaphore = asyncio.Semaphore(3)
+
+    async def run(query):
+        async with semaphore:
+            result = JSONCodec.loads(await search_web(query, count_per_query, __request__, __user__))
+            return {'query': query, 'results': result} if isinstance(result, list) else {'query': query, **result}
+
+    results = await asyncio.gather(*(run(query) for query in unique_queries))
+    sources = []
+    seen = set()
+    for result in results:
+        for source in result.get('results', []):
+            key = canonical_search_url(source['link'])
+            if key and key not in seen:
+                seen.add(key)
+                sources.append({'citation_id': f'S{len(sources) + 1}', **source})
+    return JSONCodec.dumps(
+        {'queries': results, 'sources': sources, 'partial': any('error' in result for result in results)},
+        ensure_ascii=False,
+    )
 
 
 async def fetch_url(
@@ -1799,6 +1863,7 @@ async def delegate_task(
     file_ids: list[str] | None = None,
     background: bool = False,
     model_id: str | None = None,
+    role: Literal['general', 'planner', 'researcher', 'coder', 'browser', 'data', 'verifier'] = 'general',
     __request__: Request = None,
     __user__: dict = None,
     __metadata__: dict = None,
@@ -1814,11 +1879,14 @@ async def delegate_task(
         do not put file IDs only in context.
     :param background: Return immediately and continue this chat when the sub-agent finishes
     :param model_id: ID of an available sub-agent model. Omit to use the current model
+    :param role: Specialist role; researcher, planner and verifier roles are restricted to read-only tools
     :return: Foreground result text, or a JSON dispatch handle for background work
     """
     if __request__ is None:
         return 'Error: request context not available.'
-    if getattr(__request__.state, 'internal', False) is True:
+    if getattr(__request__.state, 'internal', False) is True and not getattr(
+        __request__.state, 'agent_coordinator', False
+    ):
         return 'Error: sub-agents cannot delegate recursively.'
 
     from answerai.utils.subagents import delegate
@@ -1829,6 +1897,7 @@ async def delegate_task(
         background,
         file_ids=file_ids,
         model_id=model_id,
+        role=role,
         request=__request__,
         user_data=__user__ or {},
         metadata=__metadata__ or {},

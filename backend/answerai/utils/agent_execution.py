@@ -45,6 +45,7 @@ async def run_agent_tool(awaitable, name, kind='', *, timeout=None):
 # Only known read-only built-ins are eligible; connector annotations are not an authorization boundary.
 PARALLEL_READ_TOOLS = {
     'search_web',
+    'research_web',
     'fetch_url',
     'search_tools',
     'get_current_timestamp',
@@ -72,6 +73,15 @@ PARALLEL_READ_TOOLS = {
     'read_skill_file',
     'grep_skill_files',
 }
+
+
+def requires_tool_approval(call, metadata):
+    """Only server-known read tools bypass interactive approval in explicit agent mode."""
+    if metadata.get('params', {}).get('agent_mode') != 'agent':
+        return True
+    name = call.get('name') or call.get('function', {}).get('name')
+    tool = metadata.get('tools', {}).get(name, {})
+    return not (name in PARALLEL_READ_TOOLS and tool.get('type') == 'builtin' and not tool.get('direct'))
 
 
 async def execute_agent_batch(calls, tools, execute, *, parallelism=4):
@@ -150,3 +160,4 @@ def record_tool_result(metadata, name, params, result):
         failures[key] = 2 if failure.get('retryable') is False else previous + 1
     else:
         failures.pop(key, None)
+    return bool(failure)

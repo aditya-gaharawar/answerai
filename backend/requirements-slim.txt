@@ -104,3 +104,5 @@ opentelemetry-instrumentation-logging==0.63b1
 opentelemetry-instrumentation-httpx==0.63b1
 opentelemetry-instrumentation-aiohttp-client==0.63b1
 opentelemetry-instrumentation-system-metrics==0.63b1
+
+jsonschema==4.26.0

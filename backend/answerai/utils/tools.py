@@ -88,6 +88,7 @@ from answerai.tools.builtin import (
     search_memories,
     search_notes,
     search_web,
+    research_web,
     timer,
     toggle_automation,
     update_automation,
@@ -795,11 +796,15 @@ async def get_builtin_tools(
     if (
         is_builtin_tool_enabled('subagents')
         and config.get('subagents.enable')
-        and getattr(request.state, 'internal', False) is not True
+        and (
+            getattr(request.state, 'internal', False) is not True or getattr(request.state, 'agent_coordinator', False)
+        )
         and getattr(request.state, 'direct', False) is not True
         and not is_temporary_chat_id(metadata.get('chat_id'))
     ):
-        builtin_functions.extend([delegate_task, timer])
+        builtin_functions.append(delegate_task)
+        if not getattr(request.state, 'internal', False):
+            builtin_functions.append(timer)
 
     # Add memory tools when memory is enabled and the model allows this builtin category.
     if (
@@ -830,7 +835,7 @@ async def get_builtin_tools(
         and features.get('web_search')
         and await has_user_permission('web_search')
     ):
-        builtin_functions.extend([search_web, fetch_url])
+        builtin_functions.extend([search_web, research_web, fetch_url])
 
     # Add image generation/edit tools if builtin category enabled,
     # globally enabled, and allowed by model capability.
@@ -967,6 +972,7 @@ async def get_builtin_tools(
                 properties.pop('model_id', None)
 
         tools_dict[func.__name__] = {
+            'output_schema': {'type': 'string'} if func.__annotations__.get('return') in (str, 'str') else {},
             'tool_id': f'builtin:{func.__name__}',
             'callable': callable,
             'spec': spec,

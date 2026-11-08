@@ -860,6 +860,10 @@ class UsersTable:
             from answerai.models.notifications import delete_user_notifications
 
             await delete_user_notifications(id, db=session)
+            from answerai.models.agent_runs import AgentRun, AgentOwnerLease
+
+            await session.execute(delete(AgentRun).where(AgentRun.user_id == id))
+            await session.execute(delete(AgentOwnerLease).where(AgentOwnerLease.user_id == id))
             await session.execute(delete(User).where(User.id == id))
             await session.commit()
             return True
