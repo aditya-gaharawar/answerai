@@ -15,6 +15,8 @@ class CustomBuildHook(BuildHookInterface):
         if npm is None:
             raise RuntimeError('NodeJS `npm` is required for building ANSWERAI but it was not found')
         stderr.write('### npm ci\n')
+        # Frontend builds use the CPU runtime; avoid an unnecessary network download of Node CUDA binaries.
+        os.environ.setdefault('ONNXRUNTIME_NODE_INSTALL_CUDA', 'skip')
         subprocess.run([npm, 'ci'], check=True)  # noqa: S603
         stderr.write('\n### npm run build\n')
         node_options = os.environ.get('NODE_OPTIONS', '')

@@ -32,6 +32,7 @@ jobs:
           python-version: 3.12
       - name: Build
         env:
+          ONNXRUNTIME_NODE_INSTALL_CUDA: skip
           APP_BUILD_CHANNEL: main
           APP_BUILD_HASH: ${{ github.sha }}
         run: |

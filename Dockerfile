@@ -42,7 +42,7 @@ RUN apk add --no-cache git
 
 COPY package.json package-lock.json ./
 COPY vendor ./vendor
-RUN npm ci
+RUN ONNXRUNTIME_NODE_INSTALL_CUDA=skip npm ci
 
 COPY . .
 ENV APP_BUILD_HASH=${BUILD_HASH}
