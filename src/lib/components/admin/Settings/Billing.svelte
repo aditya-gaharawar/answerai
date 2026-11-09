@@ -17,6 +17,7 @@
 	let resetReason = '';
 	let resetConfirmation = '';
 	let resetting = false;
+	let activeSection = 'billing-plans';
 	const sections = [
 		{ id: 'billing-plans', label: 'Plans' },
 		{ id: 'billing-feature-limits', label: 'Feature limits' },
@@ -27,7 +28,23 @@
 		{ id: 'billing-security', label: 'Security' }
 	];
 	function showSection(id: string) {
+		activeSection = id;
 		document.getElementById(id)?.scrollIntoView({ block: 'start', behavior: 'auto' });
+	}
+
+	function updateActiveSection(event: Event) {
+		const region = event.currentTarget as HTMLElement;
+		if (region.scrollTop + region.clientHeight >= region.scrollHeight - 4) {
+			activeSection = sections[sections.length - 1].id;
+			return;
+		}
+		const top = region.getBoundingClientRect().top + 24;
+		let current = sections[0].id;
+		for (const section of sections) {
+			const element = document.getElementById(section.id);
+			if (element && element.getBoundingClientRect().top <= top) current = section.id;
+		}
+		activeSection = current;
 	}
 
 	async function inspectUsage() {
@@ -150,6 +167,8 @@
 				{#each sections as section (section.id)}
 					<button
 						type="button"
+						aria-current={activeSection === section.id ? 'location' : undefined}
+						class:billing-section-active={activeSection === section.id}
 						class="shrink-0 rounded-lg px-3 py-2 text-xs font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white"
 						on:click={() => showSection(section.id)}>{section.label}</button
 					>
@@ -162,6 +181,7 @@
 		role="region"
 		aria-label="Plans and payments settings"
 		tabindex="0"
+		on:scroll={updateActiveSection}
 		class="min-h-0 flex-1 overflow-y-auto overscroll-contain py-5 pe-1 scrollbar-thin"
 	>
 		<div class="space-y-6 max-w-5xl mx-auto">
@@ -178,37 +198,45 @@
 					{#each ['free', 'plus'] as name}<fieldset
 							class="space-y-3 rounded-xl border border-gray-200 p-4 dark:border-gray-800"
 						>
-							<legend class="px-2 font-semibold capitalize">{name} plan</legend
-							>{#each [['messages_per_day', 'Generation requests per day'], ['messages_per_five_hours', 'Messages per five-hour window (blank: unlimited)'], ['messages_per_week', 'Messages per weekly window (blank: unlimited)'], ['tokens_per_five_hours', 'Token credits per five-hour window (blank: unlimited)'], ['tokens_per_day', 'Token credits per day (blank: unlimited)'], ['tokens_per_week', 'Token credits per week (blank: unlimited)'], ['max_output_tokens', 'Maximum output tokens (when token budgets are enabled)'], ['requests_per_minute', 'Requests per minute'], ['audio_requests_per_day', 'Speech and transcription requests per day'], ['live_minutes_per_day', 'Live minutes per day'], ['max_call_minutes', 'Maximum minutes per call']] as [key, label]}<label
-									class="block text-sm"
-									>{label}<input
-										class={inputClass}
-										type="number"
-										min={['max_call_minutes', 'max_output_tokens'].includes(key) ? 1 : 0}
-										bind:value={config[name][key]}
-									/></label
-								>{/each}<label class="block text-sm"
-								>Allowed model IDs (one per line)<textarea
-									class={inputClass}
-									rows="4"
-									value={config[name].models.join('\n')}
-									on:input={(event) => {
-										config[name].models = event.currentTarget.value
-											.split('\n')
-											.map((value) => value.trim())
-											.filter(Boolean);
-										config = config;
-									}}
-								></textarea></label
-							>
-							<div class="space-y-2">
-								{#each features as feature}<label class="flex gap-2 text-sm"
-										><input
-											type="checkbox"
-											bind:checked={config[name].features[feature]}
-										/>{feature.replaceAll('_', ' ')}</label
-									>{/each}
-							</div>
+							<legend class="px-2 font-semibold capitalize">{name} plan</legend>
+							<details open class="group">
+								<summary
+									class="cursor-pointer rounded-lg py-2 text-sm font-medium text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white"
+									>Limits and model access</summary
+								>
+								<div class="space-y-3 pt-2">
+									{#each [['messages_per_day', 'Generation requests per day'], ['messages_per_five_hours', 'Messages per five-hour window (blank: unlimited)'], ['messages_per_week', 'Messages per weekly window (blank: unlimited)'], ['tokens_per_five_hours', 'Token credits per five-hour window (blank: unlimited)'], ['tokens_per_day', 'Token credits per day (blank: unlimited)'], ['tokens_per_week', 'Token credits per week (blank: unlimited)'], ['max_output_tokens', 'Maximum output tokens (when token budgets are enabled)'], ['requests_per_minute', 'Requests per minute'], ['audio_requests_per_day', 'Speech and transcription requests per day'], ['live_minutes_per_day', 'Live minutes per day'], ['max_call_minutes', 'Maximum minutes per call']] as [key, label]}<label
+											class="block text-sm"
+											>{label}<input
+												class={inputClass}
+												type="number"
+												min={['max_call_minutes', 'max_output_tokens'].includes(key) ? 1 : 0}
+												bind:value={config[name][key]}
+											/></label
+										>{/each}<label class="block text-sm"
+										>Allowed model IDs (one per line)<textarea
+											class={inputClass}
+											rows="4"
+											value={config[name].models.join('\n')}
+											on:input={(event) => {
+												config[name].models = event.currentTarget.value
+													.split('\n')
+													.map((value) => value.trim())
+													.filter(Boolean);
+												config = config;
+											}}
+										></textarea></label
+									>
+									<div class="space-y-2">
+										{#each features as feature}<label class="flex gap-2 text-sm"
+												><input
+													type="checkbox"
+													bind:checked={config[name].features[feature]}
+												/>{feature.replaceAll('_', ' ')}</label
+											>{/each}
+									</div>
+								</div>
+							</details>
 						</fieldset>{/each}
 				</div>
 				<fieldset
@@ -407,3 +435,10 @@
 		</div>
 	</div>
 </div>
+
+<style>
+	.billing-section-active {
+		background: var(--aai-accent-soft);
+		color: var(--aai-accent);
+	}
+</style>
