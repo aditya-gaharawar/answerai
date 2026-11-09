@@ -10,6 +10,7 @@
 	import {
 		config,
 		user,
+		WEBUI_NAME,
 		models as _models,
 		temporaryChatEnabled,
 		selectedFolder
@@ -142,11 +143,14 @@
 					}}
 				/>
 			{:else}
-				<h1
-					class="mb-4 px-5 text-2xl font-medium tracking-tight text-gray-900 dark:text-gray-100 sm:text-3xl"
-				>
-					{$i18n.t('What can I help with?')}
-				</h1>
+				<div class="aai-welcome">
+					<div class="aai-welcome-brand" aria-hidden="true">
+						<span class="aai-welcome-mark"></span>
+						<span>{$WEBUI_NAME}</span>
+					</div>
+					<h1>{$i18n.t('What can I help with?')}</h1>
+					<p>{$i18n.t('Your space to think, create, and get things done.')}</p>
+				</div>
 			{/if}
 
 			<div

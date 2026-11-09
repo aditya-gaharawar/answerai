@@ -5281,7 +5281,7 @@
 				: 'flex'}"
 		>
 			<div
-				class="h-full flex relative max-w-full min-w-0 min-h-0 flex-1 flex-col col-start-1 row-start-2"
+				class="aai-chat-canvas h-full flex relative max-w-full min-w-0 min-h-0 flex-1 flex-col col-start-1 row-start-2"
 				class:hidden={fullWidthTabs && !mainChatActive}
 				id={fullWidthTabs ? 'chat-panel-main-chat-view' : undefined}
 				role={fullWidthTabs ? 'tabpanel' : undefined}

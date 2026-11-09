@@ -152,9 +152,14 @@ body {
 	max-width: var(--aai-content-width);
 	min-width: 0;
 }
+.aai-chat-canvas {
+	background: radial-gradient(ellipse 70% 45% at 50% 24%, rgb(255 255 255 / 2%), transparent);
+}
+html.light .aai-chat-canvas,
+html.her .aai-chat-canvas {
+	background: radial-gradient(ellipse 70% 45% at 50% 24%, rgb(81 70 189 / 3%), transparent);
+}
 .aai-home {
-	background-image: radial-gradient(ellipse at 50% 32%, rgb(255 255 255 / 2.5%), transparent 58%);
-	background-size: 100% 100%;
 	animation: aai-enter var(--aai-duration) ease-out both;
 }
 .aai-home h1 {
@@ -178,8 +183,44 @@ body {
 	height: 100%;
 	min-height: 0;
 }
-.aai-chat-landing h1 {
-	margin-block: auto;
+.aai-welcome {
+	display: flex;
+	flex: 1;
+	min-height: 0;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	padding: 2rem 1rem;
+}
+.aai-welcome-brand {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	margin-bottom: 20px;
+	color: var(--aai-secondary);
+	font-size: 11px;
+	font-weight: 600;
+	letter-spacing: 0.12em;
+	line-height: 1.4;
+	text-transform: uppercase;
+}
+.aai-welcome-mark {
+	width: 7px;
+	height: 7px;
+	transform: rotate(45deg);
+	border-radius: 2px;
+	background: var(--aai-accent);
+	box-shadow: 0 0 12px var(--aai-accent-soft);
+}
+.aai-welcome h1 {
+	margin: 0;
+}
+.aai-welcome p {
+	margin: 12px 0 0;
+	color: var(--aai-secondary);
+	font-size: 0.9375rem;
+	font-weight: 400;
+	line-height: 1.6;
 }
 .aai-chat-landing .aai-home-composer {
 	flex-shrink: 0;
@@ -238,6 +279,9 @@ body {
 	border-width: 0 0 1px;
 	box-shadow: none;
 }
+.aai-topbar :where(button) {
+	border-radius: var(--aai-radius-control);
+}
 .aai-dialog {
 	border-radius: var(--aai-radius-card);
 }
@@ -278,10 +322,10 @@ body {
 }
 .aai-composer {
 	border-color: var(--aai-border-hover);
-	border-radius: 24px;
-	padding: 6px;
+	border-radius: 26px;
+	padding: 8px;
 	box-shadow:
-		0 8px 32px rgb(0 0 0 / 12%),
+		0 16px 48px rgb(0 0 0 / 16%),
 		inset 0 1px 0 var(--aai-highlight);
 }
 .aai-field {
@@ -298,8 +342,8 @@ body {
 		inset 0 1px 0 var(--aai-highlight);
 }
 .aai-composer:has(:focus-visible) {
-	outline: 2px solid color-mix(in srgb, var(--aai-accent) 70%, transparent);
-	outline-offset: 2px;
+	outline: 2px solid var(--aai-secondary);
+	outline-offset: 1px;
 }
 .aai-bottom-composer {
 	padding-block-end: max(var(--aai-space-2), env(safe-area-inset-bottom));
@@ -357,18 +401,19 @@ body {
 }
 .aai-message {
 	animation: aai-enter var(--aai-duration) ease-out both;
-	margin-bottom: var(--aai-space-6);
+	margin-bottom: var(--aai-space-8);
 }
 .aai-user-bubble {
 	border: 1px solid var(--aai-border);
-	border-radius: 20px 20px 6px 20px;
+	border-radius: 20px;
 	background: var(--aai-panel);
+	padding-block: 10px;
 }
 
 .aai-tool-call {
 	border: 1px solid var(--aai-border);
 	border-radius: var(--aai-radius-card);
-	background: var(--aai-highlight);
+	background: var(--aai-elevated);
 	padding: 10px 12px;
 	color: var(--aai-secondary);
 }
