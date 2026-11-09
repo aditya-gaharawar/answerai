@@ -153,14 +153,15 @@ body {
 	min-width: 0;
 }
 .aai-home {
-	background-image: radial-gradient(ellipse at 50% 40%, var(--aai-accent-soft), transparent 55%);
+	background-image: radial-gradient(ellipse at 50% 32%, rgb(255 255 255 / 2.5%), transparent 58%);
 	background-size: 100% 100%;
 	animation: aai-enter var(--aai-duration) ease-out both;
 }
 .aai-home h1 {
-	font-size: var(--aai-text-xl);
-	font-weight: 500;
-	line-height: 1.2;
+	font-size: clamp(1.75rem, 2.5vw, 2.25rem);
+	font-weight: 600;
+	letter-spacing: -0.04em;
+	line-height: 1.15;
 }
 .aai-chat-landing {
 	position: relative;
@@ -198,7 +199,7 @@ body {
 	box-shadow: var(--aai-shadow);
 }
 .aai-sidebar {
-	background: var(--aai-elevated);
+	background: color-mix(in srgb, var(--aai-bg) 65%, var(--aai-elevated));
 	border-inline-end: 1px solid var(--aai-border);
 }
 .aai-sidebar :where(a, button) {
@@ -208,8 +209,8 @@ body {
 	background-color: var(--aai-highlight);
 }
 .aai-sidebar :where([aria-current='page'], [aria-selected='true']) {
-	color: var(--aai-accent);
-	background: var(--aai-accent-soft);
+	color: var(--aai-text);
+	background: var(--aai-highlight);
 }
 .aai-topbar {
 	min-height: 48px;
@@ -235,7 +236,7 @@ body {
 }
 .aai-topbar.aai-glass {
 	border-width: 0 0 1px;
-	box-shadow: inset 0 -1px 0 var(--aai-highlight);
+	box-shadow: none;
 }
 .aai-dialog {
 	border-radius: var(--aai-radius-card);
@@ -276,8 +277,12 @@ body {
 	box-shadow: 0 4px 20px rgb(0 0 0 / 4%);
 }
 .aai-composer {
-	border-radius: 32px;
-	padding: var(--aai-space-1);
+	border-color: var(--aai-border-hover);
+	border-radius: 24px;
+	padding: 6px;
+	box-shadow:
+		0 8px 32px rgb(0 0 0 / 12%),
+		inset 0 1px 0 var(--aai-highlight);
 }
 .aai-field {
 	border-radius: var(--aai-radius-control);
@@ -287,9 +292,13 @@ body {
 	border-color: var(--aai-border-hover);
 }
 .aai-composer:focus-within {
-	border-color: transparent;
-	box-shadow: var(--aai-glow);
-	outline: 2px solid var(--aai-accent);
+	border-color: color-mix(in srgb, var(--aai-secondary) 55%, transparent);
+	box-shadow:
+		0 8px 32px rgb(0 0 0 / 12%),
+		inset 0 1px 0 var(--aai-highlight);
+}
+.aai-composer:has(:focus-visible) {
+	outline: 2px solid color-mix(in srgb, var(--aai-accent) 70%, transparent);
 	outline-offset: 2px;
 }
 .aai-bottom-composer {
@@ -348,11 +357,24 @@ body {
 }
 .aai-message {
 	animation: aai-enter var(--aai-duration) ease-out both;
+	margin-bottom: var(--aai-space-6);
 }
 .aai-user-bubble {
 	border: 1px solid var(--aai-border);
+	border-radius: 20px 20px 6px 20px;
+	background: var(--aai-panel);
+}
+
+.aai-tool-call {
+	border: 1px solid var(--aai-border);
 	border-radius: var(--aai-radius-card);
-	background: var(--aai-elevated);
+	background: var(--aai-highlight);
+	padding: 10px 12px;
+	color: var(--aai-secondary);
+}
+.aai-tool-call:hover {
+	border-color: var(--aai-border-hover);
+	color: var(--aai-text);
 }
 
 .aai-button {
@@ -373,20 +395,26 @@ body {
 	background: var(--aai-highlight);
 	border-color: var(--aai-border-hover);
 }
-.aai-button--primary,
-.aai-send:not(:disabled) {
+.aai-button--primary {
 	background: var(--aai-accent);
 	color: var(--aai-accent-ink);
 	border-color: transparent;
 	box-shadow: var(--aai-glow);
 }
-.aai-button--primary:hover:not(:disabled),
-.aai-send:hover:not(:disabled) {
+.aai-button--primary:hover:not(:disabled) {
 	filter: brightness(1.08);
 	transform: translateY(-1px);
 }
 .aai-send {
 	border-radius: var(--aai-radius-pill);
+}
+.aai-send:not(:disabled) {
+	background: var(--aai-text);
+	color: var(--aai-bg);
+	box-shadow: none;
+}
+.aai-send:hover:not(:disabled) {
+	opacity: 0.86;
 }
 .aai-send:disabled {
 	color: var(--aai-secondary);

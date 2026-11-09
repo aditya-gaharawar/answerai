@@ -76,7 +76,7 @@
 			} else {
 				return String(parsed);
 			}
-		} catch (e) {
+		} catch {
 			return str;
 		}
 	}
@@ -203,7 +203,7 @@
 	{:else}
 		<!-- Tool call display -->
 		<div
-			class="{buttonClassName} w-full min-w-0 cursor-pointer"
+			class="{buttonClassName} aai-tool-call w-full min-w-0 cursor-pointer"
 			role="button"
 			tabindex="0"
 			aria-expanded={open}
