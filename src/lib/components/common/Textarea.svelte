@@ -72,7 +72,7 @@
 	bind:value
 	{placeholder}
 	aria-label={ariaLabel || placeholder}
-	class={className}
+	class={`aai-field ${className}`}
 	style="field-sizing: content;"
 	{rows}
 	{required}

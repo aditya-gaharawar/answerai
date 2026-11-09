@@ -30,6 +30,17 @@ async function main() {
 		const openMenu = async () => {
 			await page.locator('#input-menu-button').click();
 			await page.getByLabel('Execution mode', { exact: true }).waitFor({ state: 'visible' });
+			await page
+				.getByRole('menu')
+				.first()
+				.evaluate(async (node) => {
+					await Promise.all(
+						node
+							.getAnimations({ subtree: true })
+							.filter((animation) => animation.effect?.getComputedTiming().iterations !== Infinity)
+							.map((animation) => animation.finished.catch(() => {}))
+					);
+				});
 		};
 		const dismiss = async () => {
 			await page.keyboard.press('Escape');
@@ -68,11 +79,19 @@ async function main() {
 				path: path.join(artifacts, `menu-${width}.png`),
 				animations: 'disabled'
 			});
-			await page.getByLabel('Execution mode').selectOption('agent');
+			await page.getByLabel('Execution mode').click();
+			await page.getByRole('menuitemradio', { name: 'Agent', exact: true }).click();
 			await page.getByLabel('Execution mode').waitFor({ state: 'detached' });
 			await openMenu();
-			assert.equal(await page.getByLabel('Execution mode').inputValue(), 'agent');
-			await page.getByLabel('Execution mode').selectOption('auto');
+			await page.getByLabel('Execution mode').click();
+			assert.equal(
+				await page
+					.getByRole('menuitemradio', { name: 'Agent', exact: true })
+					.getAttribute('aria-checked'),
+				'true'
+			);
+			await page.getByRole('menuitemradio', { name: 'Chat', exact: true }).click();
+			await page.getByLabel('Execution mode').waitFor({ state: 'detached' });
 			await openMenu();
 			await page.getByRole('menuitem', { name: 'Add attachments', exact: true }).click();
 			await page.getByRole('menuitem', { name: 'Upload Files', exact: true }).waitFor();

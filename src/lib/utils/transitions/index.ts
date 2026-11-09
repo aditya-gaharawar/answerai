@@ -10,6 +10,7 @@ type FlyAndScaleParams = {
 const defaultFlyAndScaleParams = { y: -8, start: 0.95, duration: 200 };
 
 export const flyAndScale = (node: Element, params?: FlyAndScaleParams): TransitionConfig => {
+	if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return { duration: 0 };
 	const style = getComputedStyle(node);
 	const transform = style.transform === 'none' ? '' : style.transform;
 	const withDefaults = { ...defaultFlyAndScaleParams, ...params };

@@ -108,7 +108,10 @@
 		!$selectedFolder.write_access;
 </script>
 
-<div class="m-auto w-full max-w-[58rem] px-1 md:@2xl:px-20 translate-y-6 py-24 text-center">
+<div
+	class:aai-chat-landing={!$selectedFolder}
+	class="aai-home aai-content m-auto w-full px-1 py-12 sm:py-24 text-center"
+>
 	{#if $temporaryChatEnabled}
 		<Tooltip
 			content={$i18n.t("This chat won't appear in history and your messages will not be saved.")}
@@ -121,8 +124,10 @@
 		</Tooltip>
 	{/if}
 
-	<div class="w-full text-3xl text-gray-800 dark:text-gray-100 text-center flex items-center gap-4">
-		<div class="w-full flex flex-col justify-center items-center">
+	<div
+		class="aai-home-layout w-full text-3xl text-gray-800 dark:text-gray-100 text-center flex items-center gap-4"
+	>
+		<div class="aai-home-stack w-full flex flex-col justify-center items-center">
 			{#if $selectedFolder}
 				<FolderTitle
 					folder={$selectedFolder}
@@ -144,7 +149,11 @@
 				</h1>
 			{/if}
 
-			<div class="text-base font-normal @md:max-w-3xl w-full py-3 {atSelectedModel ? 'mt-2' : ''}">
+			<div
+				class="aai-home-composer text-base font-normal @md:max-w-3xl w-full py-3 {atSelectedModel
+					? 'mt-2'
+					: ''}"
+			>
 				{#if !($selectedFolder && folderReadOnly)}
 					<MessageInput
 						{chatId}
@@ -204,7 +213,7 @@
 			<FolderPlaceholder folder={$selectedFolder} />
 		</div>
 	{:else if showSuggestions}
-		<div class="mx-auto mt-4 max-w-2xl px-5 text-left" in:fade={{ duration: 150 }}>
+		<div class="aai-suggestions mx-auto mt-4 max-w-2xl px-5 text-left" in:fade={{ duration: 150 }}>
 			<Suggestions
 				suggestionPrompts={selectedSuggestionPrompts}
 				inputValue={prompt}

@@ -1,4 +1,6 @@
 <script lang="ts">
+	import ArrowUp from '@lucide/svelte/icons/arrow-up';
+	import Square from '@lucide/svelte/icons/square';
 	import { readDataUrl } from '$lib/utils/readDataUrl';
 	import { onDestroy } from 'svelte';
 	import { captureScreenFrame } from '$lib/utils/screenCapture';
@@ -133,6 +135,9 @@
 	import Component from '../icons/Component.svelte';
 	import PlusAlt from '../icons/PlusAlt.svelte';
 	import Dropdown from '../common/Dropdown.svelte';
+	import DropdownMenu from '../common/DropdownMenu.svelte';
+	import Check from '../icons/Check.svelte';
+	import ChevronRight from '../icons/ChevronRight.svelte';
 
 	import CommandSuggestionList from './MessageInput/CommandSuggestionList.svelte';
 	import Knobs from '../icons/Knobs.svelte';
@@ -1863,7 +1868,7 @@
 			<div
 				class="flex flex-col px-3 {($settings?.widescreenMode ?? null)
 					? 'max-w-full'
-					: 'max-w-[58rem]'} w-full"
+					: 'aai-content'} w-full"
 			>
 				<div class="relative">
 					{#if typingUsers.length > 0}
@@ -1916,7 +1921,7 @@
 			<div
 				class="{($settings?.widescreenMode ?? null)
 					? 'max-w-full'
-					: 'max-w-[58rem]'} px-2 mx-auto inset-x-0"
+					: 'aai-content'} px-2 mx-auto inset-x-0"
 			>
 				<div class="">
 					<input
@@ -2107,12 +2112,12 @@
 
 						<div
 							id={inputId === 'chat-input' ? 'message-input-container' : `${inputId}-wrapper`}
-							class="flex-1 flex flex-col relative w-full shadow-sm rounded-3xl border {isTemporary
+							class="aai-composer flex-1 flex flex-col relative w-full {isTemporary
 								? 'border-dashed border-gray-100 dark:border-gray-800 hover:border-gray-200 focus-within:border-gray-200 hover:dark:border-gray-700 focus-within:dark:border-gray-700'
 								: ' border-gray-100/50 dark:border-gray-850/50 hover:border-gray-200 focus-within:border-gray-100 hover:dark:border-gray-800 focus-within:dark:border-gray-800'} {($settings?.highContrastMode ??
 							false)
 								? 'focus-within:outline focus-within:outline-2 focus-within:-outline-offset-2 focus-within:outline-blue-500 [&_.ProseMirror:focus-visible]:outline-none!'
-								: ''}  transition px-0.5 bg-white/5 dark:bg-gray-500/5 backdrop-blur-sm dark:text-gray-100"
+								: ''}  transition px-0.5 dark:text-gray-100"
 							dir={$chatDirection}
 						>
 							{#if atSelectedModel !== undefined}
@@ -2536,27 +2541,40 @@
 													/>
 												</div>
 											</div>
-											<label
-												class="flex min-h-11 items-center justify-between gap-4 px-2 text-sm text-gray-700 dark:text-gray-200"
-											>
-												{$i18n.t('Mode')}
-												<select
-													aria-label="Execution mode"
-													class="max-w-[65%] rounded-lg border-0 bg-transparent py-2 pl-3 pr-6 text-sm text-gray-500 focus:ring-1 focus:ring-gray-400"
-													value={params.agent_mode ?? 'auto'}
-													on:change={(event) => {
-														params = {
-															...params,
-															agent_mode: event.currentTarget.value,
-															tool_approval_mode: 'ask'
-														};
-														close();
-													}}
+											<Dropdown align="end" visualViewportAware>
+												<button
+													type="button"
+													aria-label={$i18n.t('Execution mode')}
+													class="composer-menu-row"
 												>
-													<option value="auto">{$i18n.t('Chat')}</option>
-													<option value="agent">{$i18n.t('Agent')}</option>
-												</select>
-											</label>
+													<span class="flex-1">{$i18n.t('Execution mode')}</span>
+													<ChevronRight className="size-4" />
+												</button>
+												<div slot="content">
+													<DropdownMenu className="w-48">
+														{#each [{ value: 'auto', label: 'Chat' }, { value: 'agent', label: 'Agent' }] as mode (mode.value)}
+															<button
+																type="button"
+																role="menuitemradio"
+																aria-checked={(params.agent_mode ?? 'auto') === mode.value}
+																on:click={() => {
+																	params = {
+																		...params,
+																		agent_mode: mode.value,
+																		tool_approval_mode: 'ask'
+																	};
+																	close();
+																}}
+															>
+																<span class="flex-1 text-left">{$i18n.t(mode.label)}</span>
+																{#if (params.agent_mode ?? 'auto') === mode.value}<Check
+																		className="size-4"
+																	/>{/if}
+															</button>
+														{/each}
+													</DropdownMenu>
+												</div>
+											</Dropdown>
 										</div>
 										{#if showWebSearchButton || showImageGenerationButton || showCodeInterpreterButton || showToolsButton || showSkillsButton || (toggleFilters && toggleFilters.length > 0)}
 											<IntegrationsMenu
@@ -2598,11 +2616,11 @@
 													type="button"
 													id="integration-menu-button"
 													class="flex min-h-11 w-full items-center gap-2 rounded-xl px-2 text-left text-sm text-gray-700 hover:bg-gray-50 dark:text-gray-200 dark:hover:bg-gray-800"
-													aria-label={$i18n.t('Integrations')}
+													aria-label={$i18n.t('Tools and integrations')}
 												>
 													<Component className="size-4" strokeWidth="1.5" /><span class="flex-1"
 														>{$i18n.t('Tools and integrations')}</span
-													><span aria-hidden="true">›</span>
+													><ChevronRight className="size-4" />
 												</button>
 											</IntegrationsMenu>
 										{/if}
@@ -2617,7 +2635,7 @@
 											<button
 												type="button"
 												role="menuitem"
-												aria-label={$i18n.t('Voice Input')}
+												aria-label={$i18n.t('Dictate')}
 												class="composer-menu-row"
 												on:click={() => {
 													close();
@@ -2935,18 +2953,12 @@
 														stopResponse();
 													}}
 												>
-													<svg
-														xmlns="http://www.w3.org/2000/svg"
-														viewBox="0 0 24 24"
+													<Square
+														class="size-4"
+														strokeWidth={1.5}
 														fill="currentColor"
-														class="size-5"
-													>
-														<path
-															fill-rule="evenodd"
-															d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12zm6-2.438c0-.724.588-1.312 1.313-1.312h4.874c.725 0 1.313.588 1.313 1.313v4.874c0 .725-.588 1.313-1.313 1.313H9.564a1.312 1.312 0 01-1.313-1.313V9.564z"
-															clip-rule="evenodd"
-														/>
-													</svg>
+														aria-hidden="true"
+													/>
 												</button>
 											</Tooltip>
 										</div>
@@ -2958,24 +2970,13 @@
 														? 'send-message-button'
 														: `${inputId}-send-message-button`}
 													aria-label={$i18n.t('Send message')}
-													class="{!(prompt === '' && files.length === 0)
+													class="aai-send {!(prompt === '' && files.length === 0)
 														? 'bg-black text-white hover:bg-gray-900 dark:bg-white dark:text-black dark:hover:bg-gray-100 '
 														: 'text-white bg-gray-200 dark:text-gray-900 dark:bg-gray-700 disabled'} transition rounded-full size-11 flex items-center justify-center self-center"
 													type="submit"
 													disabled={prompt === '' && files.length === 0}
 												>
-													<svg
-														xmlns="http://www.w3.org/2000/svg"
-														viewBox="0 0 16 16"
-														fill="currentColor"
-														class="size-5"
-													>
-														<path
-															fill-rule="evenodd"
-															d="M8 14a.75.75 0 0 1-.75-.75V4.56L4.03 7.78a.75.75 0 0 1-1.06-1.06l4.5-4.5a.75.75 0 0 1 1.06 0l4.5 4.5a.75.75 0 0 1-1.06 1.06L8.75 4.56v8.69A.75.75 0 0 1 8 14Z"
-															clip-rule="evenodd"
-														/>
-													</svg>
+													<ArrowUp class="size-4.5" strokeWidth={1.5} aria-hidden="true" />
 												</button>
 											</Tooltip>
 										</div>{/if}

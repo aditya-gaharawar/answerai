@@ -5456,7 +5456,7 @@
 							{:else}
 								<div
 									id={embedded ? messageInputDropzoneId : undefined}
-									class=" pb-2 {dragged ? 'z-0' : 'z-10'}"
+									class="aai-bottom-composer pb-2 {dragged ? 'z-0' : 'z-10'}"
 								>
 									<MessageInput
 										{terminalContext}

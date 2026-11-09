@@ -187,10 +187,10 @@
 		}
 
 		if (themeToApply === 'dark' && !_theme.includes('oled')) {
-			document.documentElement.style.setProperty('--color-gray-800', '#333');
-			document.documentElement.style.setProperty('--color-gray-850', '#262626');
-			document.documentElement.style.setProperty('--color-gray-900', '#171717');
-			document.documentElement.style.setProperty('--color-gray-950', '#0d0d0d');
+			// Remove the OLED preset overrides; the shared design tokens own normal dark colors.
+			['800', '850', '900', '950'].forEach((shade) =>
+				document.documentElement.style.removeProperty(`--color-gray-${shade}`)
+			);
 		}
 
 		themes
@@ -207,25 +207,14 @@
 
 		const metaThemeColor = document.querySelector('meta[name="theme-color"]');
 		if (metaThemeColor) {
-			if (_theme.includes('system')) {
-				const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches
-					? 'dark'
-					: 'light';
-				console.log('Setting system meta theme color: ' + systemTheme);
-				metaThemeColor.setAttribute('content', systemTheme === 'light' ? '#ffffff' : '#171717');
-			} else {
-				console.log('Setting meta theme color: ' + _theme);
-				metaThemeColor.setAttribute(
-					'content',
-					_theme === 'dark'
-						? '#171717'
-						: _theme === 'oled-dark'
-							? '#000000'
-							: _theme === 'her'
-								? '#983724'
-								: '#ffffff'
-				);
-			}
+			metaThemeColor.setAttribute(
+				'content',
+				_theme === 'oled-dark'
+					? '#000000'
+					: _theme === 'her'
+						? '#983724'
+						: getComputedStyle(document.body).backgroundColor
+			);
 		}
 
 		if (typeof window !== 'undefined' && window.applyTheme) {

@@ -329,7 +329,7 @@
 
 <Modal
 	bind:show
-	size={preview ? 'xl' : 'lg'}
+	size={preview && selected ? 'xl' : 'md'}
 	ariaLabel={$i18n.t('Search workspace')}
 	onRequestClose={close}
 	className="bg-white dark:bg-gray-850 rounded-2xl !border-gray-100 dark:!border-gray-800"
@@ -572,7 +572,9 @@
 			</div>
 		{/if}
 		<div
-			class="flex h-[min(36rem,70dvh)] min-h-40 border-t border-gray-100/60 dark:border-gray-800/40"
+			class="flex {results.length
+				? 'h-[min(32rem,65dvh)]'
+				: 'h-[min(20rem,55dvh)]'} min-h-40 border-t border-gray-100/60 dark:border-gray-800/40"
 			aria-busy={loading}
 		>
 			<div

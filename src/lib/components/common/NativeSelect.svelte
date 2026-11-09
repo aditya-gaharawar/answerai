@@ -11,7 +11,7 @@
 </script>
 
 <select
-	class={className}
+	class={`aai-field ${className}`}
 	bind:value
 	{required}
 	on:change={() => {

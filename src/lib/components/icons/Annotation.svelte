@@ -1,20 +1,8 @@
 <script lang="ts">
+	import MessageSquareText from '@lucide/svelte/icons/message-square-text';
 	export let className = 'size-4';
 	export let strokeWidth = '1.5';
 </script>
 
-<svg
-	aria-hidden="true"
-	xmlns="http://www.w3.org/2000/svg"
-	fill="none"
-	viewBox="0 0 24 24"
-	stroke-width={strokeWidth}
-	stroke="currentColor"
-	class={className}
->
-	<path
-		stroke-linecap="round"
-		stroke-linejoin="round"
-		d="M12 3a9 9 0 0 1 0 18H3v-9a9 9 0 0 1 9-9Z"
-	/>
-</svg>
+<MessageSquareText class={className} strokeWidth={Number(strokeWidth)} aria-hidden="true"
+></MessageSquareText>

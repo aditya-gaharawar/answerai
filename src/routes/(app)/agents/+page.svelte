@@ -1,4 +1,5 @@
 <script lang="ts">
+	import ArrowUp from '@lucide/svelte/icons/arrow-up';
 	import { onMount, onDestroy } from 'svelte';
 	import { models, config } from '$lib/stores';
 	import { accountRequest } from '$lib/apis/billing';
@@ -21,6 +22,7 @@
 	let webSearch = false;
 	let tokenBudget = 256000;
 	let refreshing = false;
+	let hasLoaded = false;
 	let since = 0;
 	let model = '';
 	let error = '';
@@ -43,6 +45,7 @@
 			if (mounted) error = String(e);
 		} finally {
 			refreshing = false;
+			if (mounted) hasLoaded = true;
 		}
 	}
 	async function create() {
@@ -101,7 +104,7 @@
 <svelte:head><title>Tasks · ANSWERAI</title></svelte:head>
 <section
 	aria-label="Agent executions"
-	class="mx-auto w-full max-w-3xl px-5 pb-16 pt-8 text-gray-950 dark:text-gray-100 sm:px-8 sm:pt-14"
+	class="aai-content mx-auto w-full px-5 pb-16 pt-8 text-gray-950 dark:text-gray-100 sm:px-8 sm:pt-14"
 >
 	<a href="/" class="text-sm text-gray-500 hover:text-gray-900 dark:hover:text-white">← Chat</a>
 	<header class="mb-8 mt-10">
@@ -111,10 +114,7 @@
 		</p>
 	</header>
 	{#if error}<p role="alert" class="mb-5 text-sm text-red-600 dark:text-red-400">{error}</p>{/if}
-	<form
-		on:submit|preventDefault={create}
-		class="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900/30"
-	>
+	<form on:submit|preventDefault={create} class="aai-card p-4">
 		<label class="sr-only" for="task-objective">Objective</label>
 		<textarea
 			id="task-objective"
@@ -138,10 +138,8 @@
 				>{#each $models as item}<option value={item.id}>{item.name ?? item.id}</option
 					>{/each}</select
 			>
-			<button
-				class="rounded-full bg-gray-950 px-4 py-2 text-sm font-medium text-white transition hover:bg-gray-700 disabled:cursor-not-allowed disabled:opacity-35 dark:bg-white dark:text-gray-950"
-				disabled={busy || !model || !objective.trim()}
-				>Start task <span aria-hidden="true">↑</span></button
+			<button class="aai-button aai-button--primary" disabled={busy || !model || !objective.trim()}
+				>Start task <ArrowUp class="size-4" strokeWidth={1.5} aria-hidden="true" /></button
 			>
 		</div>
 		<details class="mt-2 border-t border-gray-100 pt-3 dark:border-gray-800">
@@ -177,75 +175,90 @@
 	</form>
 	<section aria-label="Execution history" class="mt-12">
 		<h2 class="mb-3 text-xs font-medium text-gray-500">Recent tasks</h2>
-		{#each runs as run}<article class="border-t border-gray-100 py-5 dark:border-gray-800">
-				<div class="flex items-start justify-between gap-4">
-					<a
-						class="min-w-0 break-words text-sm font-medium leading-6 hover:underline"
-						href={`/c/${run.chat_id}`}>{run.prompt?.slice(0, 140) ?? 'Agent task'}</a
-					><span
-						class="shrink-0 pt-1 text-xs text-gray-500"
-						class:text-red-600={run.status === 'failed'}
-						class:text-emerald-600={run.status === 'completed'}
-						>{run.status.replaceAll('_', ' ')}</span
+
+		{#if !hasLoaded}
+			<div role="status" aria-label="Loading tasks" aria-busy="true" class="space-y-4 py-5">
+				<span class="sr-only">Loading tasks…</span>
+				{#each [0, 1, 2] as row (row)}
+					<div class="space-y-2" aria-hidden="true">
+						<div class="aai-skeleton h-4 w-3/4"></div>
+						<div class="aai-skeleton h-3 w-1/3"></div>
+					</div>
+				{/each}
+			</div>
+		{:else}
+			{#each runs as run}<article class="border-t border-gray-100 py-5 dark:border-gray-800">
+					<div class="flex items-start justify-between gap-4">
+						<a
+							class="min-w-0 break-words text-sm font-medium leading-6 hover:underline"
+							href={`/c/${run.chat_id}`}>{run.prompt?.slice(0, 140) ?? 'Agent task'}</a
+						><span
+							data-status={run.status}
+							class="aai-status shrink-0 pt-1"
+							class:text-red-600={run.status === 'failed'}
+							class:text-emerald-600={run.status === 'completed'}
+							>{run.status.replaceAll('_', ' ')}</span
+						>
+					</div>
+					<div class="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-gray-500">
+						<time datetime={new Date(run.created_at * 1000).toISOString()}
+							>{new Date(run.created_at * 1000).toLocaleDateString()}</time
+						>
+						{#if ['queued', 'running'].includes(run.status)}<button
+								disabled={busy}
+								class="hover:text-gray-950 dark:hover:text-white"
+								on:click={() => action(run, 'pause')}>Pause</button
+							>{/if}
+						{#if ['paused', 'blocked'].includes(run.status)}<button
+								disabled={busy}
+								class="hover:text-gray-950 dark:hover:text-white"
+								on:click={() => action(run, 'resume')}>Resume from checkpoint</button
+							>{/if}
+						{#if ['queued', 'running', 'pausing', 'paused', 'blocked', 'approval_required'].includes(run.status)}<button
+								disabled={busy}
+								class="hover:text-red-600"
+								on:click={() => action(run, 'cancel')}>Cancel</button
+							>{/if}
+						{#if run.status === 'needs_review'}<button
+								disabled={busy}
+								class="text-gray-800 hover:underline dark:text-gray-200"
+								on:click={() => action(run, 'verify')}>I verified the result</button
+							>{/if}
+					</div>
+					<details class="mt-3">
+						<summary
+							class="w-fit cursor-pointer text-xs text-gray-500 hover:text-gray-900 dark:hover:text-white"
+							>Activity</summary
+						>
+						<p class="mt-3 break-words text-xs text-gray-500">
+							{run.model_id} · {run.tokens_used.toLocaleString()} / {run.token_budget.toLocaleString()}
+							credits
+						</p>
+						<ol
+							class="mt-3 space-y-2 border-l border-gray-200 pl-3 text-xs leading-5 dark:border-gray-700"
+							aria-live="polite"
+						>
+							{#each run.timeline ?? [] as event (event.sequence)}<li>
+									<span class="text-gray-400">{new Date(event.at * 1000).toLocaleTimeString()}</span
+									>
+									<span class="text-gray-600 dark:text-gray-300"
+										>{event.tool ?? 'Task'} · {event.type
+											.replaceAll('.', ' ')
+											.replaceAll('_', ' ')}</span
+									>{#if event.duration_ms != null}<span class="text-gray-400">
+											· {Math.round(event.duration_ms)} ms</span
+										>{/if}
+								</li>{/each}
+						</ol>
+						{#if run.checkpoint.message}<p class="mt-3 text-xs text-gray-500">
+								{run.checkpoint.message}
+							</p>{/if}
+					</details>
+				</article>{:else}{#if !error}<p
+						class="border-t border-gray-100 py-8 text-center text-sm text-gray-400 dark:border-gray-800"
 					>
-				</div>
-				<div class="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-gray-500">
-					<time datetime={new Date(run.created_at * 1000).toISOString()}
-						>{new Date(run.created_at * 1000).toLocaleDateString()}</time
-					>
-					{#if ['queued', 'running'].includes(run.status)}<button
-							disabled={busy}
-							class="hover:text-gray-950 dark:hover:text-white"
-							on:click={() => action(run, 'pause')}>Pause</button
-						>{/if}
-					{#if ['paused', 'blocked'].includes(run.status)}<button
-							disabled={busy}
-							class="hover:text-gray-950 dark:hover:text-white"
-							on:click={() => action(run, 'resume')}>Resume from checkpoint</button
-						>{/if}
-					{#if ['queued', 'running', 'pausing', 'paused', 'blocked', 'approval_required'].includes(run.status)}<button
-							disabled={busy}
-							class="hover:text-red-600"
-							on:click={() => action(run, 'cancel')}>Cancel</button
-						>{/if}
-					{#if run.status === 'needs_review'}<button
-							disabled={busy}
-							class="text-gray-800 hover:underline dark:text-gray-200"
-							on:click={() => action(run, 'verify')}>I verified the result</button
-						>{/if}
-				</div>
-				<details class="mt-3">
-					<summary
-						class="w-fit cursor-pointer text-xs text-gray-500 hover:text-gray-900 dark:hover:text-white"
-						>Activity</summary
-					>
-					<p class="mt-3 break-words text-xs text-gray-500">
-						{run.model_id} · {run.tokens_used.toLocaleString()} / {run.token_budget.toLocaleString()}
-						credits
-					</p>
-					<ol
-						class="mt-3 space-y-2 border-l border-gray-200 pl-3 text-xs leading-5 dark:border-gray-700"
-						aria-live="polite"
-					>
-						{#each run.timeline ?? [] as event (event.sequence)}<li>
-								<span class="text-gray-400">{new Date(event.at * 1000).toLocaleTimeString()}</span>
-								<span class="text-gray-600 dark:text-gray-300"
-									>{event.tool ?? 'Task'} · {event.type
-										.replaceAll('.', ' ')
-										.replaceAll('_', ' ')}</span
-								>{#if event.duration_ms != null}<span class="text-gray-400">
-										· {Math.round(event.duration_ms)} ms</span
-									>{/if}
-							</li>{/each}
-					</ol>
-					{#if run.checkpoint.message}<p class="mt-3 text-xs text-gray-500">
-							{run.checkpoint.message}
-						</p>{/if}
-				</details>
-			</article>{:else}<p
-				class="border-t border-gray-100 py-8 text-center text-sm text-gray-400 dark:border-gray-800"
-			>
-				Your tasks will appear here.
-			</p>{/each}
+						Your tasks will appear here.
+					</p>{/if}{/each}
+		{/if}
 	</section>
 </section>

@@ -3,6 +3,8 @@
 @font-face {
 	font-family: 'Inter';
 	src: url('/assets/fonts/Inter-Variable.ttf');
+	font-weight: 100 900;
+	font-style: normal;
 	font-display: swap;
 }
 
@@ -749,16 +751,6 @@ html.high-contrast.dark .ProseMirror p.is-editor-empty:first-child::before {
 
 .ProseMirror-yjs-cursor-label[data-popper-reference-hidden] {
 	opacity: 0;
-}
-
-body {
-	background: #fff;
-	color: #000;
-}
-
-.dark body {
-	background: #171717;
-	color: #eee;
 }
 
 /* Position the handle relative to each LI */

@@ -1,25 +1,8 @@
 <script lang="ts">
+	import ListIndentDecrease from '@lucide/svelte/icons/list-indent-decrease';
 	export let className = 'size-4';
 	export let strokeWidth = '1.5';
 </script>
 
-<svg
-	aria-hidden="true"
-	xmlns="http://www.w3.org/2000/svg"
-	fill="none"
-	viewBox="0 0 24 24"
-	stroke-width={strokeWidth}
-	stroke="currentColor"
-	class={className}
->
-	<path d="M11 6H21" stroke-linecap="round" stroke-linejoin="round"></path><path
-		d="M11 12H21"
-		stroke-linecap="round"
-		stroke-linejoin="round"
-	></path>
-	<path d="M11 18H21" stroke-linecap="round" stroke-linejoin="round"></path><path
-		d="M5 19V5M5 10L3 8M5 10L7 8M5 14L3 16M5 14L7 16"
-		stroke-linecap="round"
-		stroke-linejoin="round"
-	></path>
-</svg>
+<ListIndentDecrease class={className} strokeWidth={Number(strokeWidth)} aria-hidden="true"
+></ListIndentDecrease>

@@ -13,8 +13,9 @@
 </script>
 
 <div
-	class="font-normal {classNames[type] ?? classNames['info']} w-fit px-[0.3125rem] mr-0.5 {type ===
-	'subtle'
+	data-tone={type}
+	class="aai-badge font-normal {classNames[type] ??
+		classNames['info']} w-fit px-[0.3125rem] mr-0.5 {type === 'subtle'
 		? 'shrink-0 whitespace-nowrap rounded-md text-[0.6875rem] leading-4 normal-case'
 		: 'rounded-lg text-xs uppercase line-clamp-1'}"
 >

@@ -68,10 +68,20 @@ async function main() {
 		await page.locator('#input-menu-button').click();
 		const mode = page.getByLabel('Execution mode', { exact: true });
 		await mode.waitFor({ state: 'visible' });
-		await mode.selectOption('agent');
+		await mode.click();
+		await page.getByRole('menuitemradio', { name: 'Agent', exact: true }).click();
 		await mode.waitFor({ state: 'detached' });
 		await page.locator('#input-menu-button').click();
-		if ((await mode.inputValue()) !== 'agent') throw new Error('Agent mode was not selected.');
+		await mode.click();
+		if (
+			(await page
+				.getByRole('menuitemradio', { name: 'Agent', exact: true })
+				.getAttribute('aria-checked')) !== 'true'
+		)
+			throw new Error('Agent mode was not selected.');
+		await page.getByRole('menuitemradio', { name: 'Agent', exact: true }).click();
+		await mode.waitFor({ state: 'detached' });
+		await page.locator('#input-menu-button').click();
 		await page.getByRole('menuitem', { name: 'Background tasks' }).click();
 		await page.getByRole('heading', { name: 'Agent tasks', exact: true }).waitFor();
 		if (errors.length) throw new Error(`Browser raised ${errors.length} uncaught errors.`);

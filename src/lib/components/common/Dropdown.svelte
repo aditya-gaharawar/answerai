@@ -418,7 +418,7 @@
 		tabindex="-1"
 		style:max-height={resolvedMaxHeight}
 		style:overflow-y="auto"
-		transition:flyAndScale
+		transition:flyAndScale={{ y: 0, start: 1, duration: 180 }}
 		on:click={(e) => {
 			e.stopPropagation();
 			if (closeOnSelect && !e.defaultPrevented) closeDropdown();

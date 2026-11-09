@@ -111,6 +111,7 @@
 	import Dropdown from '../common/Dropdown.svelte';
 	import DropdownMenu from '../common/DropdownMenu.svelte';
 	import CheckIcon from '../icons/Check.svelte';
+	import CreditCard from '@lucide/svelte/icons/credit-card';
 	import ArchiveBoxIcon from '../icons/ArchiveBox.svelte';
 	import GarbageBinIcon from '../icons/GarbageBin.svelte';
 	import XMarkIcon from '../icons/XMark.svelte';
@@ -1058,7 +1059,7 @@
 
 	{#if !$mobile && !$showSidebar}
 		<div
-			class="w-[calc(42px*var(--app-text-scale,1))] shrink-0 pt-0.5 pb-1 px-1 flex flex-col justify-between text-gray-700 dark:text-gray-300 hover:bg-gray-50/30 dark:hover:bg-gray-800/30 h-full z-10 transition-all border-e-[0.5px] border-gray-50 dark:border-gray-850/30"
+			class="aai-sidebar w-[calc(42px*var(--app-text-scale,1))] shrink-0 pt-0.5 pb-1 px-1 flex flex-col justify-between text-gray-700 dark:text-gray-300 hover:bg-gray-50/30 dark:hover:bg-gray-800/30 h-full z-10 transition-all border-e-[0.5px] border-gray-50 dark:border-gray-850/30"
 			id="sidebar"
 			role="navigation"
 			aria-label={$i18n.t(inboxOpened ? 'Notifications' : 'Chat history')}
@@ -1248,7 +1249,7 @@
 			aria-label={$i18n.t('Chat history')}
 			aria-hidden={!$showSidebar}
 			inert={!$showSidebar}
-			class="h-screen max-h-[100dvh] min-h-screen select-none {$mobile
+			class="aai-sidebar h-screen max-h-[100dvh] min-h-screen select-none {$mobile
 				? visible
 					? 'bg-gray-50 dark:bg-gray-950 z-50'
 					: 'bg-transparent z-0 pointer-events-none'
@@ -1260,7 +1261,7 @@
 			data-state={$showSidebar}
 		>
 			<div
-				class=" my-auto flex flex-col justify-between h-screen max-h-[100dvh] w-[var(--sidebar-width)] overflow-x-hidden scrollbar-hidden z-50 border-e border-gray-50 dark:border-gray-850/30"
+				class=" my-auto flex flex-col justify-between h-screen max-h-[100dvh] w-[var(--sidebar-width)] overflow-x-hidden scrollbar-hidden z-50 border-e border-transparent"
 			>
 				<div
 					class="sidebar {$mobile
@@ -1402,7 +1403,7 @@
 						<a
 							href="/billing"
 							class="mx-1 my-2 flex items-center gap-2 rounded-xl px-2 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-900"
-							>✦ Plans & billing</a
+							><CreditCard class="size-4" strokeWidth={1.5} aria-hidden="true" /> Plans & billing</a
 						>
 						<div id="pinned-menu-items-list">
 							{#each pinnedItems as itemId (itemId)}

@@ -9,7 +9,7 @@
 	export let show = true;
 	export let size = 'md';
 	export let containerClassName = 'p-3';
-	export let className = 'bg-white dark:bg-gray-900 rounded-4xl';
+	export let className = 'rounded-xl';
 	export let onRequestClose: (() => void) | null = null;
 	export let ariaLabel: string | undefined = undefined;
 	const requestClose = () => (onRequestClose ? onRequestClose() : (show = false));
@@ -171,15 +171,15 @@
 		aria-label={ariaLabel}
 		role="dialog"
 		tabindex="-1"
-		class="modal fixed top-0 right-0 left-0 bottom-0 bg-black/45 dark:bg-black/60 w-full h-screen max-h-[100dvh] {containerClassName}  flex justify-center z-9999 overflow-y-auto overscroll-contain"
+		class="aai-overlay modal fixed top-0 right-0 left-0 bottom-0 w-full h-screen max-h-[100dvh] {containerClassName}  flex justify-center z-9999 overflow-y-auto overscroll-contain"
 		style="scrollbar-gutter: stable;"
 		in:fade={{ duration: 10 }}
 		on:mousedown={requestClose}
 	>
 		<div
-			class="m-auto max-w-full {sizeToWidth(size)} {size !== 'full'
+			class="aai-dialog aai-glass m-auto max-w-full {sizeToWidth(size)} {size !== 'full'
 				? 'mx-2'
-				: ''} shadow-3xl min-h-fit scrollbar-hidden {className} border border-white dark:border-gray-850"
+				: ''} min-h-fit scrollbar-hidden {className}"
 			in:flyAndScale
 			on:mousedown={(e) => {
 				e.stopPropagation();

@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { getContext, onMount, tick } from 'svelte';
-	import { fly } from 'svelte/transition';
+	import { flyAndScale } from '$lib/utils/transitions';
 
 	import { config, user, tools as _tools, mobile, knowledge, visibleControls } from '$lib/stores';
 	import { getKnowledgeBases } from '$lib/apis/knowledge';
@@ -156,7 +156,7 @@
 			{#if tab === '' || tab === 'attachments'}
 				<div
 					class="max-h-[min(70dvh,32rem)] overflow-y-auto overflow-x-hidden overscroll-contain scrollbar-thin"
-					in:fly={{ x: -20, duration: 150 }}
+					in:flyAndScale={{ y: 0, start: 1, duration: 180 }}
 				>
 					{#if tab === ''}
 						<slot name="controls" {close} />
@@ -638,7 +638,10 @@
 					{/if}
 				</div>
 			{:else if tab === 'tool_permissions'}
-				<div class="flex max-h-72 flex-col overflow-hidden" in:fly={{ x: 20, duration: 150 }}>
+				<div
+					class="flex max-h-72 flex-col overflow-hidden"
+					in:flyAndScale={{ y: 0, start: 1, duration: 180 }}
+				>
 					<button
 						role="menuitem"
 						class="flex w-full shrink-0 justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal select-none cursor-pointer rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
@@ -690,7 +693,10 @@
 					</div>
 				</div>
 			{:else if tab === 'knowledge'}
-				<div class="flex max-h-72 flex-col overflow-hidden" in:fly={{ x: 20, duration: 150 }}>
+				<div
+					class="flex max-h-72 flex-col overflow-hidden"
+					in:flyAndScale={{ y: 0, start: 1, duration: 180 }}
+				>
 					<button
 						role="menuitem"
 						class="flex w-full shrink-0 justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal select-none cursor-pointer rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
@@ -710,7 +716,10 @@
 					<Knowledge {onSelect} />
 				</div>
 			{:else if tab === 'notes'}
-				<div class="flex max-h-72 flex-col overflow-hidden" in:fly={{ x: 20, duration: 150 }}>
+				<div
+					class="flex max-h-72 flex-col overflow-hidden"
+					in:flyAndScale={{ y: 0, start: 1, duration: 180 }}
+				>
 					<button
 						role="menuitem"
 						class="flex w-full shrink-0 justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal select-none cursor-pointer rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
@@ -730,7 +739,10 @@
 					<Notes {onSelect} />
 				</div>
 			{:else if tab === 'files'}
-				<div class="flex max-h-72 flex-col overflow-hidden" in:fly={{ x: 20, duration: 150 }}>
+				<div
+					class="flex max-h-72 flex-col overflow-hidden"
+					in:flyAndScale={{ y: 0, start: 1, duration: 180 }}
+				>
 					<button
 						role="menuitem"
 						class="flex w-full shrink-0 justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal select-none cursor-pointer rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
@@ -750,7 +762,10 @@
 					<Files {onSelect} />
 				</div>
 			{:else if tab === 'chats'}
-				<div class="flex max-h-72 flex-col overflow-hidden" in:fly={{ x: 20, duration: 150 }}>
+				<div
+					class="flex max-h-72 flex-col overflow-hidden"
+					in:flyAndScale={{ y: 0, start: 1, duration: 180 }}
+				>
 					<button
 						role="menuitem"
 						class="flex w-full shrink-0 justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal select-none cursor-pointer rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
@@ -770,7 +785,7 @@
 					<Chats {onSelect} />
 				</div>
 			{:else if tab === 'microsoft_onedrive'}
-				<div in:fly={{ x: 20, duration: 150 }}>
+				<div in:flyAndScale={{ y: 0, start: 1, duration: 180 }}>
 					<button
 						role="menuitem"
 						class="flex w-full justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal select-none cursor-pointer rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
