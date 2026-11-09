@@ -17,6 +17,19 @@
 	let resetReason = '';
 	let resetConfirmation = '';
 	let resetting = false;
+	const sections = [
+		{ id: 'billing-plans', label: 'Plans' },
+		{ id: 'billing-feature-limits', label: 'Feature limits' },
+		{ id: 'billing-payments', label: 'Payments' },
+		{ id: 'billing-live', label: 'Live calls' },
+		{ id: 'billing-accounts', label: 'Accounts' },
+		{ id: 'billing-usage', label: 'Usage resets' },
+		{ id: 'billing-security', label: 'Security' }
+	];
+	function showSection(id: string) {
+		document.getElementById(id)?.scrollIntoView({ block: 'start', behavior: 'auto' });
+	}
+
 	async function inspectUsage() {
 		error = '';
 		try {
@@ -48,7 +61,7 @@
 		}
 	}
 	const inputClass =
-		'mt-1 w-full rounded-lg border border-gray-200 bg-transparent p-2 text-sm dark:border-gray-700';
+		'aai-field mt-1 w-full rounded-lg border border-gray-200 p-2 text-sm dark:border-gray-700';
 	onMount(async () => {
 		try {
 			const [billing, calls] = await Promise.all([
@@ -107,239 +120,290 @@
 	}
 </script>
 
-<div class="space-y-7 p-1">
-	<h2 class="text-lg font-semibold">Plans, payments & live calls</h2>
-	{#if error}<p class="text-sm text-red-500" role="alert">{error}</p>{/if}{#if message}<p
-			class="text-sm text-green-600"
-			role="status"
-		>
-			{message}
-		</p>{/if}
-	{#if config && live}
-		<label class="flex items-center gap-3 font-medium"
-			><input type="checkbox" bind:checked={config.enabled} />Enforce Free and Plus plans</label
-		>
-		<p class="text-xs text-gray-500">
-			These limits apply to non-admin users alongside existing group permissions. A limit of zero
-			disables usage. Model access lists use exact IDs; * allows all shared models. Live model IDs
-			use live:openai/model or live:gemini/model.
-		</p>
-		<div class="grid gap-5 md:grid-cols-2">
-			{#each ['free', 'plus'] as name}<fieldset
-					class="space-y-3 rounded-xl border border-gray-200 p-4 dark:border-gray-800"
+<div class="flex h-full min-h-0 flex-col">
+	<header class="shrink-0 border-b border-gray-200 pb-4 dark:border-gray-800">
+		<div class="flex flex-wrap items-start justify-between gap-3">
+			<div>
+				<h2 class="text-lg font-semibold tracking-tight">Plans, payments & live calls</h2>
+				<p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+					Manage access, limits, payments, and live providers.
+				</p>
+			</div>
+			{#if config && live}
+				<button
+					type="button"
+					class="aai-button aai-button--primary shrink-0"
+					disabled={busy}
+					on:click={save}>{busy ? 'Saving…' : 'Save settings'}</button
 				>
-					<legend class="px-2 font-semibold capitalize">{name} plan</legend
-					>{#each [['messages_per_day', 'Generation requests per day'], ['messages_per_five_hours', 'Messages per five-hour window (blank: unlimited)'], ['messages_per_week', 'Messages per weekly window (blank: unlimited)'], ['tokens_per_five_hours', 'Token credits per five-hour window (blank: unlimited)'], ['tokens_per_day', 'Token credits per day (blank: unlimited)'], ['tokens_per_week', 'Token credits per week (blank: unlimited)'], ['max_output_tokens', 'Maximum output tokens (when token budgets are enabled)'], ['requests_per_minute', 'Requests per minute'], ['audio_requests_per_day', 'Speech and transcription requests per day'], ['live_minutes_per_day', 'Live minutes per day'], ['max_call_minutes', 'Maximum minutes per call']] as [key, label]}<label
-							class="block text-sm"
-							>{label}<input
-								class={inputClass}
-								type="number"
-								min={['max_call_minutes', 'max_output_tokens'].includes(key) ? 1 : 0}
-								bind:value={config[name][key]}
-							/></label
-						>{/each}<label class="block text-sm"
-						>Allowed model IDs (one per line)<textarea
+			{/if}
+		</div>
+		{#if error}<p class="mt-3 text-sm text-red-500 dark:text-red-400" role="alert">{error}</p>{/if}
+		{#if message}<p class="mt-3 text-sm text-green-700 dark:text-green-400" role="status">
+				{message}
+			</p>{/if}
+		{#if config && live}
+			<nav
+				aria-label="Billing settings sections"
+				class="-mx-1 mt-4 flex gap-1 overflow-x-auto overscroll-x-contain pb-1 scrollbar-thin"
+			>
+				{#each sections as section (section.id)}
+					<button
+						type="button"
+						class="shrink-0 rounded-lg px-3 py-2 text-xs font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white"
+						on:click={() => showSection(section.id)}>{section.label}</button
+					>
+				{/each}
+			</nav>
+		{/if}
+	</header>
+	<!-- svelte-ignore a11y_no_noninteractive_tabindex: The scroll region must be keyboard reachable. -->
+	<div
+		role="region"
+		aria-label="Plans and payments settings"
+		tabindex="0"
+		class="min-h-0 flex-1 overflow-y-auto overscroll-contain py-5 pe-1 scrollbar-thin"
+	>
+		<div class="space-y-6 max-w-5xl mx-auto">
+			{#if config && live}
+				<label class="flex items-center gap-3 font-medium"
+					><input type="checkbox" bind:checked={config.enabled} />Enforce Free and Plus plans</label
+				>
+				<p class="text-xs text-gray-500">
+					These limits apply to non-admin users alongside existing group permissions. A limit of
+					zero disables usage. Model access lists use exact IDs; * allows all shared models. Live
+					model IDs use live:openai/model or live:gemini/model.
+				</p>
+				<div id="billing-plans" class="grid scroll-mt-2 gap-5 lg:grid-cols-2">
+					{#each ['free', 'plus'] as name}<fieldset
+							class="space-y-3 rounded-xl border border-gray-200 p-4 dark:border-gray-800"
+						>
+							<legend class="px-2 font-semibold capitalize">{name} plan</legend
+							>{#each [['messages_per_day', 'Generation requests per day'], ['messages_per_five_hours', 'Messages per five-hour window (blank: unlimited)'], ['messages_per_week', 'Messages per weekly window (blank: unlimited)'], ['tokens_per_five_hours', 'Token credits per five-hour window (blank: unlimited)'], ['tokens_per_day', 'Token credits per day (blank: unlimited)'], ['tokens_per_week', 'Token credits per week (blank: unlimited)'], ['max_output_tokens', 'Maximum output tokens (when token budgets are enabled)'], ['requests_per_minute', 'Requests per minute'], ['audio_requests_per_day', 'Speech and transcription requests per day'], ['live_minutes_per_day', 'Live minutes per day'], ['max_call_minutes', 'Maximum minutes per call']] as [key, label]}<label
+									class="block text-sm"
+									>{label}<input
+										class={inputClass}
+										type="number"
+										min={['max_call_minutes', 'max_output_tokens'].includes(key) ? 1 : 0}
+										bind:value={config[name][key]}
+									/></label
+								>{/each}<label class="block text-sm"
+								>Allowed model IDs (one per line)<textarea
+									class={inputClass}
+									rows="4"
+									value={config[name].models.join('\n')}
+									on:input={(event) => {
+										config[name].models = event.currentTarget.value
+											.split('\n')
+											.map((value) => value.trim())
+											.filter(Boolean);
+										config = config;
+									}}
+								></textarea></label
+							>
+							<div class="space-y-2">
+								{#each features as feature}<label class="flex gap-2 text-sm"
+										><input
+											type="checkbox"
+											bind:checked={config[name].features[feature]}
+										/>{feature.replaceAll('_', ' ')}</label
+									>{/each}
+							</div>
+						</fieldset>{/each}
+				</div>
+				<fieldset
+					id="billing-feature-limits"
+					class="scroll-mt-2 space-y-3 rounded-xl border border-gray-200 p-4 dark:border-gray-800"
+				>
+					<legend class="px-2 font-semibold">Daily feature limits</legend>
+					<div class="grid gap-4 md:grid-cols-2">
+						{#each ['free', 'plus'] as name}<div>
+								<h3 class="mb-3 capitalize">{name}</h3>
+								{#each features.filter((feature) => !feature.startsWith('live_')) as feature}<label
+										class="mb-2 block text-xs"
+										>{feature.replaceAll('_', ' ')}<input
+											class={inputClass}
+											type="number"
+											min="0"
+											max="1000000"
+											bind:value={config[name].feature_limits[feature]}
+										/></label
+									>{/each}
+							</div>{/each}
+					</div>
+				</fieldset>
+				<fieldset
+					id="billing-payments"
+					class="scroll-mt-2 space-y-4 rounded-xl border border-gray-200 p-4 dark:border-gray-800"
+				>
+					<legend class="px-2 font-semibold">Payment gateways</legend><label class="block text-sm"
+						>Public application URL<input
+							class={inputClass}
+							type="url"
+							bind:value={config.public_url}
+						/></label
+					><label class="flex gap-2"
+						><input type="checkbox" bind:checked={config.stripe_enabled} />Enable Stripe</label
+					><label class="block text-sm"
+						>Stripe recurring Price ID<input
+							class={inputClass}
+							bind:value={config.stripe_price_id}
+							placeholder="price_…"
+						/></label
+					><label class="flex gap-2"
+						><input type="checkbox" bind:checked={config.razorpay_enabled} />Enable Razorpay</label
+					><label class="block text-sm"
+						>Razorpay Plan ID<input
+							class={inputClass}
+							bind:value={config.razorpay_plan_id}
+							placeholder="plan_…"
+						/></label
+					>
+					<p class="text-xs text-gray-500">
+						Checkout prices come from the selected gateway plan. Configure webhook delivery before
+						enabling checkout.
+					</p>
+				</fieldset>
+				<fieldset
+					id="billing-live"
+					class="scroll-mt-2 space-y-4 rounded-xl border border-gray-200 p-4 dark:border-gray-800"
+				>
+					<legend class="px-2 font-semibold">Current call feature</legend><label class="flex gap-2"
+						><input type="checkbox" bind:checked={live.enabled} />Enable live calls</label
+					><label class="flex gap-2"
+						><input type="checkbox" bind:checked={live.camera_enabled} />Allow camera frames</label
+					><label class="block text-sm"
+						>Default provider<select class={inputClass} bind:value={live.default_provider}
+							><option value="openai">OpenAI Realtime</option><option value="gemini"
+								>Gemini Live</option
+							></select
+						></label
+					>{#each ['openai', 'gemini'] as provider}<div class="space-y-2">
+							<label class="flex gap-2"
+								><input type="checkbox" bind:checked={live[`${provider}_enabled`]} />Enable {provider ===
+								'openai'
+									? 'OpenAI Realtime'
+									: 'Gemini Live'}</label
+							><label class="block text-sm"
+								>Model<input class={inputClass} bind:value={live[`${provider}_model`]} /></label
+							><label class="block text-sm"
+								>Voice<input class={inputClass} bind:value={live[`${provider}_voice`]} /></label
+							>
+						</div>{/each}<label class="block text-sm"
+						>Voice assistant instructions<textarea
 							class={inputClass}
 							rows="4"
-							value={config[name].models.join('\n')}
-							on:input={(event) => {
-								config[name].models = event.currentTarget.value
-									.split('\n')
-									.map((value) => value.trim())
-									.filter(Boolean);
-								config = config;
-							}}
+							bind:value={live.instructions}
 						></textarea></label
 					>
-					<div class="space-y-2">
-						{#each features as feature}<label class="flex gap-2 text-sm"
-								><input
-									type="checkbox"
-									bind:checked={config[name].features[feature]}
-								/>{feature.replaceAll('_', ' ')}</label
-							>{/each}
-					</div>
-				</fieldset>{/each}
-		</div>
-		<fieldset class="space-y-3 rounded-xl border border-gray-200 p-4 dark:border-gray-800">
-			<legend class="px-2 font-semibold">Daily feature limits</legend>
-			<div class="grid gap-4 md:grid-cols-2">
-				{#each ['free', 'plus'] as name}<div>
-						<h3 class="mb-3 capitalize">{name}</h3>
-						{#each features.filter((feature) => !feature.startsWith('live_')) as feature}<label
-								class="mb-2 block text-xs"
-								>{feature.replaceAll('_', ' ')}<input
-									class={inputClass}
-									type="number"
-									min="0"
-									max="1000000"
-									bind:value={config[name].feature_limits[feature]}
-								/></label
-							>{/each}
-					</div>{/each}
-			</div>
-		</fieldset>
-		<fieldset class="space-y-4 rounded-xl border border-gray-200 p-4 dark:border-gray-800">
-			<legend class="px-2 font-semibold">Payment gateways</legend><label class="block text-sm"
-				>Public application URL<input
-					class={inputClass}
-					type="url"
-					bind:value={config.public_url}
-				/></label
-			><label class="flex gap-2"
-				><input type="checkbox" bind:checked={config.stripe_enabled} />Enable Stripe</label
-			><label class="block text-sm"
-				>Stripe recurring Price ID<input
-					class={inputClass}
-					bind:value={config.stripe_price_id}
-					placeholder="price_…"
-				/></label
-			><label class="flex gap-2"
-				><input type="checkbox" bind:checked={config.razorpay_enabled} />Enable Razorpay</label
-			><label class="block text-sm"
-				>Razorpay Plan ID<input
-					class={inputClass}
-					bind:value={config.razorpay_plan_id}
-					placeholder="plan_…"
-				/></label
-			>
-			<p class="text-xs text-gray-500">
-				Checkout prices come from the selected gateway plan. Configure webhook delivery before
-				enabling checkout.
-			</p>
-		</fieldset>
-		<fieldset class="space-y-4 rounded-xl border border-gray-200 p-4 dark:border-gray-800">
-			<legend class="px-2 font-semibold">Current call feature</legend><label class="flex gap-2"
-				><input type="checkbox" bind:checked={live.enabled} />Enable live calls</label
-			><label class="flex gap-2"
-				><input type="checkbox" bind:checked={live.camera_enabled} />Allow camera frames</label
-			><label class="block text-sm"
-				>Default provider<select class={inputClass} bind:value={live.default_provider}
-					><option value="openai">OpenAI Realtime</option><option value="gemini">Gemini Live</option
-					></select
-				></label
-			>{#each ['openai', 'gemini'] as provider}<div class="space-y-2">
-					<label class="flex gap-2"
-						><input type="checkbox" bind:checked={live[`${provider}_enabled`]} />Enable {provider ===
-						'openai'
-							? 'OpenAI Realtime'
-							: 'Gemini Live'}</label
+				</fieldset>
+				<div class="rounded-xl bg-gray-50 p-4 text-xs dark:bg-gray-900">
+					<p class="mb-2 font-semibold">Server credential status</p>
+					{#each Object.entries(credentials) as [key, ready]}<p class="mb-1">
+							{key}: {ready ? 'Configured' : 'Missing'}
+						</p>{/each}
+					<p class="mt-2 text-gray-500">
+						Set missing credentials in the server environment or .env, then restart. Secret values
+						are never returned to the browser.
+					</p>
+				</div>
+
+				<fieldset
+					id="billing-accounts"
+					class="scroll-mt-2 space-y-3 rounded-xl border border-gray-200 p-4 dark:border-gray-800"
+				>
+					<legend class="px-2 font-semibold">Individual account access</legend><label
+						class="block text-sm"
+						>User ID or email<input class={inputClass} bind:value={userId} /></label
 					><label class="block text-sm"
-						>Model<input class={inputClass} bind:value={live[`${provider}_model`]} /></label
+						>Plan override<select class={inputClass} bind:value={override}
+							><option value="">Automatic (subscription or Free)</option><option value="free"
+								>Free</option
+							><option value="plus">Plus</option><option value="blocked"
+								>Block paid and generation features</option
+							></select
+						></label
 					><label class="block text-sm"
-						>Voice<input class={inputClass} bind:value={live[`${provider}_voice`]} /></label
+						>Expires (optional)<input
+							class={inputClass}
+							type="datetime-local"
+							bind:value={until}
+						/></label
+					><button
+						class="rounded-lg border px-4 py-2 text-sm"
+						disabled={!userId.trim()}
+						on:click={updateOverride}>Apply account access</button
 					>
-				</div>{/each}<label class="block text-sm"
-				>Voice assistant instructions<textarea
-					class={inputClass}
-					rows="4"
-					bind:value={live.instructions}
-				></textarea></label
-			>
-		</fieldset>
-		<div class="rounded-xl bg-gray-50 p-4 text-xs dark:bg-gray-900">
-			<p class="mb-2 font-semibold">Server credential status</p>
-			{#each Object.entries(credentials) as [key, ready]}<p class="mb-1">
-					{key}: {ready ? 'Configured' : 'Missing'}
-				</p>{/each}
-			<p class="mt-2 text-gray-500">
-				Set missing credentials in the server environment or .env, then restart. Secret values are
-				never returned to the browser.
-			</p>
+					<p class="text-xs text-gray-500">
+						An override does not change payment collection. Cancel a subscription separately if
+						needed.
+					</p>
+				</fieldset>
+				<fieldset
+					id="billing-usage"
+					class="scroll-mt-2 space-y-3 rounded-xl border border-gray-200 p-4 dark:border-gray-800"
+				>
+					<legend class="px-2 font-semibold">Usage and rate limit resets</legend>
+					<p class="text-xs text-gray-500">
+						Five-hour and weekly windows start at first use. Daily and minute windows use UTC
+						boundaries. Blank new limits are unlimited; zero blocks usage. Token credits reserve
+						UTF-8 input bytes plus overhead and a capped response allowance; they are not provider
+						invoiced tokens. Reservations remain charged after cancellation.
+					</p>
+					<label class="block text-sm"
+						>User ID or email<input class={inputClass} bind:value={userId} /></label
+					>
+					<button
+						class="rounded-lg border px-4 py-2 text-sm"
+						disabled={!userId.trim() || resetting}
+						on:click={inspectUsage}>View user usage</button
+					>
+					{#if userPlan?.usage}
+						<ul class="space-y-2 text-xs">
+							{#each userPlan.usage as row}<li>
+									{row.metric} · {row.window / 3600}h: {row.used} / {row.limit ?? 'Unlimited'} · Resets
+									{new Date(row.resets_at * 1000).toLocaleString()}
+								</li>{/each}
+						</ul>
+					{/if}
+					<label class="block text-sm"
+						>Reset scope<select class={inputClass} bind:value={resetScope}
+							><option value="user">Selected user</option><option value="global"
+								>All users (global reset)</option
+							></select
+						></label
+					>
+					{#if resetScope === 'global'}<p role="alert" class="text-sm text-amber-600">
+							This restores quota availability for every user. Active calls continue. Subscriptions
+							and payment records are preserved.
+						</p>{/if}
+					<label class="block text-sm"
+						>Reason<textarea class={inputClass} maxlength="500" bind:value={resetReason}
+						></textarea></label
+					>
+					<label class="block text-sm"
+						>Type RESET to confirm<input
+							class={inputClass}
+							bind:value={resetConfirmation}
+							autocomplete="off"
+						/></label
+					>
+					<button
+						class="rounded-lg bg-red-600 px-4 py-2 text-sm text-white disabled:opacity-50"
+						disabled={resetting ||
+							resetConfirmation !== 'RESET' ||
+							resetReason.trim().length < 3 ||
+							(resetScope === 'user' && !userId.trim())}
+						on:click={resetUsage}
+						>{resetting
+							? 'Resetting…'
+							: resetScope === 'global'
+								? 'Reset limits for all users'
+								: 'Reset user limits'}</button
+					>
+				</fieldset>
+				<div id="billing-security" class="scroll-mt-2"><SecurityControls /></div>
+			{:else if !error}<p role="status" class="text-sm text-gray-500">Loading settings…</p>{/if}
 		</div>
-		<button
-			class="rounded-xl bg-blue-600 px-5 py-2.5 text-white disabled:opacity-50"
-			disabled={busy}
-			on:click={save}>{busy ? 'Saving…' : 'Save settings'}</button
-		>
-		<fieldset class="space-y-3 rounded-xl border border-gray-200 p-4 dark:border-gray-800">
-			<legend class="px-2 font-semibold">Individual account access</legend><label
-				class="block text-sm"
-				>User ID or email<input class={inputClass} bind:value={userId} /></label
-			><label class="block text-sm"
-				>Plan override<select class={inputClass} bind:value={override}
-					><option value="">Automatic (subscription or Free)</option><option value="free"
-						>Free</option
-					><option value="plus">Plus</option><option value="blocked"
-						>Block paid and generation features</option
-					></select
-				></label
-			><label class="block text-sm"
-				>Expires (optional)<input
-					class={inputClass}
-					type="datetime-local"
-					bind:value={until}
-				/></label
-			><button
-				class="rounded-lg border px-4 py-2 text-sm"
-				disabled={!userId.trim()}
-				on:click={updateOverride}>Apply account access</button
-			>
-			<p class="text-xs text-gray-500">
-				An override does not change payment collection. Cancel a subscription separately if needed.
-			</p>
-		</fieldset>
-		<fieldset class="space-y-3 rounded-xl border border-gray-200 p-4 dark:border-gray-800">
-			<legend class="px-2 font-semibold">Usage and rate limit resets</legend>
-			<p class="text-xs text-gray-500">
-				Five-hour and weekly windows start at first use. Daily and minute windows use UTC
-				boundaries. Blank new limits are unlimited; zero blocks usage. Token credits reserve UTF-8
-				input bytes plus overhead and a capped response allowance; they are not provider invoiced
-				tokens. Reservations remain charged after cancellation.
-			</p>
-			<label class="block text-sm"
-				>User ID or email<input class={inputClass} bind:value={userId} /></label
-			>
-			<button
-				class="rounded-lg border px-4 py-2 text-sm"
-				disabled={!userId.trim() || resetting}
-				on:click={inspectUsage}>View user usage</button
-			>
-			{#if userPlan?.usage}
-				<ul class="space-y-2 text-xs">
-					{#each userPlan.usage as row}<li>
-							{row.metric} · {row.window / 3600}h: {row.used} / {row.limit ?? 'Unlimited'} · Resets {new Date(
-								row.resets_at * 1000
-							).toLocaleString()}
-						</li>{/each}
-				</ul>
-			{/if}
-			<label class="block text-sm"
-				>Reset scope<select class={inputClass} bind:value={resetScope}
-					><option value="user">Selected user</option><option value="global"
-						>All users (global reset)</option
-					></select
-				></label
-			>
-			{#if resetScope === 'global'}<p role="alert" class="text-sm text-amber-600">
-					This restores quota availability for every user. Active calls continue. Subscriptions and
-					payment records are preserved.
-				</p>{/if}
-			<label class="block text-sm"
-				>Reason<textarea class={inputClass} maxlength="500" bind:value={resetReason}
-				></textarea></label
-			>
-			<label class="block text-sm"
-				>Type RESET to confirm<input
-					class={inputClass}
-					bind:value={resetConfirmation}
-					autocomplete="off"
-				/></label
-			>
-			<button
-				class="rounded-lg bg-red-600 px-4 py-2 text-sm text-white disabled:opacity-50"
-				disabled={resetting ||
-					resetConfirmation !== 'RESET' ||
-					resetReason.trim().length < 3 ||
-					(resetScope === 'user' && !userId.trim())}
-				on:click={resetUsage}
-				>{resetting
-					? 'Resetting…'
-					: resetScope === 'global'
-						? 'Reset limits for all users'
-						: 'Reset user limits'}</button
-			>
-		</fieldset>
-		<SecurityControls />
-	{:else if !error}<p>Loading settings…</p>{/if}
+	</div>
 </div>
