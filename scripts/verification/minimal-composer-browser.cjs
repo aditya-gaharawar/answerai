@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports -- CommonJS loads external test dependencies through NODE_PATH. */
 /* Local/staging only: creates a real test conversation. Uses an explicitly configured
  * test account/provider; no requests are mocked or intercepted in this browser test.
  * Install Playwright outside the repository and set NODE_PATH if necessary.
@@ -49,7 +50,7 @@ async function main() {
 		for (const width of [320, 390, 768, 1440]) {
 			await page.setViewportSize({ width, height: 844 });
 			await page.goto(base, { waitUntil: 'domcontentloaded' });
-			await page.getByRole('heading', { name: 'What can I help with?', exact: true }).waitFor();
+			await page.getByTestId('chat-welcome-title').waitFor({ timeout: 90000 });
 			const composer = page.locator('form').filter({ has: page.locator('#chat-input') });
 			assert.equal(
 				await composer.getByRole('button').count(),

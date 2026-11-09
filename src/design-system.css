@@ -152,112 +152,6 @@ body {
 	max-width: var(--aai-content-width);
 	min-width: 0;
 }
-.aai-chat-canvas {
-	background: radial-gradient(ellipse 70% 45% at 50% 24%, rgb(255 255 255 / 2%), transparent);
-}
-html.light .aai-chat-canvas,
-html.her .aai-chat-canvas {
-	background: radial-gradient(ellipse 70% 45% at 50% 24%, rgb(81 70 189 / 3%), transparent);
-}
-.aai-home {
-	animation: aai-enter var(--aai-duration) ease-out both;
-}
-.aai-home h1 {
-	font-size: clamp(1.75rem, 2.5vw, 2.25rem);
-	font-weight: 600;
-	letter-spacing: -0.04em;
-	line-height: 1.15;
-}
-.aai-chat-landing {
-	position: relative;
-	display: flex;
-	flex-direction: column;
-	height: 100%;
-	padding-block: var(--aai-space-4) max(var(--aai-space-4), env(safe-area-inset-bottom));
-}
-.aai-chat-landing .aai-home-layout {
-	flex: 1;
-	min-height: 0;
-}
-.aai-chat-landing .aai-home-stack {
-	height: 100%;
-	min-height: 0;
-}
-.aai-welcome {
-	display: flex;
-	flex: 1;
-	min-height: 0;
-	flex-direction: column;
-	align-items: center;
-	justify-content: center;
-	padding: 2rem 1rem;
-}
-.aai-welcome-brand {
-	display: flex;
-	align-items: center;
-	gap: 8px;
-	margin-bottom: 20px;
-	color: var(--aai-secondary);
-	font-size: 11px;
-	font-weight: 600;
-	letter-spacing: 0.12em;
-	line-height: 1.4;
-	text-transform: uppercase;
-}
-.aai-welcome-mark {
-	width: 7px;
-	height: 7px;
-	transform: rotate(45deg);
-	border-radius: 2px;
-	background: var(--aai-accent);
-	box-shadow: 0 0 12px var(--aai-accent-soft);
-}
-.aai-welcome h1 {
-	margin: 0;
-}
-.aai-welcome p {
-	margin: 12px 0 0;
-	color: var(--aai-secondary);
-	font-size: 0.9375rem;
-	font-weight: 400;
-	line-height: 1.6;
-}
-.aai-chat-landing .aai-home-composer {
-	flex-shrink: 0;
-	padding-block: 0;
-}
-.aai-chat-landing .aai-suggestions {
-	position: absolute;
-	inset-inline: var(--aai-space-4);
-	bottom: 160px;
-	z-index: 20;
-	max-height: min(50dvh, 24rem);
-	overflow-y: auto;
-	background: var(--aai-elevated);
-	border: 1px solid var(--aai-border);
-	border-radius: var(--aai-radius-card);
-	padding: var(--aai-space-4);
-	box-shadow: var(--aai-shadow);
-}
-.aai-sidebar {
-	background: color-mix(in srgb, var(--aai-bg) 65%, var(--aai-elevated));
-	border-inline-end: 1px solid var(--aai-border);
-}
-.aai-sidebar :where(a, button) {
-	border-radius: var(--aai-radius-control);
-}
-.aai-sidebar :where(a, button):hover {
-	background-color: var(--aai-highlight);
-}
-.aai-sidebar :where([aria-current='page'], [aria-selected='true']) {
-	color: var(--aai-text);
-	background: var(--aai-highlight);
-}
-.aai-topbar {
-	min-height: 48px;
-	border-bottom: 1px solid var(--aai-border);
-}
-
 /* Opaque fallback first. Blur is restricted to small overlays/navigation. */
 .aai-glass {
 	background: var(--aai-elevated);
@@ -274,13 +168,6 @@ html.her .aai-chat-canvas {
 		-webkit-backdrop-filter: blur(16px) saturate(140%);
 		backdrop-filter: blur(16px) saturate(140%);
 	}
-}
-.aai-topbar.aai-glass {
-	border-width: 0 0 1px;
-	box-shadow: none;
-}
-.aai-topbar :where(button) {
-	border-radius: var(--aai-radius-control);
 }
 .aai-dialog {
 	border-radius: var(--aai-radius-card);
@@ -313,55 +200,15 @@ html.her .aai-chat-canvas {
 	background: var(--aai-border);
 }
 
-.aai-composer,
 .aai-field {
 	background: var(--aai-elevated);
 	color: var(--aai-text);
 	border: 1px solid var(--aai-border);
+	border-radius: var(--aai-radius-control);
 	box-shadow: 0 4px 20px rgb(0 0 0 / 4%);
 }
-.aai-composer {
-	border-color: var(--aai-border-hover);
-	border-radius: 26px;
-	padding: 8px;
-	box-shadow:
-		0 16px 48px rgb(0 0 0 / 16%),
-		inset 0 1px 0 var(--aai-highlight);
-}
-.aai-field {
-	border-radius: var(--aai-radius-control);
-}
-.aai-composer:hover,
 .aai-field:hover {
 	border-color: var(--aai-border-hover);
-}
-.aai-composer:focus-within {
-	border-color: color-mix(in srgb, var(--aai-secondary) 55%, transparent);
-	box-shadow:
-		0 8px 32px rgb(0 0 0 / 12%),
-		inset 0 1px 0 var(--aai-highlight);
-}
-.aai-composer:has(:focus-visible) {
-	outline: 2px solid var(--aai-secondary);
-	outline-offset: 1px;
-}
-.aai-bottom-composer {
-	padding-block-end: max(var(--aai-space-2), env(safe-area-inset-bottom));
-}
-.aai-composer .ProseMirror {
-	line-height: 1.6;
-}
-.aai-composer .input-prose,
-.aai-message .markdown-prose {
-	font-size: var(--aai-text-base) !important;
-}
-.aai-composer :where(textarea, [contenteditable='true']) {
-	background: transparent;
-	-webkit-backdrop-filter: none;
-	backdrop-filter: none;
-}
-.aai-composer textarea {
-	font-size: var(--aai-text-base);
 }
 .aai-card {
 	border: 1px solid var(--aai-border);
@@ -399,29 +246,6 @@ html.her .aai-chat-canvas {
 	color: var(--aai-secondary);
 	background: var(--aai-highlight);
 }
-.aai-message {
-	animation: aai-enter var(--aai-duration) ease-out both;
-	margin-bottom: var(--aai-space-8);
-}
-.aai-user-bubble {
-	border: 1px solid var(--aai-border);
-	border-radius: 20px;
-	background: var(--aai-panel);
-	padding-block: 10px;
-}
-
-.aai-tool-call {
-	border: 1px solid var(--aai-border);
-	border-radius: var(--aai-radius-card);
-	background: var(--aai-elevated);
-	padding: 10px 12px;
-	color: var(--aai-secondary);
-}
-.aai-tool-call:hover {
-	border-color: var(--aai-border-hover);
-	color: var(--aai-text);
-}
-
 .aai-button {
 	display: inline-flex;
 	align-items: center;
@@ -449,21 +273,6 @@ html.her .aai-chat-canvas {
 .aai-button--primary:hover:not(:disabled) {
 	filter: brightness(1.08);
 	transform: translateY(-1px);
-}
-.aai-send {
-	border-radius: var(--aai-radius-pill);
-}
-.aai-send:not(:disabled) {
-	background: var(--aai-text);
-	color: var(--aai-bg);
-	box-shadow: none;
-}
-.aai-send:hover:not(:disabled) {
-	opacity: 0.86;
-}
-.aai-send:disabled {
-	color: var(--aai-secondary);
-	background: var(--aai-panel);
 }
 .aai-button:disabled {
 	opacity: 0.5;
@@ -570,19 +379,6 @@ html.her .aai-chat-canvas {
 	}
 	.aai-menu :where(button, a[role^='menuitem']) {
 		min-height: 44px;
-	}
-	.aai-sidebar :where(button, a[href]) {
-		min-height: 40px;
-	}
-	.aai-topbar {
-		min-height: 52px;
-	}
-	.aai-topbar button {
-		min-width: 40px;
-		min-height: 40px;
-	}
-	.aai-home h1 {
-		font-size: 24px;
 	}
 }
 @media (prefers-reduced-motion: reduce) {

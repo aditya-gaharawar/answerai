@@ -691,7 +691,7 @@
 
 {#key message.id}
 	<div
-		class=" flex w-full message-{message.id}"
+		class="aai-assistant-message flex w-full message-{message.id}"
 		id="message-{message.id}"
 		dir={$chatDirection}
 		style="scroll-margin-top: 3rem;"
@@ -979,7 +979,7 @@
 				{:else if !edit}
 					<div
 						bind:this={buttonsContainerElement}
-						class="flex items-center justify-start overflow-x-auto whitespace-nowrap buttons {($settings?.highContrastMode ??
+						class="aai-message-actions flex items-center justify-start overflow-x-auto whitespace-nowrap buttons {($settings?.highContrastMode ??
 						false)
 							? 'text-gray-600 dark:text-gray-500'
 							: 'text-gray-600/80 dark:text-gray-500/70'} mt-0.5 [&>*]:shrink-0"

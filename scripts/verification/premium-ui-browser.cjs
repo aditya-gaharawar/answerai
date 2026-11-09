@@ -66,9 +66,7 @@ async function main() {
 	};
 	const home = async (page) => {
 		await page.goto(base, { waitUntil: 'domcontentloaded' });
-		await page
-			.getByRole('heading', { name: 'What can I help with?', exact: true })
-			.waitFor({ timeout: 90000 });
+		await page.getByTestId('chat-welcome-title').waitFor({ timeout: 90000 });
 		const changelog = page.getByRole('dialog', { name: "What's New in ANSWERAI" });
 		if (await changelog.isVisible())
 			await changelog.getByRole('button', { name: 'Close', exact: true }).click();
@@ -93,6 +91,14 @@ async function main() {
 				false
 			);
 			assert((await page.locator('.aai-home').boundingBox()).width <= 721);
+			const welcome = await page.locator('.aai-welcome').boundingBox();
+			const composer = await page.locator('.aai-composer').boundingBox();
+			assert(composer.y > welcome.y + welcome.height, 'Composer overlaps welcome content');
+			assert(composer.y - (welcome.y + welcome.height) < 64, 'Welcome and input are disconnected');
+			assert(
+				composer.y + composer.height < 860,
+				'Empty chat input is pinned away from the welcome'
+			);
 			assert.equal(
 				await page
 					.locator('.aai-composer')

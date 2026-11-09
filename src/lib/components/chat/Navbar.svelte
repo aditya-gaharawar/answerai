@@ -358,13 +358,10 @@
 							{/if}
 						</div>
 					{:else}
-						<h1 class="sr-only">{$i18n.t('New Chat')}</h1>
-						<div class="pointer-events-none invisible flex max-w-full min-w-0 items-center gap-2">
-							<div
-								class="min-w-0 truncate md:py-1 text-left text-[0.9375rem] font-normal text-gray-700 dark:text-gray-300"
-							>
-								{$i18n.t('New Chat')}
-							</div>
+						<div class="aai-chat-location">
+							<span>{$i18n.t('Chat')}</span>
+							<span class="aai-chat-location-divider" aria-hidden="true">/</span>
+							<span>{$i18n.t('New Chat')}</span>
 						</div>
 					{/if}
 				</div>

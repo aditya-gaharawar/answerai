@@ -1,0 +1,343 @@
+/* Chat workspace. Shared components and the rest of the product use design-system.css. */
+.aai-chat-canvas {
+	background-color: var(--color-gray-950, var(--aai-bg));
+	background-image: radial-gradient(ellipse at 65% 0%, rgb(124 124 255 / 3%), transparent 55%);
+}
+.aai-chat-canvas.aai-chat-custom-background {
+	background: transparent;
+}
+.aai-home {
+	animation: aai-enter 220ms ease-out both;
+}
+.aai-chat-landing {
+	position: relative;
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+	height: 100%;
+	min-height: 0;
+	padding-block: 80px 48px;
+}
+.aai-chat-landing .aai-home-layout {
+	flex: 0 0 auto;
+	min-height: 0;
+}
+.aai-chat-landing .aai-home-stack {
+	align-items: stretch;
+	gap: 32px;
+	text-align: start;
+}
+.aai-welcome {
+	padding-inline: 10px;
+}
+.aai-welcome-identity {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	margin-bottom: 28px;
+	color: var(--aai-secondary);
+	font-size: 13px;
+	font-weight: 500;
+	letter-spacing: 0.04em;
+}
+.aai-welcome-symbol {
+	display: grid;
+	place-items: center;
+	width: 40px;
+	height: 40px;
+	border: 1px solid var(--aai-border-hover);
+	border-radius: 13px;
+	background: linear-gradient(140deg, var(--aai-highlight), transparent);
+	color: var(--aai-text);
+	box-shadow: inset 0 1px 0 var(--aai-highlight);
+}
+.aai-welcome h1 {
+	max-width: 16ch;
+	margin: 0;
+	color: var(--aai-text);
+	font-size: clamp(2rem, 3.6vw, 3rem);
+	font-weight: 500;
+	letter-spacing: -0.055em;
+	line-height: 1.1;
+	text-wrap: balance;
+}
+.aai-welcome p {
+	margin: 20px 0 0;
+	color: var(--aai-secondary);
+	font-size: 15px;
+	font-weight: 400;
+	line-height: 1.6;
+}
+.aai-chat-landing .aai-home-composer {
+	flex-shrink: 0;
+	padding-block: 0;
+}
+.aai-suggestions {
+	margin: 12px 8px 0;
+	max-height: 240px;
+	overflow-y: auto;
+	border: 1px solid var(--aai-border);
+	border-radius: 16px;
+	padding: 16px;
+	background: var(--aai-elevated);
+	box-shadow: var(--aai-shadow);
+}
+
+/* Navigation has one clear primary action and a quieter secondary hierarchy. */
+.aai-sidebar {
+	background: var(--color-gray-950, var(--aai-bg));
+	border-inline-end: 1px solid var(--aai-border);
+}
+.aai-sidebar :where(a, button) {
+	border-radius: 9px;
+}
+.aai-sidebar :where(a, button):hover {
+	background-color: var(--aai-highlight);
+}
+.aai-sidebar :where([aria-current='page'], [aria-selected='true']) {
+	color: var(--aai-text);
+	background: var(--aai-highlight);
+}
+.aai-sidebar-brand {
+	min-height: 58px;
+	align-items: center;
+	padding-inline: 8px;
+}
+.aai-sidebar #sidebar-webui-name {
+	font-weight: 600;
+	letter-spacing: -0.02em;
+}
+.aai-sidebar-navigation {
+	padding: 12px 8px 16px;
+	border-bottom: 1px solid var(--aai-border);
+	margin-bottom: 8px;
+}
+.aai-sidebar-navigation > div:first-child {
+	margin-bottom: 8px;
+}
+.aai-sidebar .aai-new-conversation {
+	min-height: 40px;
+	background: var(--aai-text);
+	color: var(--aai-bg);
+	padding-inline: 12px;
+	box-shadow: 0 2px 8px rgb(0 0 0 / 10%);
+}
+.aai-sidebar .aai-new-conversation:hover {
+	background: var(--aai-text);
+	opacity: 0.88;
+}
+.aai-new-conversation :where(div, span) {
+	font-weight: 500;
+}
+.aai-new-conversation .hover-reveal {
+	color: inherit;
+}
+.aai-sidebar .aai-sidebar-search {
+	min-height: 38px;
+	padding-inline: 12px;
+	color: var(--aai-secondary);
+}
+.aai-sidebar-search .hover-reveal {
+	visibility: visible;
+	opacity: 1;
+	color: var(--aai-secondary);
+}
+.aai-topbar.aai-glass {
+	min-height: 48px;
+	justify-content: center;
+	border-width: 0 0 1px;
+	border-color: var(--aai-border);
+	background: var(--color-gray-950, var(--aai-bg));
+	box-shadow: none;
+	padding-inline: 10px;
+	padding-block: 0;
+}
+.aai-chat-location {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	font-size: 12px;
+	color: var(--aai-secondary);
+}
+.aai-chat-location > :last-child {
+	color: var(--aai-text);
+}
+.aai-chat-location-divider {
+	opacity: 0.4;
+}
+
+/* A single surface for text, attachments, approval prompts and input controls. */
+.aai-composer {
+	color: var(--aai-text);
+	background: var(--aai-panel);
+	border: 1px solid var(--aai-border-hover);
+	border-radius: 20px;
+	padding: 8px;
+	box-shadow:
+		0 12px 40px rgb(0 0 0 / 16%),
+		inset 0 1px 0 var(--aai-highlight);
+}
+.aai-composer:hover {
+	border-color: color-mix(in srgb, var(--aai-secondary) 35%, transparent);
+}
+.aai-composer:focus-within {
+	border-color: var(--aai-secondary);
+}
+.aai-composer .ProseMirror {
+	min-height: 44px;
+	line-height: 1.65;
+}
+.aai-composer .input-prose,
+.aai-message .markdown-prose {
+	font-size: var(--aai-text-base) !important;
+}
+.aai-composer :where(textarea, [contenteditable='true']) {
+	background: transparent;
+	-webkit-backdrop-filter: none;
+	backdrop-filter: none;
+}
+.aai-composer-toolbar {
+	align-items: center;
+	margin-top: 12px;
+}
+.aai-composer #input-menu-button {
+	width: 36px;
+	height: 36px;
+	border: 1px solid var(--aai-border-hover);
+	border-radius: 11px;
+	color: var(--aai-secondary);
+}
+.aai-composer #input-menu-button:hover {
+	color: var(--aai-text);
+	background: var(--aai-highlight);
+}
+.aai-send,
+.aai-stop {
+	width: 40px;
+	height: 40px;
+	border-radius: 12px;
+}
+.aai-send:not(:disabled),
+.aai-stop {
+	background: var(--aai-text);
+	color: var(--aai-bg);
+	box-shadow: 0 1px 4px rgb(0 0 0 / 10%);
+}
+.aai-send:hover:not(:disabled),
+.aai-stop:hover {
+	opacity: 0.85;
+}
+.aai-send:disabled {
+	background: var(--aai-highlight);
+	color: var(--aai-secondary);
+}
+.aai-bottom-composer {
+	padding-block: 12px max(16px, env(safe-area-inset-bottom));
+}
+
+/* Conversation typography stays readable without enclosing every answer in a card. */
+.aai-message {
+	margin-bottom: 28px;
+	animation: aai-enter 180ms ease-out both;
+}
+.aai-user-bubble {
+	border: 1px solid var(--aai-border);
+	border-radius: 18px;
+	background: var(--aai-panel);
+	padding: 12px 18px;
+}
+.aai-assistant-message #response-message-model-name {
+	font-size: 13px;
+	font-weight: 500;
+	color: var(--aai-secondary);
+}
+.aai-message .markdown-prose :where(p, li) {
+	line-height: 1.75;
+}
+.aai-message-actions {
+	gap: 2px;
+	padding-block: 6px;
+}
+.aai-code-block {
+	border-color: var(--aai-border-hover);
+	border-radius: 14px;
+	box-shadow: 0 4px 16px rgb(0 0 0 / 8%);
+}
+.aai-tool-call {
+	margin-block: 8px;
+	border: 1px solid var(--aai-border);
+	border-radius: 12px;
+	background: var(--aai-elevated);
+	padding: 12px 14px;
+	color: var(--aai-secondary);
+}
+.aai-tool-call:hover {
+	border-color: var(--aai-border-hover);
+	color: var(--aai-text);
+}
+
+@media (max-width: 767px) {
+	.aai-chat-landing {
+		justify-content: flex-start;
+		padding-block: clamp(88px, 16dvh, 140px) 24px;
+	}
+	.aai-chat-landing .aai-home-stack {
+		gap: 28px;
+	}
+	.aai-welcome {
+		padding-inline: 12px;
+	}
+	.aai-welcome h1 {
+		font-size: clamp(32px, 7vw, 38px);
+		max-width: 14ch;
+	}
+	.aai-welcome-identity {
+		margin-bottom: 24px;
+	}
+	.aai-welcome p {
+		font-size: 14px;
+		margin-top: 16px;
+	}
+	.aai-topbar.aai-glass {
+		min-height: 52px;
+		padding-inline: 0;
+	}
+	.aai-topbar button {
+		min-width: 40px;
+		min-height: 40px;
+	}
+	.aai-sidebar :where(button, a[href]) {
+		min-height: 40px;
+	}
+	.aai-message-actions button {
+		min-width: 36px;
+		min-height: 36px;
+	}
+	.aai-bottom-composer {
+		padding-block: 8px max(8px, env(safe-area-inset-bottom));
+	}
+}
+@media (max-height: 600px) {
+	.aai-chat-landing {
+		justify-content: flex-start;
+		padding-block: 72px 24px;
+	}
+	.aai-chat-landing .aai-home-stack {
+		gap: 20px;
+	}
+	.aai-welcome-identity {
+		margin-bottom: 16px;
+	}
+	.aai-welcome-symbol {
+		width: 32px;
+		height: 32px;
+		border-radius: 10px;
+	}
+	.aai-welcome h1 {
+		font-size: 28px;
+		max-width: none;
+	}
+	.aai-welcome p {
+		display: none;
+	}
+}

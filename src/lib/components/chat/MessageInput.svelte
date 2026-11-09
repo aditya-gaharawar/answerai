@@ -2448,7 +2448,10 @@
 								</div>
 							</div>
 
-							<div class="mx-1 mb-1 flex max-w-full items-end justify-between gap-3" dir="ltr">
+							<div
+								class="aai-composer-toolbar mx-1 mb-1 flex max-w-full items-end justify-between gap-3"
+								dir="ltr"
+							>
 								<InputMenu
 									bind:this={inputMenu}
 									onCompare={openComparison}
@@ -2948,7 +2951,7 @@
 												<button
 													type="button"
 													aria-label={$i18n.t('Stop')}
-													class="bg-white hover:bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-800 transition rounded-full size-11 flex items-center justify-center"
+													class="aai-stop bg-white hover:bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-800 transition rounded-full size-11 flex items-center justify-center"
 													on:click={() => {
 														stopResponse();
 													}}

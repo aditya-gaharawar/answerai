@@ -1,5 +1,17 @@
 # AnswerAI premium interface
 
+## Chat workspace rebuild — 2026-11-09
+
+The current chat layout replaces the previous centered title and distant bottom input with a single welcome-and-input workspace. `ChatWelcome.svelte` owns the welcome content, and `src/chat-interface.css` owns chat presentation. The corresponding chat rules were removed from `design-system.css`; shared product tokens remain there.
+
+The sidebar now gives New Chat a primary button and keeps search and the existing navigation in a secondary group. Conversation input remains anchored, with a dedicated control row, larger mobile response-action targets, and coordinated message, code, and tool surfaces. Existing model selection, attachments, agent settings, approvals, temporary chat, custom backgrounds, resizing, and mobile drawer behavior retain their original handlers.
+
+The current review screenshots are in [chat-workspace](screenshots/chat-workspace/). They use a synthetic local account. The rich conversation is explicitly marked as an interface fixture, not a model-generated result.
+
+`scripts/verification/chat-content-browser.cjs` adds local-only checks for persisted Markdown, code, table rendering, page overflow, and anchored conversation input at 360, 768, and 1440px. It creates and removes a labelled test conversation through the actual backend. The existing premium UI checks now verify that the empty-state input stays next to the welcome content; compact-composer checks still exercise the real chat submission and nested menus.
+
+The older implementation notes and screenshots below describe the broader shared design system.
+
 Design branch: `design/dark-premium-ui`. Validation date: 2026-11-09 (Asia/Calcutta).
 
 ## Brief audit
@@ -16,7 +28,7 @@ Design branch: `design/dark-premium-ui`. Validation date: 2026-11-09 (Asia/Calcu
 
 `src/design-system.css` owns the interface tokens and reusable semantic classes. Existing Tailwind neutrals bridge to the dark palette so existing screens retain their structure. Default colors are #0A0A0B / #111113, primary text #EDEDEF, secondary text #A1A1AA and a single violet accent #7C7CFF. Muted #71717A is not the default small-text color; readable labels use secondary. Primary buttons use dark text on violet to pass 4.5:1 contrast. Success, warning and error statuses use muted semantic colors.
 
-The main chat column is 720px at the default UI scale. Inter is served from the existing local variable font; code uses a monospace stack. The empty-chat and conversation composers sit at the bottom with safe-area spacing. Existing plus-menu capabilities remain available. Selecting Chat/Agent uses native menu radio semantics with the same execution parameters and approval policy as before.
+The main chat column is 720px at the default UI scale. Inter is served from the existing local variable font; code uses a monospace stack. The empty-chat composer is grouped with the welcome content; conversation input sits at the bottom with safe-area spacing. Existing plus-menu capabilities remain available. Selecting Chat/Agent uses native menu radio semantics with the same execution parameters and approval policy as before.
 
 The navbar, modals and popovers share limited glass treatment, with an opaque background declared before the `@supports` enhancement. The scrolling sidebar and text editors use solid backgrounds. Common menus, fields, cards, badges, tables, tabs, toasts, tooltips and focus states share tokens. The sidebar keeps its existing collapse, resize and mobile drawer handling. Existing Cmd/Ctrl+K workspace search remains the command palette, with less empty space when no preview is displayed.
 

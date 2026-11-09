@@ -59,6 +59,7 @@
 	import '../tailwind.css';
 	import '../app.css';
 	import '../design-system.css';
+	import '../chat-interface.css';
 	import 'tippy.js/dist/tippy.css';
 
 	import { executeToolServer, getBackendConfig, getModels, getVersion } from '$lib/apis';

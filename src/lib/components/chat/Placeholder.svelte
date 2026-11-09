@@ -10,7 +10,6 @@
 	import {
 		config,
 		user,
-		WEBUI_NAME,
 		models as _models,
 		temporaryChatEnabled,
 		selectedFolder
@@ -22,6 +21,7 @@
 	} from '$lib/utils/localizedContent';
 
 	import Suggestions from './Suggestions.svelte';
+	import ChatWelcome from './ChatWelcome.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import EyeSlash from '$lib/components/icons/EyeSlash.svelte';
 	import MessageInput from './MessageInput.svelte';
@@ -143,14 +143,7 @@
 					}}
 				/>
 			{:else}
-				<div class="aai-welcome">
-					<div class="aai-welcome-brand" aria-hidden="true">
-						<span class="aai-welcome-mark"></span>
-						<span>{$WEBUI_NAME}</span>
-					</div>
-					<h1>{$i18n.t('What can I help with?')}</h1>
-					<p>{$i18n.t('Your space to think, create, and get things done.')}</p>
-				</div>
+				<ChatWelcome />
 			{/if}
 
 			<div
@@ -192,7 +185,7 @@
 						{onToolApprovalModeChange}
 						{stopResponse}
 						{createMessagePair}
-						placeholder={$i18n.t('How can I help you today?')}
+						placeholder={$i18n.t('Ask anything...')}
 						{onChange}
 						{onUpload}
 						{onUpdate}
@@ -208,6 +201,18 @@
 						}}
 					/>
 				{/if}
+				{#if showSuggestions && !$selectedFolder}
+					<div class="aai-suggestions text-left" in:fade={{ duration: 150 }}>
+						<Suggestions
+							suggestionPrompts={selectedSuggestionPrompts}
+							inputValue={prompt}
+							onSelect={(selection) => {
+								showSuggestions = false;
+								onSelect(selection);
+							}}
+						/>
+					</div>
+				{/if}
 			</div>
 		</div>
 	</div>
@@ -215,17 +220,6 @@
 	{#if $selectedFolder}
 		<div class="mx-auto px-4 md:max-w-3xl md:px-6 min-h-62" in:fade={{ duration: 200, delay: 200 }}>
 			<FolderPlaceholder folder={$selectedFolder} />
-		</div>
-	{:else if showSuggestions}
-		<div class="aai-suggestions mx-auto mt-4 max-w-2xl px-5 text-left" in:fade={{ duration: 150 }}>
-			<Suggestions
-				suggestionPrompts={selectedSuggestionPrompts}
-				inputValue={prompt}
-				onSelect={(selection) => {
-					showSuggestions = false;
-					onSelect(selection);
-				}}
-			/>
 		</div>
 	{/if}
 </div>

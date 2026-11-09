@@ -1264,7 +1264,7 @@
 				class=" my-auto flex flex-col justify-between h-screen max-h-[100dvh] w-[var(--sidebar-width)] overflow-x-hidden scrollbar-hidden z-50 border-e border-transparent"
 			>
 				<div
-					class="sidebar {$mobile
+					class="sidebar aai-sidebar-brand {$mobile
 						? 'px-0.75 pt-1 pb-1 -mb-2'
 						: 'px-1 pt-0.5 pb-0.5'} flex shrink-0 justify-between space-x-1 text-gray-600 dark:text-gray-400 sticky top-0 z-10"
 				>
@@ -1357,15 +1357,14 @@
 						}
 					}}
 				>
-					<div class="pb-1">
+					<div class="aai-sidebar-navigation pb-1">
 						<div class="px-1 flex justify-center text-gray-700 dark:text-gray-300">
 							<a
 								id="sidebar-new-chat-button"
-								class="group grow flex items-center space-x-2 rounded-xl px-2 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-900 transition outline-none"
+								class="aai-new-conversation group grow flex items-center space-x-2 rounded-xl px-2 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-900 transition outline-none"
 								href="/"
 								draggable="false"
 								on:click={newChatHandler}
-								aria-label={$i18n.t('New Chat')}
 							>
 								<div class="self-center flex size-4 shrink-0 items-center justify-center">
 									<EditPencilIcon className="size-4" strokeWidth="1.5" />
@@ -1382,12 +1381,11 @@
 						<div class="px-1 flex justify-center text-gray-700 dark:text-gray-300">
 							<button
 								id="sidebar-search-button"
-								class="group grow flex items-center space-x-2 rounded-xl px-2 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-900 transition outline-none"
+								class="aai-sidebar-search group grow flex items-center space-x-2 rounded-xl px-2 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-900 transition outline-none"
 								on:click={() => {
 									showSearch.set(true);
 								}}
 								draggable="false"
-								aria-label={$i18n.t('Search')}
 							>
 								<div class="self-center flex size-4 shrink-0 items-center justify-center">
 									<SearchIcon strokeWidth="1.5" className="size-4" />
